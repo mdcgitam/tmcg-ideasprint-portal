@@ -84,9 +84,14 @@ export function Footer() {
         </nav>
       </Reveal>
 
-      <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-2 border-t border-border pt-6 font-mono text-[11px] text-ink-faint sm:flex-row sm:justify-between">
+      <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-3 border-t border-border pt-6 font-mono text-[11px] text-ink-faint sm:flex-row sm:items-center sm:justify-between">
         <span>© {new Date().getFullYear()} TMCG × MDC GITAM Visakhapatnam. All rights reserved.</span>
-        <span>No Registration Fee · NOC Mandatory</span>
+        <div className="flex items-center gap-4">
+          <span>No Registration Fee · NOC Mandatory</span>
+          <Link href="/privacy" data-cursor="interactive" className="underline transition-colors hover:text-gold">
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </footer>
   );
