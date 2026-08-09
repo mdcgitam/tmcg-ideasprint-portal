@@ -1,0 +1,97 @@
+import { redirect } from "next/navigation";
+import { getCurrentProfile } from "@/lib/auth/current-user";
+import { dashboardPathForRole } from "@/lib/auth/roles";
+import { createClient } from "@/lib/supabase/server";
+import { TeamDashboardShell } from "@/components/dashboard/team/TeamDashboardShell";
+import type {
+  ProfileRow,
+  TeamRow,
+  NocRow,
+  AttendanceRow,
+  AttendanceSessionRow,
+  FoodCouponRow,
+  ExitFormRow,
+  ProblemStatementRow,
+  ApprovalRequestRow,
+  ConfigurationRow,
+} from "@/types/database";
+
+export default async function TeamDashboardPage() {
+  const profile = await getCurrentProfile();
+  if (!profile) redirect("/login");
+  if (profile.role !== "Team Lead" && profile.role !== "Member") redirect(dashboardPathForRole(profile.role));
+
+  const supabase = await createClient();
+
+  const { data: membershipRow } = await supabase
+    .from("team_members")
+    .select("team_id")
+    .eq("profile_id", profile.id)
+    .maybeSingle();
+
+  const teamId = (membershipRow as { team_id: string } | null)?.team_id;
+
+  if (!teamId) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-void px-6 text-center">
+        <p className="font-heading text-ink-muted">No team found for this account.</p>
+      </main>
+    );
+  }
+
+  const [
+    { data: team },
+    { data: memberRows },
+    { data: nocRows },
+    { data: attendanceRows },
+    { data: attendanceSessionRows },
+    { data: foodRows },
+    { data: exitFormRow },
+    { data: pendingRequestRow },
+    { data: configRows },
+  ] = await Promise.all([
+    supabase.from("teams").select("*").eq("id", teamId).single(),
+    supabase.from("team_members").select("profile_id, is_lead, profiles(*)").eq("team_id", teamId),
+    // No .eq(team_id) filters below — RLS alone correctly scopes each of
+    // these to what this caller's role is allowed to see (e.g. a Member
+    // only gets their own NOC row, a Team Lead gets every teammate's).
+    supabase.from("nocs").select("*"),
+    supabase.from("attendance").select("*").eq("team_id", teamId),
+    supabase.from("attendance_sessions").select("*").order("sort_order"),
+    supabase.from("food_coupons").select("*"),
+    supabase.from("exit_forms").select("*").eq("team_id", teamId).maybeSingle(),
+    supabase.from("approval_requests").select("*").eq("team_id", teamId).eq("status", "Pending").maybeSingle(),
+    supabase.from("configuration").select("*"),
+  ]);
+
+  const teamRow = team as TeamRow;
+
+  const members = ((memberRows ?? []) as unknown as { profile_id: string; is_lead: boolean; profiles: ProfileRow }[])
+    .map((row) => ({ ...row.profiles, is_lead: row.is_lead }))
+    .sort((a, b) => Number(b.is_lead) - Number(a.is_lead));
+
+  const { data: currentPsRow } = teamRow.current_problem_statement_id
+    ? await supabase.from("problem_statements").select("*").eq("id", teamRow.current_problem_statement_id).maybeSingle()
+    : { data: null };
+
+  const config: Record<string, unknown> = {};
+  for (const row of (configRows ?? []) as ConfigurationRow[]) {
+    config[row.key] = row.value;
+  }
+
+  return (
+    <TeamDashboardShell
+      profile={profile}
+      team={teamRow}
+      members={members}
+      nocs={(nocRows ?? []) as NocRow[]}
+      attendance={(attendanceRows ?? []) as AttendanceRow[]}
+      attendanceSessions={(attendanceSessionRows ?? []) as AttendanceSessionRow[]}
+      foodCoupons={(foodRows ?? []) as FoodCouponRow[]}
+      exitForm={(exitFormRow ?? null) as ExitFormRow | null}
+      currentProblemStatement={(currentPsRow ?? null) as ProblemStatementRow | null}
+      pendingApprovalRequest={(pendingRequestRow ?? null) as ApprovalRequestRow | null}
+      config={config}
+    />
+  );
+}

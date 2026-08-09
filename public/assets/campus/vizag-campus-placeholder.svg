@@ -1,0 +1,60 @@
+<svg width="1600" height="1200" viewBox="0 0 1600 1200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#121216"/>
+      <stop offset="55%" stop-color="#08080a"/>
+      <stop offset="100%" stop-color="#08080a"/>
+    </linearGradient>
+    <linearGradient id="ridge1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a4a3e"/>
+      <stop offset="100%" stop-color="#08080a"/>
+    </linearGradient>
+    <linearGradient id="ridge2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#123a6b"/>
+      <stop offset="100%" stop-color="#08080a"/>
+    </linearGradient>
+    <linearGradient id="goldGlow" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#7c5e12" stop-opacity="0"/>
+      <stop offset="50%" stop-color="#c9a227" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#7c5e12" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f3d27a" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#f3d27a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="1600" height="1200" fill="url(#sky)"/>
+  <circle cx="1180" cy="360" r="260" fill="url(#sun)"/>
+
+  <!-- distant ridge / hill line (Vizag's Eastern Ghats silhouette, abstracted) -->
+  <path d="M0,620 L110,560 L230,600 L340,520 L470,590 L620,500 L780,580 L940,510 L1100,590 L1260,530 L1420,600 L1600,560 L1600,1200 L0,1200 Z" fill="url(#ridge2)" opacity="0.6"/>
+  <path d="M0,720 L140,660 L300,700 L460,630 L640,710 L820,650 L980,720 L1160,660 L1340,720 L1600,680 L1600,1200 L0,1200 Z" fill="url(#ridge1)" opacity="0.8"/>
+
+  <!-- abstract campus block silhouette -->
+  <g fill="#1b1b21" stroke="#2b2b33" stroke-width="1.5">
+    <rect x="140" y="760" width="220" height="260" />
+    <rect x="380" y="700" width="140" height="320" />
+    <rect x="540" y="820" width="180" height="200" />
+    <rect x="760" y="680" width="160" height="340" />
+    <rect x="960" y="780" width="240" height="240" />
+    <rect x="1240" y="720" width="150" height="300" />
+  </g>
+
+  <!-- window grid glints -->
+  <g fill="#c9a227" opacity="0.5">
+    <rect x="170" y="800" width="10" height="10"/>
+    <rect x="200" y="800" width="10" height="10"/>
+    <rect x="170" y="840" width="10" height="10"/>
+    <rect x="410" y="740" width="10" height="10"/>
+    <rect x="440" y="780" width="10" height="10"/>
+    <rect x="790" y="720" width="10" height="10"/>
+    <rect x="820" y="760" width="10" height="10"/>
+    <rect x="1000" y="820" width="10" height="10"/>
+    <rect x="1040" y="860" width="10" height="10"/>
+    <rect x="1270" y="760" width="10" height="10"/>
+  </g>
+
+  <rect x="0" y="900" width="1600" height="4" fill="url(#goldGlow)"/>
+  <rect width="1600" height="1200" fill="#08080a" opacity="0.15"/>
+</svg>

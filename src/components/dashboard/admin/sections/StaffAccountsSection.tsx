@@ -1,0 +1,131 @@
+"use client";
+
+import { useState } from "react";
+import type { ProfileRow, UserRole } from "@/types/database";
+import { createStaffProfile, updateUserRole, DashboardActionError } from "@/lib/dashboard/admin-actions";
+
+const STAFF_ROLES: UserRole[] = ["SPOC", "Super Admin"];
+
+/**
+ * SPOC/Super Admin accounts don't go through team registration — this is
+ * the only way to create one. A staff account gets a bare `profiles` row
+ * (name + email + role only, no team) via create_staff_profile; once that
+ * person signs in with the matching Google account, auth/callback links it
+ * exactly like a participant profile.
+ */
+export function StaffAccountsSection({ staffAccounts }: { staffAccounts: ProfileRow[] }) {
+  const [local, setLocal] = useState(staffAccounts);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<UserRole>("SPOC");
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [changingId, setChangingId] = useState<string | null>(null);
+  const [rowError, setRowError] = useState<string | null>(null);
+
+  async function handleCreate(e: React.FormEvent) {
+    e.preventDefault();
+    setCreating(true);
+    setCreateError(null);
+    try {
+      const id = await createStaffProfile({ name: name.trim(), email: email.trim(), role: role as "SPOC" | "Super Admin" });
+      setLocal((prev) => [
+        { id, auth_user_id: null, user_id: "", campus: "VSP", role, name: name.trim(), gitam_email: email.trim().toLowerCase(), phone: "", reg_no: "", year_of_study: "", school: "", department: "", branch: "", gender: "", stay: "", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        ...prev,
+      ]);
+      setName("");
+      setEmail("");
+    } catch (err) {
+      setCreateError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleRoleChange(profileId: string, newRole: UserRole) {
+    setChangingId(profileId);
+    setRowError(null);
+    try {
+      await updateUserRole(profileId, newRole);
+      setLocal((prev) => prev.map((p) => (p.id === profileId ? { ...p, role: newRole } : p)));
+    } catch (err) {
+      setRowError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setChangingId(null);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <form onSubmit={handleCreate} className="rounded-xl border border-border bg-surface p-6">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">New Staff Account</span>
+        <div className="mt-4 grid gap-4 sm:grid-cols-3">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Full name"
+            required
+            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="name@student.gitam.edu"
+            required
+            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as UserRole)}
+            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          >
+            {STAFF_ROLES.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
+          </select>
+        </div>
+        {createError && <p className="mt-3 font-heading text-sm text-danger">{createError}</p>}
+        <button
+          type="submit"
+          disabled={creating}
+          className="mt-4 rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+        >
+          {creating ? "Creating…" : "Create Account"}
+        </button>
+      </form>
+
+      <div className="flex flex-col gap-2">
+        {rowError && <p className="font-heading text-sm text-danger">{rowError}</p>}
+        {local.length === 0 ? (
+          <div className="rounded-xl border border-border bg-surface p-8 text-center">
+            <p className="font-heading text-sm text-ink-muted">No staff accounts yet.</p>
+          </div>
+        ) : (
+          local.map((s) => (
+            <div key={s.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-surface p-4">
+              <div>
+                <p className="font-heading text-sm text-ink">{s.name}</p>
+                <p className="mt-1 font-heading text-xs text-ink-muted">{s.gitam_email}</p>
+              </div>
+              <select
+                value={s.role}
+                disabled={changingId === s.id}
+                onChange={(e) => handleRoleChange(s.id, e.target.value as UserRole)}
+                className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+              >
+                {(["SPOC", "Super Admin", "Team Lead", "Member"] as UserRole[]).map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+}

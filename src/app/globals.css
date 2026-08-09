@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------- *
+ * TMCG IdeaSprint 4.0 — Design Tokens
+ * Palette derived from the three provided brand marks:
+ *   TMCG  -> black + metallic gold   (primary, championship energy)
+ *   MDC   -> deep navy -> electric blue gradient   (secondary, developer/tech)
+ *   GITAM -> deep teal   (tertiary, campus/institutional)
+ * ---------------------------------------------------------------------- */
+
+:root {
+  --color-void: #08080a;
+  --color-surface: #121216;
+  --color-surface-2: #1b1b21;
+  --color-surface-3: #26262e;
+  --color-border: #2b2b33;
+  --color-border-strong: #3d3d47;
+
+  --color-ink: #f6f4ee;
+  --color-ink-muted: #a8a6a0;
+  --color-ink-faint: #8c8a85;
+
+  --color-gold: #c9a227;
+  --color-gold-light: #f3d27a;
+  --color-gold-deep: #7c5e12;
+
+  --color-mdc: #2e8fe0;
+  --color-mdc-deep: #123a6b;
+
+  --color-gitam: #128a72;
+  --color-gitam-deep: #0a4a3e;
+
+  --color-danger: #e5484d;
+  --color-success: #30a46c;
+  --color-warning: #f5a524;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --dur-fast: 200ms;
+  --dur-base: 400ms;
+  --dur-slow: 800ms;
+}
+
+@theme inline {
+  --color-void: var(--color-void);
+  --color-surface: var(--color-surface);
+  --color-surface-2: var(--color-surface-2);
+  --color-surface-3: var(--color-surface-3);
+  --color-border: var(--color-border);
+  --color-border-strong: var(--color-border-strong);
+
+  --color-ink: var(--color-ink);
+  --color-ink-muted: var(--color-ink-muted);
+  --color-ink-faint: var(--color-ink-faint);
+
+  --color-gold: var(--color-gold);
+  --color-gold-light: var(--color-gold-light);
+  --color-gold-deep: var(--color-gold-deep);
+
+  --color-mdc: var(--color-mdc);
+  --color-mdc-deep: var(--color-mdc-deep);
+
+  --color-gitam: var(--color-gitam);
+  --color-gitam-deep: var(--color-gitam-deep);
+
+  --color-danger: var(--color-danger);
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+
+  --font-display: var(--font-display);
+  --font-heading: var(--font-heading);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-void);
+  color: var(--color-ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--color-gold);
+  color: var(--color-void);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold);
+  outline-offset: 3px;
+}
+
+/* ScrollSmoother's wrapper/content pair (public layout only) — pre-set so
+   there's no layout jump between first paint and the JS smoother taking
+   over. ScrollSmoother.create() manages these further once it mounts. */
+#smooth-wrapper {
+  overflow: hidden;
+  position: relative;
+  width: 100%;
+}
+#smooth-content {
+  overflow: visible;
+  width: 100%;
+}
+
+/* Custom scrollbar — subtle, premium */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-void);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-3);
+  border-radius: 999px;
+  border: 2px solid var(--color-void);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+/* Respect reduced motion globally; components should also check this via useReducedMotion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+.hero-char {
+  display: inline-block;
+  will-change: transform, opacity;
+}
