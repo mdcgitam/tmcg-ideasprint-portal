@@ -22,7 +22,7 @@ const ACCENTS: Record<DomainIconKey, { text: string; border: string; glow: strin
 };
 
 /**
- * Act 02 — The Challenge (prompt.md §43). The section pins while the first
+ * Act 2 — The Challenge (prompt.md §43). The section pins while the first
  * domain card holds in place and each following card arrives one at a time
  * as the user keeps scrolling, building up to the full single-line row —
  * only then does the page release and continue scrolling.
@@ -68,7 +68,7 @@ export function DomainsSection() {
       className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden border-t border-border bg-void px-6 sm:px-10 lg:px-16"
     >
       <div className="mb-14 w-full max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 02 — The Challenge</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 2 — The Challenge</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">DOMAINS</h2>
       </div>
 

@@ -3,7 +3,7 @@ import { Reveal } from "@/components/motion/Reveal";
 import { judges } from "@/data/site-config";
 
 /**
- * Act 04 continued (prompt.md §14). Judges as an accordion of expanding
+ * Act 5 — The Panel (prompt.md §14). Judges as an accordion of expanding
  * portraits rather than photo+name+designation cards. `judges` is empty
  * until organizers confirm the panel — no fabricated names are shown.
  */
@@ -11,7 +11,7 @@ export function JudgesSection() {
   return (
     <section id="judges" className="border-t border-border bg-void px-6 py-28 sm:px-10 lg:px-16">
       <Reveal className="mx-auto mb-14 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">The Panel</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 5 — The Panel</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">JUDGES</h2>
       </Reveal>
 

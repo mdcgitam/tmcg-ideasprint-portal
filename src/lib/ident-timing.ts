@@ -1,5 +1,3 @@
-const IDENT_KEY = "ideasprint-ident-seen";
-
 /**
  * When the ident's own fade-out begins, in seconds — this is when Hero's
  * curtain should start parting (they cross-fade rather than running fully
@@ -13,16 +11,10 @@ export const IDENT_DURATION = 1.55;
  * Whether the studio ident is about to play on THIS page load — computed
  * once at module evaluation time (client-side) so every consumer (the ident
  * itself, Hero's curtain timing, NavBar's reveal delay) agrees on the same
- * answer for the whole page lifecycle, regardless of exactly when each
- * component's effects happen to run relative to `markIdentSeen()` being
- * called. Always `false` during SSR (no sessionStorage on the server) —
- * corrected once the client-side module evaluates.
+ * answer for the whole page lifecycle. Deliberately plays on every full page
+ * load/refresh, not just once per browser session — the cinematic open is
+ * the point, not a one-time-only splash. Always `false` during SSR (no
+ * `window` on the server) — corrected once the client-side module evaluates.
  */
 export const WILL_PLAY_IDENT =
-  typeof window !== "undefined" &&
-  !sessionStorage.getItem(IDENT_KEY) &&
-  !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-export function markIdentSeen() {
-  if (typeof window !== "undefined") sessionStorage.setItem(IDENT_KEY, "1");
-}
+  typeof window !== "undefined" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;

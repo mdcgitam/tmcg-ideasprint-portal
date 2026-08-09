@@ -23,7 +23,7 @@ const TIER_STYLE: Record<Place, { icon: LucideIcon; ring: string; text: string; 
 };
 
 /**
- * Act 05 — The Reward (prompt.md §12, §43). A championship moment, not
+ * Act 6 — The Reward (prompt.md §12, §43). A championship moment, not
  * three pricing cards — rank badges (icon + numeral) pop in with an
  * elastic, over-rotated bounce building up to the ₹15,000 first-place
  * badge, amounts count up from zero as they land, and the winner's badge
@@ -116,7 +116,7 @@ export function PrizeSection() {
         aria-hidden
       />
 
-      <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 05 — The Reward</span>
+      <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 6 — The Reward</span>
       <h2 className="mt-4 font-display text-5xl tracking-wide text-ink sm:text-7xl">GRAND FINALE PRIZES</h2>
       <p className="mx-auto mt-4 max-w-lg font-heading text-sm text-ink-muted">
         Awarded only at the Grand Finale, common across all three campuses.

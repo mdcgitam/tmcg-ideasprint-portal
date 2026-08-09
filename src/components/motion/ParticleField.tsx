@@ -25,7 +25,7 @@ function generateParticles(count: number, seed: number): Particle[] {
   }));
 }
 
-const particles = generateParticles(28, 42);
+const particles = generateParticles(20, 42);
 
 /**
  * Ambient constellation of drifting/twinkling points behind the hero.
@@ -42,7 +42,7 @@ export function ParticleField() {
     const animation = animate(dots, {
       opacity: [
         { to: 0.15, duration: 0 },
-        { to: 0.9, duration: 2200 },
+        { to: 0.65, duration: 2200 },
         { to: 0.15, duration: 2200 },
       ],
       translateY: [

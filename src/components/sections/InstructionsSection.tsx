@@ -22,7 +22,7 @@ export function InstructionsSection() {
     <section id="instructions" className="border-t border-border bg-void px-6 py-24 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-5xl">
         <Reveal className="mb-14">
-          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 06 — The Briefing</span>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 7 — The Briefing</span>
           <h2 className="mt-4 font-display text-5xl tracking-wide text-ink sm:text-7xl">GOOD TO KNOW</h2>
         </Reveal>
 

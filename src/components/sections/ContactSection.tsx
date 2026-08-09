@@ -4,7 +4,7 @@ import { contacts } from "@/data/site-config";
 const ORG_LABEL: Record<string, string> = { TMCG: "TMCG", MDC: "Meta Developer Communities" };
 
 /**
- * Act 08 — Contact (prompt.md §17, §43). Real people, not four identical
+ * Act 9 — Contact (prompt.md §17, §43). Real people, not four identical
  * cards — grouped by organizing body. Names/numbers are organizer-provided
  * placeholders (SPEC.md §87) until Admin Configuration is populated.
  */
@@ -15,7 +15,7 @@ export function ContactSection() {
   return (
     <section id="contact" className="border-t border-border bg-void px-6 py-28 sm:px-10 lg:px-16">
       <Reveal className="mx-auto mb-14 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 08 — Contact</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 9 — Contact</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-7xl">TALK TO US</h2>
       </Reveal>
 

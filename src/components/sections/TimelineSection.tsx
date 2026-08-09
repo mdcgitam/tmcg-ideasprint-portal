@@ -24,7 +24,7 @@ function toStep(item: (typeof timeline)[number]): Step {
 const steps: Step[] = timeline.map(toStep);
 
 /**
- * Act 03 — The Journey (prompt.md §11, §43). A connected roadmap rather than
+ * Act 3 — The Journey (prompt.md §11, §43). A connected roadmap rather than
  * a pinned cycle of giant numbers or another card row (which would just
  * repeat the Domains pattern) — Round 1 → Round 2 → Grand Finale joined by a
  * line that draws in as the section scrolls through view. No pinning, no
@@ -93,7 +93,7 @@ export function TimelineSection() {
       className="border-t border-border bg-surface px-6 py-28 sm:px-10 lg:px-16"
     >
       <div className="mx-auto mb-20 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 03 — The Journey</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 3 — The Journey</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">THE JOURNEY</h2>
       </div>
 

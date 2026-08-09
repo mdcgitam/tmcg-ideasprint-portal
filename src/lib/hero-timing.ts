@@ -16,5 +16,5 @@ import { IDENT_DURATION, WILL_PLAY_IDENT } from "./ident-timing";
  * lifecycle without Hero/NavBar needing to coordinate with StudioIdent directly.
  */
 export const CURTAIN_START = (WILL_PLAY_IDENT ? IDENT_DURATION : 0) + 0.15;
-export const CURTAIN_DURATION = 2.6;
+export const CURTAIN_DURATION = 3.4;
 export const REVEAL_AT = CURTAIN_START + CURTAIN_DURATION;

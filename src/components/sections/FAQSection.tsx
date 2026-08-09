@@ -29,7 +29,7 @@ export function FAQSection() {
   return (
     <section id="faq" className="border-t border-border bg-surface px-6 py-28 sm:px-10 lg:px-16">
       <Reveal className="mx-auto mb-14 max-w-4xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 07 — Questions</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 8 — Questions</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-7xl">FAQ</h2>
       </Reveal>
 

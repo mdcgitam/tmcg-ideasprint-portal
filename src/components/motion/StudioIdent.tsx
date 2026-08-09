@@ -5,20 +5,28 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useGSAP } from "@gsap/react";
 import { gsap } from "@/lib/gsap";
-import { WILL_PLAY_IDENT, markIdentSeen } from "@/lib/ident-timing";
+import { WILL_PLAY_IDENT } from "@/lib/ident-timing";
 
 /**
  * Cold open before the Hero curtain even parts — the three organizer marks
  * converge and pulse on black, like a studio logo bump before a film
- * starts. Plays once per browser session (see ident-timing.ts), skippable,
- * and never blocks: if it doesn't play, Hero's own CURTAIN_START collapses
- * back to its short default so there's no dead air.
+ * starts. Plays on every full page load/refresh (see ident-timing.ts),
+ * skippable, and never blocks: if it doesn't play (reduced motion), Hero's
+ * own CURTAIN_START collapses back to its short default so there's no dead
+ * air.
  *
  * Renders visible by default (matching SSR, where sessionStorage doesn't
- * exist) and corrects to hidden in a layout effect — pre-paint, so repeat
- * visits within the same session don't see it flash — rather than branching
- * the initial render on WILL_PLAY_IDENT directly, which would mismatch
- * between server and client.
+ * exist) and corrects to hidden in a layout effect for repeat visits within
+ * the same session — this is deliberate, not an oversight: the alternative
+ * (start hidden, reveal once we can check sessionStorage) leaves a gap on
+ * *every* load, including the common first-time case, where nothing covers
+ * Hero yet and it flashes through before the ident's backdrop appears.
+ * Showing the opaque backdrop immediately means Hero is never left
+ * uncovered; the only remaining risk was the *logos* briefly rendering at
+ * their finished (opacity 1, full scale) state before GSAP's `.set()` runs
+ * — fixed below by giving them that hidden starting state directly as
+ * inline styles, correct from the very first paint, not applied moments
+ * later by JS.
  */
 export function StudioIdent() {
   const isHome = usePathname() === "/";
@@ -32,7 +40,6 @@ export function StudioIdent() {
   useGSAP(
     () => {
       if (!isHome || !WILL_PLAY_IDENT || !rootRef.current) return;
-      markIdentSeen();
 
       gsap.timeline({ onComplete: () => setVisible(false) })
         .set("[data-ident-logo]", { opacity: 0, scale: 0.7 })
@@ -45,7 +52,6 @@ export function StudioIdent() {
 
   function skip() {
     if (rootRef.current) gsap.killTweensOf([rootRef.current, ...rootRef.current.querySelectorAll("[data-ident-logo]")]);
-    markIdentSeen();
     setVisible(false);
   }
 
@@ -72,26 +78,39 @@ export function StudioIdent() {
         alt="GITAM"
         width={1212}
         height={532}
-        style={{ filter: "url(#logo-key-black)" }}
+        style={{ filter: "url(#logo-key-black)", opacity: 0, transform: "scale(0.7)" }}
         className="h-9 w-auto sm:h-14"
       />
-      <span className="font-display text-xl text-ink-faint sm:text-2xl">×</span>
+      <span
+        data-ident-logo
+        className="font-display text-xl text-ink-faint sm:text-2xl"
+        style={{ opacity: 0, transform: "scale(0.7)" }}
+      >
+        ×
+      </span>
       <Image
         data-ident-logo
         src="/assets/brand/tmcg-logo.jpeg"
         alt="TMCG"
         width={601}
         height={216}
-        style={{ filter: "url(#logo-key-black)" }}
+        style={{ filter: "url(#logo-key-black)", opacity: 0, transform: "scale(0.7)" }}
         className="h-9 w-auto sm:h-14"
       />
-      <span className="font-display text-xl text-ink-faint sm:text-2xl">×</span>
+      <span
+        data-ident-logo
+        className="font-display text-xl text-ink-faint sm:text-2xl"
+        style={{ opacity: 0, transform: "scale(0.7)" }}
+      >
+        ×
+      </span>
       <Image
         data-ident-logo
         src="/assets/brand/mdc-logo.png"
         alt="MDC"
         width={512}
         height={257}
+        style={{ opacity: 0, transform: "scale(0.7)" }}
         className="h-9 w-auto sm:h-14"
       />
     </div>

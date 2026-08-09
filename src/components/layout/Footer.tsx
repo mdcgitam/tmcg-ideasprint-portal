@@ -48,6 +48,14 @@ export function Footer() {
         <div>
           <div ref={logosRef} className="flex items-center gap-4">
             <Image
+              src="/assets/brand/gitam-logo.jpeg"
+              alt="GITAM"
+              width={1212}
+              height={532}
+              style={{ filter: "url(#logo-key-black)" }}
+              className="h-10 w-auto"
+            />
+            <Image
               src="/assets/brand/tmcg-logo.jpeg"
               alt="TMCG"
               width={601}
@@ -56,14 +64,6 @@ export function Footer() {
               className="h-8 w-auto"
             />
             <Image src="/assets/brand/mdc-logo.png" alt="MDC" width={512} height={257} className="h-8 w-auto" />
-            <Image
-              src="/assets/brand/gitam-logo.jpeg"
-              alt="GITAM"
-              width={1212}
-              height={532}
-              style={{ filter: "url(#logo-key-black)" }}
-              className="h-10 w-auto"
-            />
           </div>
           <p className="mt-4 max-w-sm font-heading text-sm text-ink-muted">
             TMCG IdeaSprint 4.0 — jointly organized by TMCG and Meta Developer Communities (MDC) GITAM Visakhapatnam.
