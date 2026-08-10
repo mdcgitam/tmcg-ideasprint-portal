@@ -16,7 +16,9 @@ interface MagneticButtonProps {
 /**
  * CTA button that pulls toward the cursor within its bounds and springs back
  * on leave. `primary` (gold, filled) is visually dominant over `secondary`
- * (outline) — used to enforce Register > Login hierarchy (prompt.md §7).
+ * (glass — translucent void fill + backdrop blur, not just a bare outline,
+ * so it stays legible over busy photo backgrounds like the hero) — used to
+ * enforce Register > Login hierarchy (prompt.md §7).
  */
 export function MagneticButton({
   href,
@@ -54,7 +56,7 @@ export function MagneticButton({
         variant === "primary" &&
           "bg-gold text-void shadow-[0_0_40px_-8px_rgba(201,162,39,0.6)] hover:bg-gold-light",
         variant === "secondary" &&
-          "border border-border-strong text-ink hover:border-gold hover:text-gold",
+          "border border-ink/20 bg-void/60 text-ink backdrop-blur-md hover:border-gold hover:bg-void/75 hover:text-gold",
         className,
       )}
     >
