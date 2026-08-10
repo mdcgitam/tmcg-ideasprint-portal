@@ -36,8 +36,8 @@ const REALITY_FILTER = "grayscale(0) sepia(0) hue-rotate(0deg) saturate(1.12) br
  * column rhythm, a set of perspective construction lines flashes through
  * to establish depth, and flat-shaded surfaces fill in behind the linework.
  * The real photograph then resolves through those exact same surface
- * shapes — `REVEAL_PANELS` in BuildingBlueprint.tsx, the pediment, the
- * cornice, each colonnade bay individually, the ground plane — each one a
+ * shapes — the panels in BuildingBlueprint.tsx, the return facade, the
+ * connector wall, each pilaster bay individually, the ground plane — each one a
  * separately clip-path'd, separately opacity-animated slice of the same
  * photo, staggered left to right across the facade. There is no single
  * recognisable "reveal shape": the building's own geometry is the mask.
@@ -237,7 +237,7 @@ export function Hero() {
       {/* Campus imagery: points -> lines -> volume -> surfaces -> the real
           photo resolving through those exact same surface shapes, panel by
           panel across the facade — never a single visible reveal shape.
-          The foreground layer (portico + nearer trees) is a separate
+          The foreground layer (building corner + nearer trees) is a separate
           sibling below, stacked ABOVE the title text — the depth plane
           where architecture and typography genuinely overlap. */}
       <div
@@ -349,7 +349,7 @@ export function Hero() {
       </div>
 
       {/* Same source as the background layer, masked to just the
-          foreground band (portico + nearer trees) — deliberately stacked
+          foreground band (building corner + nearer trees) — deliberately stacked
           ABOVE the title text (not inside the -z-10 image block) so the
           architecture genuinely overlaps the typography where they'd
           intersect at this depth, rather than the title sitting flatly on
