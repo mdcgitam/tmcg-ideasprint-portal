@@ -1,10 +1,3 @@
-
-// Pilaster x-positions along the receding facade, measured directly off the
-// photo (see component doc comment) — not evenly guessed. Top/base y
-// interpolated linearly between the two measured end pilasters so the row's
-// perspective recession (pilasters get shorter, and shift down, moving right
-// toward the vanishing point) reads correctly instead of every pilaster
-// being identical.
 // y-values throughout this file are expressed in the SVG's own viewBox
 // units, which is 75 tall (not 100) — see the viewBox on the <svg> below.
 // The viewBox height matches the source photo's 4:3 aspect ratio exactly,
@@ -15,79 +8,89 @@
 // aspect ratio — e.g. a 16:9 hero — silently misaligning the linework from
 // the photo it's meant to trace.) So a y measured as "40% down the photo"
 // is written here as 40 * 0.75 = 30.
-const PILASTER_X = [50, 58, 65, 72, 80];
-const PILASTER_X_RANGE: [number, number] = [50, 80];
-const PILASTER_TOP_RANGE: [number, number] = [6, 13.875];
-const PILASTER_BASE_RANGE: [number, number] = [41.25, 33.75];
+const SCALE = 0.75;
+const s = (raw: number) => raw * SCALE;
 
 function lerp(x: number, xRange: [number, number], yRange: [number, number]) {
   const t = (x - xRange[0]) / (xRange[1] - xRange[0]);
   return yRange[0] + t * (yRange[1] - yRange[0]);
 }
 
-const PILASTER_POINTS = PILASTER_X.map((x) => ({
-  x,
-  top: lerp(x, PILASTER_X_RANGE, PILASTER_TOP_RANGE),
-}));
+// The facade reads as four zones left to right, each measured separately
+// off the photo rather than forced into one formula: the near-edge-on
+// return facade, the first main-facade bay right past the corner (easy to
+// miss — it reads as part of the return facade at a glance, but it's on
+// the other side of the corner seam), a genuinely blank connector wall,
+// and the receding pilaster run. All raw values are "percent of photo",
+// scaled to viewBox units by `s()`.
+const CORNER_X = 17.5;
+const CORNER_TOP = 2;
+const CORNER_BASE = 58;
+const PILASTER_X = [50, 58, 65, 72, 80];
+const PILASTER_X_RANGE: [number, number] = [50, 80];
+const PILASTER_TOP_RANGE: [number, number] = [8, 18.5];
+const PILASTER_BASE_RANGE: [number, number] = [55, 45];
 
-// Individual window outlines, not just the pilaster rhythm around them —
-// five floors per bay, measured the same way as the pilasters: a top/base
-// range read off the photo at the two end pilasters, interpolated for
-// every bay in between so the windows shrink with the same perspective
-// recession as everything else on this facade. Windows sit inset within
-// each floor's band (18% margin each side, weighted toward the band's
-// lower half) rather than filling it, the way a real window sits below a
-// spandrel panel, not floor-to-ceiling.
-const WINDOW_FLOORS = 5;
-const WINDOW_TOP_RANGE: [number, number] = [7.5, 15];
-const WINDOW_BASE_RANGE: [number, number] = [39, 32.25];
-
-function buildMainWindows(): Array<[number, number, number, number]> {
-  const rects: Array<[number, number, number, number]> = [];
-  for (let i = 0; i < PILASTER_X.length - 1; i++) {
-    const x1 = PILASTER_X[i];
-    const x2 = PILASTER_X[i + 1];
-    const cx = (x1 + x2) / 2;
-    const top = lerp(cx, PILASTER_X_RANGE, WINDOW_TOP_RANGE);
-    const base = lerp(cx, PILASTER_X_RANGE, WINDOW_BASE_RANGE);
-    const bandHeight = (base - top) / WINDOW_FLOORS;
-    const bayWidth = x2 - x1;
-    const winWidth = bayWidth * 0.64;
-    const winX = x1 + bayWidth * 0.18;
-    for (let f = 0; f < WINDOW_FLOORS; f++) {
-      const bandTop = top + f * bandHeight;
-      rects.push([winX, bandTop + bandHeight * 0.15, winWidth, bandHeight * 0.55]);
-    }
+// Top/base of the facade's structural envelope at any x from the corner
+// through the end of the pilaster run — piecewise, not one formula, because
+// the near facade (corner to first pilaster) barely foreshortens while the
+// pilaster run recedes sharply. Used to derive both the mullions and the
+// floor lines so every line — regardless of which zone it's in — sits on
+// the same measured envelope instead of being eyeballed per zone.
+function facadeEnvelope(x: number): { top: number; base: number } {
+  if (x <= CORNER_X) return { top: CORNER_TOP, base: CORNER_BASE };
+  if (x <= PILASTER_X_RANGE[0]) {
+    const t = (x - CORNER_X) / (PILASTER_X_RANGE[0] - CORNER_X);
+    return {
+      top: CORNER_TOP + t * (PILASTER_TOP_RANGE[0] - CORNER_TOP),
+      base: CORNER_BASE + t * (PILASTER_BASE_RANGE[0] - CORNER_BASE),
+    };
   }
-  return rects;
+  return {
+    top: lerp(x, PILASTER_X_RANGE, PILASTER_TOP_RANGE),
+    base: lerp(x, PILASTER_X_RANGE, PILASTER_BASE_RANGE),
+  };
 }
 
-const MAIN_WINDOWS = buildMainWindows();
-
-// The near-edge-on return facade's own window column — measured
-// separately since it isn't part of the receding pilaster rhythm (it
-// faces almost directly across the frame rather than away into the
-// perspective). Only four rows kept, not five — the fifth would sit low
-// enough to collide with the fence/ground line below.
-const RETURN_WINDOWS: Array<[number, number, number, number]> = [
-  [14.5, 1.5, 9.5, 6.75],
-  [14.5, 11.25, 9.5, 6.75],
-  [14.5, 20.625, 9.5, 6.75],
-  [14.5, 30, 9.5, 6.75],
+// Window-edge mullions — full facade height at their own x, not just
+// spanning their window's floor band — read as real vertical structure the
+// way the corner pier and pilasters do, just a step quieter. Four zones:
+// the return facade's own window column, the first main-facade bay right
+// past the corner (the one most likely to get missed), and two per
+// pilaster bay across the receding run.
+const MULLION_X = [
+  6.5, 14.5, // return facade window
+  19, 26.5, // first main-facade bay, past the corner
+  ...PILASTER_X.slice(0, -1).flatMap((x1, i) => {
+    const x2 = PILASTER_X[i + 1];
+    const bayWidth = x2 - x1;
+    return [x1 + bayWidth * 0.18, x1 + bayWidth * 0.82];
+  }),
 ];
 
-// Floor-divider lines across the pilaster run — one per floor boundary
-// (six lines bracket the five window rows), each end interpolated from
-// the same WINDOW_TOP_RANGE/BASE_RANGE the windows themselves use, so
-// they land exactly at each floor's band edge rather than approximating it.
-function buildFloorLines(): Array<[number, number, number, number]> {
-  const lines: Array<[number, number, number, number]> = [];
-  for (let f = 0; f <= WINDOW_FLOORS; f++) {
-    const y1 = WINDOW_TOP_RANGE[0] + (f * (WINDOW_BASE_RANGE[0] - WINDOW_TOP_RANGE[0])) / WINDOW_FLOORS;
-    const y2 = WINDOW_TOP_RANGE[1] + (f * (WINDOW_BASE_RANGE[1] - WINDOW_TOP_RANGE[1])) / WINDOW_FLOORS;
-    lines.push([50, y1, 80, y2]);
+const MULLIONS = MULLION_X.map((x) => ({ x, ...facadeEnvelope(x) }));
+
+// Floor-divider lines — six boundaries bracketing five floors, each drawn
+// as one continuous path across the *entire* facade width (return facade
+// through the last pilaster), not per-zone fragments. Sampled at every x
+// where the facade envelope actually changes shape (the corner, the
+// connector's two edges, and each pilaster) so the line visibly kisses the
+// corner and every pilaster at the exact height `facadeEnvelope` puts them,
+// the way a real floor slab reads continuously behind a plain wall too.
+const FLOOR_SAMPLE_X = [6, CORNER_X, 27, ...PILASTER_X];
+const FLOOR_COUNT = 5;
+
+function buildFloorLines(): string[] {
+  const paths: string[] = [];
+  for (let k = 0; k <= FLOOR_COUNT; k++) {
+    const points = FLOOR_SAMPLE_X.map((x) => {
+      const { top, base } = facadeEnvelope(x);
+      const y = top + (k / FLOOR_COUNT) * (base - top);
+      return `${x},${s(y).toFixed(2)}`;
+    });
+    paths.push(`M ${points.join(" L ")}`);
   }
-  return lines;
+  return paths;
 }
 
 const FLOOR_LINES = buildFloorLines();
@@ -95,14 +98,15 @@ const FLOOR_LINES = buildFloorLines();
 // A representative subset of vertices, not every one — the "points" stage
 // reads as survey markers establishing the form, not a dense scatter.
 const VERTEX_POINTS: Array<[number, number]> = [
-  [6, 2.25],
-  [13, 1.125],
-  [17.5, 1.5],
-  [40, 4.875],
-  [65, 9.75],
-  [80, 13.875],
-  [17.5, 43.5],
-  ...PILASTER_POINTS.filter((_, i) => i % 2 === 0).map((c): [number, number] => [c.x, c.top]),
+  [6, s(3)],
+  [13, s(1.5)],
+  [CORNER_X, s(CORNER_TOP)],
+  [27, s(facadeEnvelope(27).top)],
+  [40, s(6.5)],
+  [65, s(13)],
+  [80, s(18.5)],
+  [CORNER_X, s(CORNER_BASE)],
+  ...PILASTER_X.filter((_, i) => i % 2 === 0).map((x): [number, number] => [x, s(lerp(x, PILASTER_X_RANGE, PILASTER_TOP_RANGE))]),
 ];
 
 // Perspective construction lines — the roofline's near corner and two
@@ -111,27 +115,28 @@ const VERTEX_POINTS: Array<[number, number]> = [
 // rising roofline, this facade's roof and base converge toward each other
 // moving right (the building foreshortens as it recedes), which places the
 // vanishing point down and to the right rather than up and to the right.
-const VANISHING_POINT: [number, number] = [120, 24];
+const VANISHING_POINT: [number, number] = [120, s(32)];
 const VOLUME_ORIGINS: Array<[number, number]> = [
-  [17.5, 1.5],
-  [50, 6],
-  [80, 13.875],
+  [CORNER_X, s(CORNER_TOP)],
+  [50, s(8)],
+  [80, s(18.5)],
 ];
 
 /**
  * The building's own surfaces, broken into discrete panels — the near
- * (nearly edge-on) return facade, the plain connector wall between it and
- * the first pilaster, each pilaster bay individually, and the ground/fence
- * strip. Rendered as flat-shaded fills during the SVG blueprint's "surfaces
- * gain material" beat, sitting under the linework. The photograph itself is
- * a separate, single full-bleed layer (see Hero.tsx) — not clipped through
- * these shapes — so these panels are purely a blueprint-visualisation
- * concern now.
+ * (nearly edge-on) return facade, the first main-facade bay past the
+ * corner, the plain connector wall, each pilaster bay individually, and
+ * the ground/fence strip. Rendered as flat-shaded fills during the SVG
+ * blueprint's "surfaces gain material" beat, sitting under the linework.
+ * The photograph itself is a separate, single full-bleed layer (see
+ * Hero.tsx) — not clipped through these shapes — so these panels are
+ * purely a blueprint-visualisation concern now.
  */
 function buildPanels(): Array<{ key: string; rect: [number, number, number, number] }> {
   const panels: Array<{ key: string; rect: [number, number, number, number] }> = [
-    { key: "return-facade", rect: [6, 2.25, 11.5, 39.75] },
-    { key: "connector", rect: [17.5, 2.25, 32.5, 39.75] },
+    { key: "return-facade", rect: [6, s(2), 11.5, s(56)] },
+    { key: "near-bay", rect: [CORNER_X, s(2), 9.5, s(56)] },
+    { key: "connector", rect: [27, s(4), 23, s(53)] },
   ];
   // Bays between each pair of pilasters. No trailing bay past the last
   // pilaster (unlike a colonnade running to the frame edge) — the roofline
@@ -140,13 +145,12 @@ function buildPanels(): Array<{ key: string; rect: [number, number, number, numb
   for (let i = 0; i < PILASTER_X.length - 1; i++) {
     const x1 = PILASTER_X[i];
     const x2 = PILASTER_X[i + 1];
-    const top = Math.min(
-      lerp(x1, PILASTER_X_RANGE, PILASTER_TOP_RANGE),
-      lerp(x2, PILASTER_X_RANGE, PILASTER_TOP_RANGE),
+    const top = s(
+      Math.min(lerp(x1, PILASTER_X_RANGE, PILASTER_TOP_RANGE), lerp(x2, PILASTER_X_RANGE, PILASTER_TOP_RANGE)),
     );
     panels.push({ key: `bay-${i}`, rect: [x1, top - 1.125, x2 - x1, 42 - top] });
   }
-  panels.push({ key: "ground", rect: [6, 42, 74, 4.5] });
+  panels.push({ key: "ground", rect: [6, s(56), 74, s(6)] });
   return panels;
 }
 
@@ -159,30 +163,36 @@ const PANELS = buildPanels();
  * noisy, uncontrolled results from something like an SVG feConvolveMatrix or
  * Canvas Sobel filter; hand-authored paths give full art-direction control
  * over which lines actually read as "this building" (the roofline sweep,
- * the near corner pier, the pilaster rhythm) versus incidental photographic
- * detail.
+ * the near corner pier, the pilaster and mullion rhythm) versus incidental
+ * photographic detail.
  *
  * Coordinates were measured directly off the photo, not estimated by eye —
  * a 1%-increment grid was overlaid on the full image and on zoomed crops of
- * the corner and pilaster run specifically, and each point read off that
- * grid.
+ * the corner, the bay just past it, and the pilaster run specifically, and
+ * each point read off that grid.
+ *
+ * The facade is deliberately drawn as a continuous grid of full-length
+ * lines (mullions running the facade's own height, floor lines running the
+ * facade's own width) rather than a closed rectangle per window — that
+ * reads as precise structural linework, the way a real elevation drawing
+ * is built from lines that keep going past the feature they define, not as
+ * a scatter of disconnected boxes.
  *
  * Line weights are deliberately hierarchical, not uniform — the roofline
  * (the one big gesture) reads strongest; the corner pier and pilasters are
- * secondary; the window outlines sit a step quieter than the pilasters
- * they're nested inside; the ground/fence line, floor-divider lines, and
- * dimension mark are the quietest, thin and low-opacity, the way a real
- * construction drawing has a clear visual hierarchy rather than every line
- * shouting equally.
+ * next; the mullions are a step quieter than the pilasters they run
+ * alongside; the ground line, floor-divider lines, and dimension mark are
+ * the quietest, thin and low-opacity, the way a real construction drawing
+ * has a clear visual hierarchy rather than every line shouting equally.
  *
  * Every element carries `data-blueprint-*` so Hero.tsx can choreograph
  * groups independently through the construction sequence: point (vertices,
  * appear first), primary (the roofline), column (corner pier + pilasters),
- * window (every individual window outline, per-bay and per-floor), secondary
- * (ground/fence line, floor-divider lines — the quiet supporting lines),
- * volume (perspective construction lines — the "this has depth" beat),
- * surface (the panel fills — the "this has material" beat), tick (one
- * restrained dimension mark).
+ * mullion (window-edge verticals, a step quieter), secondary (ground line,
+ * floor-divider lines — the quiet supporting lines), volume (perspective
+ * construction lines — the "this has depth" beat), surface (the panel
+ * fills — the "this has material" beat), tick (one restrained dimension
+ * mark).
  *
  * This linework sits directly on top of the photograph in Hero.tsx (no
  * masking shape between them): it draws in over the still-hidden photo,
@@ -226,7 +236,7 @@ export function BuildingBlueprint() {
 
         {/* The near corner pier — the building's own dominant vertical, not
             a portico column */}
-        <path data-blueprint-column strokeWidth="0.11" opacity="0.75" d="M 17.5,1.5 L 17.5,43.5" />
+        <path data-blueprint-column strokeWidth="0.11" opacity="0.75" d={`M ${CORNER_X},${s(CORNER_TOP)} L ${CORNER_X},${s(CORNER_BASE)}`} />
         <path data-blueprint-secondary strokeWidth="0.06" opacity="0.5" d="M 6,2.25 L 6,42" />
 
         {/* Pilasters, rhythmic left to right, heights following the
@@ -240,30 +250,30 @@ export function BuildingBlueprint() {
               data-blueprint-column
               strokeWidth="0.1"
               opacity="0.7"
-              d={`M ${x},${top.toFixed(2)} L ${x},${base.toFixed(2)}`}
+              d={`M ${x},${s(top).toFixed(2)} L ${x},${s(base).toFixed(2)}`}
             />
           );
         })}
 
-        {/* Every individual window outline — the return facade's column
-            plus five floors across each pilaster bay — not just the
-            pilaster rhythm around them */}
-        <g data-blueprint-window strokeWidth="0.045" opacity="0.6">
-          {[...RETURN_WINDOWS, ...MAIN_WINDOWS].map(([x, y, wWidth, wHeight], i) => (
-            <rect key={i} x={x} y={y} width={wWidth} height={wHeight} />
+        {/* Window-edge mullions — full facade height at their own x, a
+            continuous vertical grid rather than a box per window */}
+        <g data-blueprint-mullion strokeWidth="0.045" opacity="0.55">
+          {MULLIONS.map((m) => (
+            <path key={m.x} d={`M ${m.x},${s(m.top).toFixed(2)} L ${m.x},${s(m.base).toFixed(2)}`} />
           ))}
         </g>
 
         {/* Ground/fence line + floor-divider lines — quiet supporting
-            structure, the thinnest, faintest lines on the page */}
+            structure, the thinnest, faintest lines on the page. Each floor
+            line runs the full facade width in one continuous path. */}
         <path data-blueprint-secondary strokeWidth="0.05" opacity="0.4" d="M 6,48 L 90,42" />
-        {FLOOR_LINES.map(([x1, y1, x2, y2], i) => (
-          <path key={i} data-blueprint-secondary strokeWidth="0.04" opacity="0.3" d={`M ${x1},${y1.toFixed(2)} L ${x2},${y2.toFixed(2)}`} />
+        {FLOOR_LINES.map((d, i) => (
+          <path key={i} data-blueprint-secondary strokeWidth="0.04" opacity="0.3" d={d} />
         ))}
 
         {/* One restrained dimension mark — not a HUD, just a single technical note */}
         <g data-blueprint-tick strokeWidth="0.06" opacity="0.5">
-          <path d="M 3,1.5 L 5,1.5 M 3,43.5 L 5,43.5 M 4,1.5 L 4,43.5" />
+          <path d={`M 3,${s(CORNER_TOP)} L 5,${s(CORNER_TOP)} M 3,${s(CORNER_BASE)} L 5,${s(CORNER_BASE)} M 4,${s(CORNER_TOP)} L 4,${s(CORNER_BASE)}`} />
         </g>
       </g>
 
