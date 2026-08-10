@@ -8,50 +8,36 @@ import { ParticleField } from "@/components/motion/ParticleField";
 import { GrainOverlay } from "@/components/motion/GrainOverlay";
 import { MagneticButton } from "@/components/motion/MagneticButton";
 import { BuildingBlueprint } from "@/components/motion/BuildingBlueprint";
+import { BuildingPhotograph } from "@/components/motion/BuildingPhotograph";
 import { heroContent } from "@/data/site-config";
-import { CustomEase } from "@/lib/gsap";
 import { CURTAIN_START, CURTAIN_DURATION, REVEAL_AT } from "@/lib/hero-timing";
 
 const ALL_HERO_SELECTORS = "[data-hero-brandmark], [data-hero-char], [data-hero-location], [data-hero-cta]";
 
-// A camera dolly has weight — it doesn't ease off with pure math, it settles
-// with a faint overshoot, like the operator's own hand catching the move.
-// Guarded the same way gsap.ts gates its own registerPlugin call — this
-// runs at module-eval time, which also happens during SSR, where GSAP
-// plugins are never registered (no `window`) and CustomEase.create() would
-// otherwise warn ("Please gsap.registerPlugin(CustomEase)") on every build.
-if (typeof window !== "undefined") {
-  CustomEase.create("cameraPush", "M0,0 C0.32,0.01 0.12,1.02 1,1");
-}
-
-// Softer than a first pass — enough to read as "digital/technical" without
-// crushing the building's actual colour and detail away.
-const DUOTONE_FILTER = "grayscale(0.5) sepia(0.12) hue-rotate(150deg) saturate(1.5) brightness(0.92) contrast(1.1)";
-const REALITY_FILTER = "grayscale(0) sepia(0) hue-rotate(0deg) saturate(1.12) brightness(1) contrast(1.08)";
-
 /**
- * Act 1 — Arrival (prompt.md §43). One continuous construction, not a
- * blueprint layer crossfading into a photograph: vertices appear first
- * (survey points establishing the form), connect into the roofline and
- * column rhythm, a set of perspective construction lines flashes through
- * to establish depth, and flat-shaded surfaces fill in behind the linework.
- * The real photograph then resolves through those exact same surface
- * shapes — the panels in BuildingBlueprint.tsx, the return facade, the
- * connector wall, each pilaster bay individually, the ground plane — each one a
- * separately clip-path'd, separately opacity-animated slice of the same
- * photo, staggered left to right across the facade. There is no single
- * recognisable "reveal shape": the building's own geometry is the mask.
- * A slow camera push (a bespoke `CustomEase` curve, not stock easing)
- * carries the whole sequence forward while the grade lifts from a cool
- * "digital" duotone toward the building's true warm colour, and a single
- * restrained light sweep crosses the facade as the grade finishes
- * resolving — the one signature beat, not a HUD. The title's characters
- * land last, snapping out of their own blur into focus, rippling in from
- * the right where the roofline's own sweep terminates — and the same
- * masked foreground layer that gives the photo its parallax also sits
- * above the title, so the architecture genuinely overlaps the type at the
- * depth plane where they'd really intersect, rather than the title just
- * being pasted on top.
+ * Act 1 — Arrival. The building constructs itself from its own architectural
+ * blueprint, in a fixed, unmoving composition: DARK → BLUEPRINT → BLUEPRINT
+ * GAINS DIMENSION → BUILDING MATERIALIZES REGION BY REGION → BLUEPRINT
+ * DISSOLVES → real photograph → title.
+ *
+ * Deliberately NOT a camera move of any kind — no scale, no pan, no dolly.
+ * The photograph (via BuildingPhotograph.tsx) and the blueprint (via
+ * BuildingBlueprint.tsx) both sit in one fixed `viewBox="0 0 100 75"`
+ * frame and never transform; only opacity, stroke-drawing, and per-panel
+ * clip-rect heights animate. The building never moves — only its visual
+ * state does.
+ *
+ * The materialization itself is the core effect: BuildingPhotograph clips
+ * the same photo through the building's own measured architectural panels
+ * (return facade, the bay past the corner, the connector wall, each
+ * pilaster bay, the ground/fence strip) — shared geometry with the
+ * blueprint via `@/lib/building-geometry` — and each panel's clip rect
+ * grows from zero height independently, staggered left to right with the
+ * ground/foreground strip held back until last. At the sequence's
+ * midpoint several regions are mid-reveal simultaneously: some still bare
+ * blueprint, some fully photographic, one or two mid-grow between the two
+ * — there is no single wipe line or reveal shape, the building's own
+ * geometry is the mask.
  *
  * Title reveal is a hand-rolled overflow-mask/translateY animation rather
  * than the SplitText plugin — one fewer moving part (no plugin/font-load
@@ -62,13 +48,11 @@ const REALITY_FILTER = "grayscale(0) sepia(0) hue-rotate(0deg) saturate(1.12) br
 export function Hero() {
   const rootRef = useRef<HTMLElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
-  const pushRef = useRef<HTMLDivElement>(null);
-  const backgroundLayerRef = useRef<HTMLDivElement>(null);
-  const foregroundLayerRef = useRef<HTMLDivElement>(null);
   const blueprintRef = useRef<HTMLDivElement>(null);
   const coreLightRef = useRef<HTMLDivElement>(null);
   const sweepRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<HTMLDivElement>(null);
+  const foregroundLayerRef = useRef<HTMLDivElement>(null);
   const titleWords = heroContent.title.split(" ");
 
   useGSAP(
@@ -77,9 +61,9 @@ export function Hero() {
 
       function forceVisible() {
         gsap.set(ALL_HERO_SELECTORS, { clearProps: "all" });
-        gsap.set(pushRef.current, { scale: 1 });
-        gsap.set(foregroundLayerRef.current, { scale: 1, x: 0, y: 0, opacity: 0.4, filter: REALITY_FILTER });
-        gsap.set(backgroundLayerRef.current, { filter: REALITY_FILTER, x: 0, y: 0, opacity: 1 });
+        gsap.set(foregroundLayerRef.current, { opacity: 0.4 });
+        gsap.set("[data-reveal-base]", { opacity: 1 });
+        gsap.set("[data-reveal-clip]", { attr: { height: (_i: number, target: SVGRectElement) => target.dataset.fullHeight ?? "0" } });
         gsap.set(blueprintRef.current, { opacity: 0 });
         gsap.set(coreLightRef.current, { opacity: 0 });
         gsap.set(sweepRef.current, { opacity: 0 });
@@ -99,11 +83,11 @@ export function Hero() {
       const volumeLines = "[data-blueprint-volume]";
       const surfaceFills = "[data-blueprint-surface]";
       const tickMark = "[data-blueprint-tick]";
+      const revealClips = "[data-reveal-clip]";
+      const revealBase = "[data-reveal-base]";
 
-      tl.set(pushRef.current, { scale: 1.22 })
-        .set(foregroundLayerRef.current, { scale: 1.34, x: 0, y: 0, opacity: 0 })
-        .set(backgroundLayerRef.current, { filter: DUOTONE_FILTER, x: 0, opacity: 0 })
-        .set(blueprintRef.current, { opacity: 1 })
+      tl.set(blueprintRef.current, { opacity: 1 })
+        .set(foregroundLayerRef.current, { opacity: 0 })
         .set(coreLightRef.current, { opacity: 0, scale: 0.5 })
         .set(sweepRef.current, { opacity: 0, xPercent: -150 })
         .set(pointNodes, { opacity: 0, scale: 0 })
@@ -111,63 +95,82 @@ export function Hero() {
         .set(volumeLines, { opacity: 0, drawSVG: "0%" })
         .set(surfaceFills, { opacity: 0 })
         .set(tickMark, { opacity: 0 })
+        .set(revealBase, { opacity: 0 })
+        .set(revealClips, { attr: { height: 0 } })
         .set("[data-hero-char]", { opacity: 0, yPercent: 115, filter: "blur(7px)" })
         .set("[data-hero-location]", { opacity: 0, y: 12 })
         .set("[data-hero-cta]", { opacity: 0, y: 12 })
         .set("[data-hero-brandmark]", { opacity: 0, y: 10 })
 
-        // ANTICIPATION (~0–0.6s) — the ident's point of light holds
-        // briefly, then hands off as the vertices begin to appear. Short:
-        // the wait shouldn't outstay its welcome.
+        // STATE 1 — DARK (~0–0.4s): the ident's point of light holds
+        // briefly against pure darkness, then hands off as the first
+        // survey points begin to appear. Short: the wait shouldn't
+        // outstay its welcome.
         .to(coreLightRef.current, { opacity: 1, scale: 1, duration: 0.22, ease: "power2.out" }, CURTAIN_START)
         .to(coreLightRef.current, { opacity: 0, duration: 0.3, ease: "power2.in" }, CURTAIN_START + 0.28)
 
-        // ARCHITECTURE EMERGES (~0.4–1.9s) — points establish the form,
-        // then connect into the roofline (the one big gesture), the
+        // STATE 2 — BLUEPRINT DRAWS (~0.4–1.55s): points establish the
+        // form, then connect into the roofline (the one big gesture), the
         // column rhythm, the quieter window-edge mullions, and the
         // full-width floor-divider lines. Points dissolve as the lines
-        // that connect them take over.
+        // that connect them take over. By the end of this block the
+        // building is fully recognisable from linework alone, on pure
+        // darkness — no photograph anywhere yet.
         .to(pointNodes, { opacity: 1, scale: 1, duration: 0.3, stagger: { each: 0.02, from: "random" }, ease: "back.out(2)" }, CURTAIN_START + 0.4)
         .to(pointNodes, { opacity: 0, duration: 0.25, ease: "power1.in" }, CURTAIN_START + 0.78)
         .to(primaryLine, { drawSVG: "100%", duration: 0.55, ease: "power2.inOut" }, CURTAIN_START + 0.55)
         .to(columnLines, { drawSVG: "100%", duration: 0.32, stagger: { each: 0.04, from: "start" }, ease: "power1.inOut" }, CURTAIN_START + 0.85)
-        .to(mullionLines, { drawSVG: "100%", duration: 0.4, stagger: { each: 0.02, from: "start" }, ease: "power1.inOut" }, CURTAIN_START + 1.05)
-        .to(secondaryLines, { drawSVG: "100%", duration: 0.4, stagger: 0.045, ease: "power2.inOut" }, CURTAIN_START + 1.55)
-        .to(tickMark, { opacity: 0.7, duration: 0.2 }, CURTAIN_START + 1.85)
+        .to(mullionLines, { drawSVG: "100%", duration: 0.35, stagger: { each: 0.018, from: "start" }, ease: "power1.inOut" }, CURTAIN_START + 1.05)
+        .to(secondaryLines, { drawSVG: "100%", duration: 0.3, stagger: 0.035, ease: "power2.inOut" }, CURTAIN_START + 1.3)
+        .to(tickMark, { opacity: 0.7, duration: 0.2 }, CURTAIN_START + 1.5)
 
-        // BUILDING RECONSTRUCTION (~1.4–3.2s) — perspective construction
-        // lines flash through to establish depth, flat-shaded surfaces
-        // gain "material", and the real photograph fades in beneath the
-        // linework as one whole image — no panels, no clip-path blocks,
-        // just the photo materialising directly under the lines that are
-        // already tracing it — while the camera push carries the whole
-        // frame forward and the grade begins lifting out of duotone.
-        .to(volumeLines, { opacity: 1, drawSVG: "100%", duration: 0.3, ease: "power2.out" }, CURTAIN_START + 1.4)
-        .to(volumeLines, { opacity: 0, duration: 0.3, ease: "power1.in" }, CURTAIN_START + 1.85)
-        .to(surfaceFills, { opacity: 1, duration: 0.35, ease: "power2.out" }, CURTAIN_START + 1.55)
-        .to(backgroundLayerRef.current, { opacity: 1, duration: 0.7, ease: "power2.inOut" }, CURTAIN_START + 1.85)
-        .to(foregroundLayerRef.current, { opacity: 0.4, duration: 0.5, ease: "power2.out" }, CURTAIN_START + 2.6)
-        .to(pushRef.current, { scale: 1, duration: CURTAIN_DURATION - 1.5, ease: "cameraPush" }, CURTAIN_START + 1.85)
-        .to(foregroundLayerRef.current, { scale: 1, duration: CURTAIN_DURATION - 1.5, ease: "cameraPush" }, CURTAIN_START + 1.85)
-        .to(backgroundLayerRef.current, { y: -1.1, duration: CURTAIN_DURATION - 1.5, ease: "cameraPush" }, CURTAIN_START + 1.85)
-        .to(foregroundLayerRef.current, { y: -2.4, duration: CURTAIN_DURATION - 1.5, ease: "cameraPush" }, CURTAIN_START + 1.85)
-        .to([primaryLine, columnLines, mullionLines, secondaryLines, tickMark, surfaceFills], { opacity: 0, duration: 0.5, ease: "power2.in" }, REVEAL_AT - 0.9)
-        .to(blueprintRef.current, { opacity: 0, duration: 0.1 }, REVEAL_AT - 0.35)
+        // STATE 3 — BLUEPRINT GAINS DIMENSION (~1.4–1.6s): a quick flash
+        // of perspective construction lines toward the vanishing point,
+        // and the flat-shaded surface panels gain "material" — the
+        // building reads as having depth and mass just before it starts
+        // becoming physically real.
+        .to(volumeLines, { opacity: 1, drawSVG: "100%", duration: 0.28, ease: "power2.out" }, CURTAIN_START + 1.4)
+        .to(volumeLines, { opacity: 0, duration: 0.28, ease: "power1.in" }, CURTAIN_START + 1.72)
+        .to(surfaceFills, { opacity: 1, duration: 0.3, ease: "power2.out" }, CURTAIN_START + 1.5)
 
-        // EVENT REVEAL — the grade finishes lifting to true colour, one
-        // restrained light sweep crosses the facade as it settles, and
-        // everything lands together: characters snapping out of their own
-        // blur into focus, rippling in from the right where the roofline
-        // terminated. The masked foreground layer (already stacked above
-        // the title in the DOM) is what gives the type its depth plane —
-        // no separate animation needed, it's just already there.
+        // STATE 4/5 — MATERIALIZATION (~1.55–2.9s): the real photograph
+        // is revealed strictly through the building's own architectural
+        // regions — see BuildingPhotograph.tsx / `@/lib/building-geometry`
+        // — each panel's clip rect growing from zero height independently,
+        // left to right across the facade with the ground/foreground strip
+        // (fence, pipes, car) held back until last since it isn't the
+        // subject. No camera motion, no whole-image crossfade: the
+        // building's own geometry is the reveal shape, and different
+        // regions are visibly in different states at once.
         .to(
-          [backgroundLayerRef.current, foregroundLayerRef.current],
-          { filter: REALITY_FILTER, duration: 0.9, ease: "power2.inOut" },
-          REVEAL_AT - 1.1,
+          revealClips,
+          {
+            attr: { height: (_i: number, target: SVGRectElement) => target.dataset.fullHeight ?? "0" },
+            duration: 0.45,
+            stagger: { each: 0.11, from: "start" },
+            ease: "power2.inOut",
+          },
+          CURTAIN_START + 1.55,
         )
-        .to(sweepRef.current, { opacity: 0.4, duration: 0.05 }, REVEAL_AT - 0.4)
-        .to(sweepRef.current, { xPercent: 150, opacity: 0, duration: 0.55, ease: "power1.inOut" }, REVEAL_AT - 0.35)
+        .to(revealBase, { opacity: 1, duration: 1.3, ease: "power2.inOut" }, CURTAIN_START + 1.6)
+        .to(foregroundLayerRef.current, { opacity: 0.4, duration: 0.5, ease: "power2.out" }, CURTAIN_START + 2.5)
+
+        // STATE 6 — BLUEPRINT DISSOLVES (~2.9–3.3s): every line and
+        // surface fill fades away together now that the real photograph
+        // fully occupies the frame beneath them, leaving the finished
+        // building on its own.
+        .to([primaryLine, columnLines, mullionLines, secondaryLines, tickMark, surfaceFills], { opacity: 0, duration: 0.4, ease: "power2.in" }, REVEAL_AT - 0.5)
+        .to(blueprintRef.current, { opacity: 0, duration: 0.1 }, REVEAL_AT - 0.12)
+
+        // STATE 7 — EVENT REVEAL: one restrained light sweep crosses the
+        // facade as the construction settles, and everything lands
+        // together: characters snapping out of their own blur into
+        // focus, rippling in from the right where the roofline's own
+        // sweep terminated. The masked foreground layer (already stacked
+        // above the title in the DOM) is what gives the type its depth
+        // plane — no separate animation needed, it's just already there.
+        .to(sweepRef.current, { opacity: 0.4, duration: 0.05 }, REVEAL_AT - 0.3)
+        .to(sweepRef.current, { xPercent: 150, opacity: 0, duration: 0.55, ease: "power1.inOut" }, REVEAL_AT - 0.25)
         .to("[data-hero-brandmark]", { opacity: 1, y: 0, duration: 0.6, ease: "power2.out" }, REVEAL_AT)
         .to(
           "[data-hero-char]",
@@ -191,16 +194,12 @@ export function Hero() {
       const safetyTimer = window.setTimeout(forceVisible, (REVEAL_AT + 2.5) * 1000);
 
       // Continuous cursor-reactive depth (prompt.md §8 "hover depth /
-      // cursor-based movement") — two layers at different speeds so the
-      // scene reads as having real depth: the particle field, being
-      // "closer" to the viewer, drifts further than the background photo.
-      // This is the only motion left once the sequence settles — everything
-      // else is a one-shot entrance, nothing loops or keeps animating on
-      // its own.
-      const quickMain = {
-        x: gsap.quickTo(imageRef.current, "x", { duration: 0.8, ease: "power3.out" }),
-        y: gsap.quickTo(imageRef.current, "y", { duration: 0.8, ease: "power3.out" }),
-      };
+      // cursor-based movement") for the particle field only — the building
+      // photograph itself is a fixed composition per the brief (no camera
+      // motion of any kind), so only the "closer" decorative particle
+      // layer drifts with the cursor once the sequence settles. This is
+      // the only motion left once the sequence settles — everything else
+      // is a one-shot entrance, nothing loops or keeps animating on its own.
       const quickParticles = {
         x: gsap.quickTo(particlesRef.current, "x", { duration: 0.6, ease: "power3.out" }),
         y: gsap.quickTo(particlesRef.current, "y", { duration: 0.6, ease: "power3.out" }),
@@ -211,8 +210,6 @@ export function Hero() {
         if (!rect) return;
         const relX = (e.clientX - rect.left) / rect.width - 0.5;
         const relY = (e.clientY - rect.top) / rect.height - 0.5;
-        quickMain.x(relX * 16);
-        quickMain.y(relY * 16);
         quickParticles.x(relX * 34);
         quickParticles.y(relY * 34);
       }
@@ -237,39 +234,33 @@ export function Hero() {
         <ParticleField />
       </div>
 
-      {/* Campus imagery: points -> lines -> volume -> surfaces -> the real
-          photo resolving through those exact same surface shapes, panel by
-          panel across the facade — never a single visible reveal shape.
-          The foreground layer (building corner + nearer trees) is a separate
-          sibling below, stacked ABOVE the title text — the depth plane
-          where architecture and typography genuinely overlap. */}
+      {/* Campus imagery: a single fixed composition, never scaled or
+          panned. Points -> lines -> volume -> surfaces -> the real photo
+          resolving strictly through the building's own architectural
+          regions (BuildingPhotograph.tsx), region by region across the
+          facade — never a single visible reveal shape, never a camera move. */}
       <div
         ref={imageRef}
         data-hero-image
         className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--color-surface-2),_var(--color-void))]"
         style={{ clipPath: "inset(0% round 24px)" }}
       >
-        <div ref={pushRef} className="absolute inset-0">
-          <div
-            ref={backgroundLayerRef}
-            className="absolute inset-0 bg-cover bg-center"
-            style={{ backgroundImage: `url(${heroContent.campusImage.src})` }}
-          />
-          {/* Film grain disguises the source photo's compression as an
-              intentional cinematic grade instead of a stretched, soft image. */}
-          <GrainOverlay opacity={0.06} />
-        </div>
+        <BuildingPhotograph src={heroContent.campusImage.src} />
+
+        {/* Film grain disguises the source photo's compression as an
+            intentional cinematic grade instead of a stretched, soft image. */}
+        <GrainOverlay opacity={0.06} />
 
         {/* The blueprint's linework sits directly on the photo, no masking
-            shape between them — the lines draw themselves, then the photo
-            underneath fades in as one whole image (not panels/blocks), and
-            the lines dissolve once the grade resolves to true colour. */}
+            shape between them — the lines draw themselves over pure
+            darkness, the real photo materializes region by region
+            underneath, and the lines dissolve once it has fully resolved. */}
         <div ref={blueprintRef} className="absolute inset-0">
           <BuildingBlueprint />
         </div>
 
         {/* Signature moment — one restrained light sweep across the facade
-            as the grade finishes resolving. Neutral, not gold. */}
+            as the construction settles. Neutral, not gold. */}
         <div
           ref={sweepRef}
           aria-hidden
@@ -296,8 +287,8 @@ export function Hero() {
 
         {/* Hidden, priority-loaded Image purely so Next.js issues an early
             fetch/preload hint for the campus photo — the actual visible
-            reveal is driven by the plain `background-image` panel divs
-            above, which share the browser's cached copy of the same URL. */}
+            reveal is driven by BuildingPhotograph's SVG layers above,
+            which share the browser's cached copy of the same URL. */}
         <Image
           src={heroContent.campusImage.src}
           alt=""
@@ -351,12 +342,13 @@ export function Hero() {
         </div>
       </div>
 
-      {/* Same source as the background layer, masked to just the
-          foreground band (building corner + nearer trees) — deliberately stacked
+      {/* Same source as the main photograph, masked to just the foreground
+          band (building corner + nearer trees) — deliberately stacked
           ABOVE the title text (not inside the -z-10 image block) so the
           architecture genuinely overlaps the typography where they'd
           intersect at this depth, rather than the title sitting flatly on
-          top of everything. */}
+          top of everything. A fixed composition like everything else here
+          — opacity only, never scaled or translated. */}
       <div
         ref={foregroundLayerRef}
         aria-hidden
