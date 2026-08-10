@@ -94,6 +94,7 @@ export function Hero() {
       const pointNodes = "[data-blueprint-point]";
       const primaryLine = "[data-blueprint-primary]";
       const columnLines = "[data-blueprint-column]";
+      const windowLines = "[data-blueprint-window] rect";
       const secondaryLines = "[data-blueprint-secondary]";
       const volumeLines = "[data-blueprint-volume]";
       const surfaceFills = "[data-blueprint-surface]";
@@ -106,7 +107,7 @@ export function Hero() {
         .set(coreLightRef.current, { opacity: 0, scale: 0.5 })
         .set(sweepRef.current, { opacity: 0, xPercent: -150 })
         .set(pointNodes, { opacity: 0, scale: 0 })
-        .set([primaryLine, columnLines, secondaryLines], { drawSVG: "0%" })
+        .set([primaryLine, columnLines, windowLines, secondaryLines], { drawSVG: "0%" })
         .set(volumeLines, { opacity: 0, drawSVG: "0%" })
         .set(surfaceFills, { opacity: 0 })
         .set(tickMark, { opacity: 0 })
@@ -121,16 +122,18 @@ export function Hero() {
         .to(coreLightRef.current, { opacity: 1, scale: 1, duration: 0.22, ease: "power2.out" }, CURTAIN_START)
         .to(coreLightRef.current, { opacity: 0, duration: 0.3, ease: "power2.in" }, CURTAIN_START + 0.28)
 
-        // ARCHITECTURE EMERGES (~0.4–1.5s) — points establish the form,
+        // ARCHITECTURE EMERGES (~0.4–1.9s) — points establish the form,
         // then connect into the roofline (the one big gesture), the
-        // column rhythm, and the quieter supporting lines. Points dissolve
-        // as the lines that connect them take over.
+        // column rhythm, every individual window across the facade, and
+        // the quieter supporting lines. Points dissolve as the lines that
+        // connect them take over.
         .to(pointNodes, { opacity: 1, scale: 1, duration: 0.3, stagger: { each: 0.02, from: "random" }, ease: "back.out(2)" }, CURTAIN_START + 0.4)
         .to(pointNodes, { opacity: 0, duration: 0.25, ease: "power1.in" }, CURTAIN_START + 0.78)
         .to(primaryLine, { drawSVG: "100%", duration: 0.55, ease: "power2.inOut" }, CURTAIN_START + 0.55)
         .to(columnLines, { drawSVG: "100%", duration: 0.32, stagger: { each: 0.04, from: "start" }, ease: "power1.inOut" }, CURTAIN_START + 0.85)
-        .to(secondaryLines, { drawSVG: "100%", duration: 0.4, stagger: 0.06, ease: "power2.inOut" }, CURTAIN_START + 1.05)
-        .to(tickMark, { opacity: 0.7, duration: 0.2 }, CURTAIN_START + 1.3)
+        .to(windowLines, { drawSVG: "100%", duration: 0.45, stagger: { each: 0.012, from: "start" }, ease: "power1.inOut" }, CURTAIN_START + 1.05)
+        .to(secondaryLines, { drawSVG: "100%", duration: 0.35, stagger: 0.05, ease: "power2.inOut" }, CURTAIN_START + 1.55)
+        .to(tickMark, { opacity: 0.7, duration: 0.2 }, CURTAIN_START + 1.8)
 
         // BUILDING RECONSTRUCTION (~1.4–3.2s) — perspective construction
         // lines flash through to establish depth, flat-shaded surfaces
@@ -148,7 +151,7 @@ export function Hero() {
         .to(foregroundLayerRef.current, { scale: 1, duration: CURTAIN_DURATION - 1.5, ease: "cameraPush" }, CURTAIN_START + 1.85)
         .to(backgroundLayerRef.current, { y: -1.1, duration: CURTAIN_DURATION - 1.5, ease: "cameraPush" }, CURTAIN_START + 1.85)
         .to(foregroundLayerRef.current, { y: -2.4, duration: CURTAIN_DURATION - 1.5, ease: "cameraPush" }, CURTAIN_START + 1.85)
-        .to([primaryLine, columnLines, secondaryLines, tickMark, surfaceFills], { opacity: 0, duration: 0.5, ease: "power2.in" }, REVEAL_AT - 0.9)
+        .to([primaryLine, columnLines, windowLines, secondaryLines, tickMark, surfaceFills], { opacity: 0, duration: 0.5, ease: "power2.in" }, REVEAL_AT - 0.9)
         .to(blueprintRef.current, { opacity: 0, duration: 0.1 }, REVEAL_AT - 0.35)
 
         // EVENT REVEAL — the grade finishes lifting to true colour, one

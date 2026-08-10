@@ -1,3 +1,4 @@
+
 // Pilaster x-positions along the receding facade, measured directly off the
 // photo (see component doc comment) — not evenly guessed. Top/base y
 // interpolated linearly between the two measured end pilasters so the row's
@@ -28,6 +29,68 @@ const PILASTER_POINTS = PILASTER_X.map((x) => ({
   x,
   top: lerp(x, PILASTER_X_RANGE, PILASTER_TOP_RANGE),
 }));
+
+// Individual window outlines, not just the pilaster rhythm around them —
+// five floors per bay, measured the same way as the pilasters: a top/base
+// range read off the photo at the two end pilasters, interpolated for
+// every bay in between so the windows shrink with the same perspective
+// recession as everything else on this facade. Windows sit inset within
+// each floor's band (18% margin each side, weighted toward the band's
+// lower half) rather than filling it, the way a real window sits below a
+// spandrel panel, not floor-to-ceiling.
+const WINDOW_FLOORS = 5;
+const WINDOW_TOP_RANGE: [number, number] = [7.5, 15];
+const WINDOW_BASE_RANGE: [number, number] = [39, 32.25];
+
+function buildMainWindows(): Array<[number, number, number, number]> {
+  const rects: Array<[number, number, number, number]> = [];
+  for (let i = 0; i < PILASTER_X.length - 1; i++) {
+    const x1 = PILASTER_X[i];
+    const x2 = PILASTER_X[i + 1];
+    const cx = (x1 + x2) / 2;
+    const top = lerp(cx, PILASTER_X_RANGE, WINDOW_TOP_RANGE);
+    const base = lerp(cx, PILASTER_X_RANGE, WINDOW_BASE_RANGE);
+    const bandHeight = (base - top) / WINDOW_FLOORS;
+    const bayWidth = x2 - x1;
+    const winWidth = bayWidth * 0.64;
+    const winX = x1 + bayWidth * 0.18;
+    for (let f = 0; f < WINDOW_FLOORS; f++) {
+      const bandTop = top + f * bandHeight;
+      rects.push([winX, bandTop + bandHeight * 0.15, winWidth, bandHeight * 0.55]);
+    }
+  }
+  return rects;
+}
+
+const MAIN_WINDOWS = buildMainWindows();
+
+// The near-edge-on return facade's own window column — measured
+// separately since it isn't part of the receding pilaster rhythm (it
+// faces almost directly across the frame rather than away into the
+// perspective). Only four rows kept, not five — the fifth would sit low
+// enough to collide with the fence/ground line below.
+const RETURN_WINDOWS: Array<[number, number, number, number]> = [
+  [14.5, 1.5, 9.5, 6.75],
+  [14.5, 11.25, 9.5, 6.75],
+  [14.5, 20.625, 9.5, 6.75],
+  [14.5, 30, 9.5, 6.75],
+];
+
+// Floor-divider lines across the pilaster run — one per floor boundary
+// (six lines bracket the five window rows), each end interpolated from
+// the same WINDOW_TOP_RANGE/BASE_RANGE the windows themselves use, so
+// they land exactly at each floor's band edge rather than approximating it.
+function buildFloorLines(): Array<[number, number, number, number]> {
+  const lines: Array<[number, number, number, number]> = [];
+  for (let f = 0; f <= WINDOW_FLOORS; f++) {
+    const y1 = WINDOW_TOP_RANGE[0] + (f * (WINDOW_BASE_RANGE[0] - WINDOW_TOP_RANGE[0])) / WINDOW_FLOORS;
+    const y2 = WINDOW_TOP_RANGE[1] + (f * (WINDOW_BASE_RANGE[1] - WINDOW_TOP_RANGE[1])) / WINDOW_FLOORS;
+    lines.push([50, y1, 80, y2]);
+  }
+  return lines;
+}
+
+const FLOOR_LINES = buildFloorLines();
 
 // A representative subset of vertices, not every one — the "points" stage
 // reads as survey markers establishing the form, not a dense scatter.
@@ -106,18 +169,20 @@ const PANELS = buildPanels();
  *
  * Line weights are deliberately hierarchical, not uniform — the roofline
  * (the one big gesture) reads strongest; the corner pier and pilasters are
- * secondary; the ground/fence line, window-band hints, and dimension mark
- * are the quietest, thin and low-opacity, the way a real construction
- * drawing has a clear visual hierarchy rather than every line shouting
- * equally.
+ * secondary; the window outlines sit a step quieter than the pilasters
+ * they're nested inside; the ground/fence line, floor-divider lines, and
+ * dimension mark are the quietest, thin and low-opacity, the way a real
+ * construction drawing has a clear visual hierarchy rather than every line
+ * shouting equally.
  *
  * Every element carries `data-blueprint-*` so Hero.tsx can choreograph
  * groups independently through the construction sequence: point (vertices,
  * appear first), primary (the roofline), column (corner pier + pilasters),
- * secondary (ground/fence line, window-band hints — the quiet supporting
- * lines), volume (perspective construction lines — the "this has depth"
- * beat), surface (the panel fills — the "this has material" beat), tick
- * (one restrained dimension mark).
+ * window (every individual window outline, per-bay and per-floor), secondary
+ * (ground/fence line, floor-divider lines — the quiet supporting lines),
+ * volume (perspective construction lines — the "this has depth" beat),
+ * surface (the panel fills — the "this has material" beat), tick (one
+ * restrained dimension mark).
  *
  * This linework sits directly on top of the photograph in Hero.tsx (no
  * masking shape between them): it draws in over the still-hidden photo,
@@ -180,11 +245,21 @@ export function BuildingBlueprint() {
           );
         })}
 
-        {/* Ground/fence line + window-band hints — quiet supporting
+        {/* Every individual window outline — the return facade's column
+            plus five floors across each pilaster bay — not just the
+            pilaster rhythm around them */}
+        <g data-blueprint-window strokeWidth="0.045" opacity="0.6">
+          {[...RETURN_WINDOWS, ...MAIN_WINDOWS].map(([x, y, wWidth, wHeight], i) => (
+            <rect key={i} x={x} y={y} width={wWidth} height={wHeight} />
+          ))}
+        </g>
+
+        {/* Ground/fence line + floor-divider lines — quiet supporting
             structure, the thinnest, faintest lines on the page */}
         <path data-blueprint-secondary strokeWidth="0.05" opacity="0.4" d="M 6,48 L 90,42" />
-        <path data-blueprint-secondary strokeWidth="0.05" opacity="0.35" d="M 50,22.5 L 80,25.5" />
-        <path data-blueprint-secondary strokeWidth="0.05" opacity="0.35" d="M 50,33.75 L 80,36" />
+        {FLOOR_LINES.map(([x1, y1, x2, y2], i) => (
+          <path key={i} data-blueprint-secondary strokeWidth="0.04" opacity="0.3" d={`M ${x1},${y1.toFixed(2)} L ${x2},${y2.toFixed(2)}`} />
+        ))}
 
         {/* One restrained dimension mark — not a HUD, just a single technical note */}
         <g data-blueprint-tick strokeWidth="0.06" opacity="0.5">
