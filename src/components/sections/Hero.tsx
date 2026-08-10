@@ -20,12 +20,16 @@ const ALL_HERO_SELECTORS = "[data-hero-brandmark], [data-hero-char], [data-hero-
  * GAINS DIMENSION → BUILDING MATERIALIZES REGION BY REGION → BLUEPRINT
  * DISSOLVES → real photograph → title.
  *
- * Deliberately NOT a camera move of any kind — no scale, no pan, no dolly.
- * The photograph (via BuildingPhotograph.tsx) and the blueprint (via
- * BuildingBlueprint.tsx) both sit in one fixed `viewBox="0 0 100 75"`
- * frame and never transform; only opacity, stroke-drawing, and per-panel
- * clip-rect heights animate. The building never moves — only its visual
- * state does.
+ * Deliberately NOT a camera move of any kind during construction — no
+ * scale, no pan, no dolly. The photograph (via BuildingPhotograph.tsx) and
+ * the blueprint (via BuildingBlueprint.tsx) both sit in one fixed
+ * `viewBox="0 0 100 75"` frame and never transform there; only opacity,
+ * stroke-drawing, and per-panel clip-rect heights animate. The building
+ * never moves during its own construction — only its visual state does.
+ * Once fully materialized, a small (±16px) cursor-reactive hover parallax
+ * on the settled photograph resumes — see `quickImage` below — the idle
+ * "hover depth" interactivity the rest of the site uses, not a construction
+ * camera move.
  *
  * The materialization itself is the core effect: BuildingPhotograph clips
  * the same photo through the building's own measured architectural panels
@@ -194,12 +198,33 @@ export function Hero() {
       const safetyTimer = window.setTimeout(forceVisible, (REVEAL_AT + 2.5) * 1000);
 
       // Continuous cursor-reactive depth (prompt.md §8 "hover depth /
-      // cursor-based movement") for the particle field only — the building
-      // photograph itself is a fixed composition per the brief (no camera
-      // motion of any kind), so only the "closer" decorative particle
-      // layer drifts with the cursor once the sequence settles. This is
-      // the only motion left once the sequence settles — everything else
-      // is a one-shot entrance, nothing loops or keeps animating on its own.
+      // cursor-based movement") once the sequence has settled — a small,
+      // direct translate (no scale, no perspective change) with the
+      // particle field, being "closer" to the viewer, drifting a bit
+      // further than the building photograph. This is a gentle idle-state
+      // hover effect, not a camera move of the opening sequence itself.
+      //
+      // The photograph is two separate DOM layers — imageRef (the main
+      // photo + blueprint, z-behind the title) and foregroundLayerRef (a
+      // masked duplicate of the same photo's bottom band, z-above the
+      // title, for the architecture/title depth-overlap) — so both must be
+      // driven by the *same* relX/relY each pointermove. Moving only one
+      // visibly shears the two copies of the photo apart at the boundary
+      // between them, reading as a blur/warp rather than a clean shift.
+      //
+      // quickTo's own internal easing (not a raw set) is what makes it
+      // track the cursor smoothly rather than snapping to each
+      // pointermove sample — keep it identical across both layers
+      // (duration/ease) so they stay in lockstep rather than drifting
+      // apart frame to frame.
+      const quickImage = {
+        x: gsap.quickTo(imageRef.current, "x", { duration: 0.8, ease: "power3.out" }),
+        y: gsap.quickTo(imageRef.current, "y", { duration: 0.8, ease: "power3.out" }),
+      };
+      const quickForeground = {
+        x: gsap.quickTo(foregroundLayerRef.current, "x", { duration: 0.8, ease: "power3.out" }),
+        y: gsap.quickTo(foregroundLayerRef.current, "y", { duration: 0.8, ease: "power3.out" }),
+      };
       const quickParticles = {
         x: gsap.quickTo(particlesRef.current, "x", { duration: 0.6, ease: "power3.out" }),
         y: gsap.quickTo(particlesRef.current, "y", { duration: 0.6, ease: "power3.out" }),
@@ -210,8 +235,12 @@ export function Hero() {
         if (!rect) return;
         const relX = (e.clientX - rect.left) / rect.width - 0.5;
         const relY = (e.clientY - rect.top) / rect.height - 0.5;
-        quickParticles.x(relX * 34);
-        quickParticles.y(relY * 34);
+        quickImage.x(relX * 8);
+        quickImage.y(relY * 8);
+        quickForeground.x(relX * 8);
+        quickForeground.y(relY * 8);
+        quickParticles.x(relX * 18);
+        quickParticles.y(relY * 18);
       }
 
       rootRef.current?.addEventListener("pointermove", handlePointerMove);
@@ -242,7 +271,7 @@ export function Hero() {
       <div
         ref={imageRef}
         data-hero-image
-        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--color-surface-2),_var(--color-void))]"
+        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--color-surface-2),_var(--color-void))] will-change-transform"
         style={{ clipPath: "inset(0% round 24px)" }}
       >
         <BuildingPhotograph src={heroContent.campusImage.src} />
@@ -347,12 +376,16 @@ export function Hero() {
           ABOVE the title text (not inside the -z-10 image block) so the
           architecture genuinely overlaps the typography where they'd
           intersect at this depth, rather than the title sitting flatly on
-          top of everything. A fixed composition like everything else here
-          — opacity only, never scaled or translated. */}
+          top of everything. Never scaled during construction — only
+          opacity there — but it does share the same small hover-parallax
+          translate as the main image once settled (see quickForeground in
+          the pointermove handler above), since it's a duplicate of the
+          same photo and would visibly shear apart from the main layer
+          otherwise. */}
       <div
         ref={foregroundLayerRef}
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-10 overflow-hidden opacity-0"
+        className="pointer-events-none absolute inset-0 z-10 overflow-hidden opacity-0 will-change-transform"
         style={{
           clipPath: "inset(0% round 24px)",
           // Starts well below where the eyebrow/title/location text sits —
