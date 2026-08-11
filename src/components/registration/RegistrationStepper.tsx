@@ -13,7 +13,6 @@ import { emptyMember, MIN_TEAM_SIZE, registrationSchema, type RegistrationFormVa
 import {
   findInTeamDuplicates,
   submitRegistration,
-  RegistrationError,
   type SubmitRegistrationResult,
 } from "@/lib/registration/availability";
 
@@ -70,18 +69,13 @@ export function RegistrationStepper() {
   async function onSubmit(values: RegistrationFormValues) {
     setSubmitting(true);
     setSubmitError(null);
-    try {
-      const res = await submitRegistration({ team: values.team, members: values.members });
-      setResult(res);
-    } catch (err) {
-      setSubmitError(
-        err instanceof RegistrationError
-          ? err.message
-          : "Something went wrong while submitting your registration. Please try again.",
-      );
-    } finally {
-      setSubmitting(false);
+    const outcome = await submitRegistration({ team: values.team, members: values.members });
+    if (outcome.success) {
+      setResult(outcome);
+    } else {
+      setSubmitError(outcome.message);
     }
+    setSubmitting(false);
   }
 
   if (result) {

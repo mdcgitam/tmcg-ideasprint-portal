@@ -1,7 +1,6 @@
 "use server";
 
 import { createServiceClient } from "@/lib/supabase/service";
-import { RegistrationError } from "./errors";
 import type { RegisterTeamResult } from "@/types/database";
 import type { MemberFormValues, TeamDetailsFormValues } from "./schema";
 
@@ -14,6 +13,13 @@ export interface SubmitRegistrationResult {
   teamId: string;
   userIds: string[];
 }
+
+// A discriminated return value, not a thrown error — Server Functions don't
+// preserve custom Error subclasses across the server/client boundary (thrown
+// errors arrive client-side as a plain Error), so `instanceof RegistrationError`
+// on the client can never distinguish a friendly duplicate message from an
+// unexpected failure. See node_modules/next/dist/docs/01-app/01-getting-started/10-error-handling.md.
+export type SubmitRegistrationOutcome = ({ success: true } & SubmitRegistrationResult) | { success: false; message: string };
 
 function friendlyMessage(raw: string): string {
   if (raw.startsWith("DUPLICATE_TEAM_NAME")) {
@@ -50,7 +56,7 @@ function friendlyMessage(raw: string): string {
  * 0001_init_schema.sql) — a service-role call since this happens before any
  * auth session exists and register_team is revoked from anon/authenticated.
  */
-export async function submitRegistration(input: SubmitRegistrationInput): Promise<SubmitRegistrationResult> {
+export async function submitRegistration(input: SubmitRegistrationInput): Promise<SubmitRegistrationOutcome> {
   const supabase = createServiceClient();
 
   const { data, error } = await supabase.rpc("register_team", { p_payload: input });
@@ -62,12 +68,12 @@ export async function submitRegistration(input: SubmitRegistrationInput): Promis
       // anything else is unexpected and worth keeping visible server-side.
       console.error("register_team RPC error:", error.message);
     }
-    throw new RegistrationError(friendlyMessage(error.message));
+    return { success: false, message: friendlyMessage(error.message) };
   }
   if (!data) {
-    throw new RegistrationError("Something went wrong while submitting your registration. Please try again.");
+    return { success: false, message: "Something went wrong while submitting your registration. Please try again." };
   }
 
   const result = data as RegisterTeamResult;
-  return { teamId: result.team_id, userIds: result.user_ids };
+  return { success: true, teamId: result.team_id, userIds: result.user_ids };
 }

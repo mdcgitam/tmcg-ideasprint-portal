@@ -59,5 +59,4 @@ export function findInTeamDuplicates(members: MemberFormValues[]): Record<string
 }
 
 export { submitRegistration } from "./actions";
-export type { SubmitRegistrationInput, SubmitRegistrationResult } from "./actions";
-export { RegistrationError } from "./errors";
+export type { SubmitRegistrationInput, SubmitRegistrationResult, SubmitRegistrationOutcome } from "./actions";
