@@ -71,6 +71,7 @@
 
   --font-display: var(--font-display);
   --font-heading: var(--font-heading);
+  --font-hero-label: var(--font-hero-label);
   --font-body: var(--font-body);
   --font-mono: var(--font-mono);
 }

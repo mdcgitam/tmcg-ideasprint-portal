@@ -1,10 +1,17 @@
 import { Reveal } from "@/components/motion/Reveal";
 import { registrationGuidelines, eventConfig } from "@/data/site-config";
 
+function ordinal(n: number) {
+  if (n % 10 === 1 && n % 100 !== 11) return `${n}st`;
+  if (n % 10 === 2 && n % 100 !== 12) return `${n}nd`;
+  if (n % 10 === 3 && n % 100 !== 13) return `${n}rd`;
+  return `${n}th`;
+}
+
 function formatEventDateRange(startIso: string, endIso: string) {
   const start = new Date(startIso);
   const end = new Date(endIso);
-  const day = (d: Date) => d.getDate();
+  const day = (d: Date) => ordinal(d.getDate());
   const month = (d: Date) => d.toLocaleDateString("en-IN", { month: "long" });
   const year = (d: Date) => d.getFullYear();
   if (month(start) === month(end) && year(start) === year(end)) {
@@ -26,14 +33,7 @@ export function InstructionsSection() {
           <h2 className="mt-4 font-display text-5xl tracking-wide text-ink sm:text-7xl">GOOD TO KNOW</h2>
         </Reveal>
 
-        <Reveal className="overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 via-void to-void px-8 py-10 text-center sm:py-12">
-          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Mandatory</span>
-          <p className="mt-4 font-display text-3xl tracking-wide text-ink sm:text-5xl">
-            NOC SUBMISSION IS COMPULSORY FOR EVERY PARTICIPANT
-          </p>
-        </Reveal>
-
-        <Reveal className="mt-10 grid gap-10 rounded-2xl border border-border bg-surface px-8 py-10 text-center sm:grid-cols-3 sm:py-12">
+        <Reveal className="grid gap-10 rounded-2xl border border-border bg-surface px-8 py-10 text-center sm:grid-cols-3 sm:py-12">
           <div>
             <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Event Dates</span>
             <p className="mt-3 font-heading text-2xl text-ink">
@@ -48,6 +48,13 @@ export function InstructionsSection() {
             <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Venue</span>
             <p className="mt-3 font-heading text-2xl text-ink">{eventConfig.venue}</p>
           </div>
+        </Reveal>
+
+        <Reveal className="mt-10 overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 via-void to-void px-8 py-10 text-center sm:py-12">
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Mandatory</span>
+          <p className="mt-4 font-display text-3xl tracking-wide text-ink sm:text-5xl">
+            NOC SUBMISSION IS COMPULSORY FOR EVERY PARTICIPANT
+          </p>
         </Reveal>
 
         <Reveal className="mt-10 overflow-hidden rounded-2xl border border-mdc/40 bg-mdc/10 px-8 py-6 text-center">

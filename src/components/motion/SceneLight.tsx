@@ -15,7 +15,7 @@ import { gsap, ScrollTrigger, prefersReducedMotion } from "@/lib/gsap";
  * Homepage-only, mounted in the public layout outside the ScrollSmoother
  * wrapper — `position: fixed` inside `#smooth-content` would be
  * reinterpreted relative to that transformed ancestor instead of the
- * viewport, same reasoning as NavBar and ActRail.
+ * viewport, same reasoning as NavBar.
  */
 export function SceneLight() {
   const isHome = usePathname() === "/";

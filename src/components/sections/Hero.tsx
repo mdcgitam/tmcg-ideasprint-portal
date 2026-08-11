@@ -333,7 +333,7 @@ export function Hero() {
       <div className="flex w-full flex-1 flex-col items-center justify-center px-2 text-center">
         <p
           data-hero-brandmark
-          className="mb-3 w-full max-w-2xl px-2 font-heading text-xs tracking-[0.2em] text-ink uppercase sm:tracking-[0.35em] sm:text-sm"
+          className="mb-3 w-full max-w-2xl px-2 font-hero-label text-xs tracking-[0.2em] text-ink uppercase sm:tracking-[0.35em] sm:text-sm"
         >
           {heroContent.eyebrow}
         </p>
@@ -353,18 +353,23 @@ export function Hero() {
           ))}
         </h1>
 
-        <p data-hero-location className="mt-6 w-full font-heading text-base tracking-[0.2em] text-ink uppercase sm:tracking-[0.3em] sm:text-lg">
+        <p data-hero-location className="mt-6 w-full font-hero-label text-base tracking-[0.2em] text-ink uppercase sm:tracking-[0.3em] sm:text-lg">
           GITAM Visakhapatnam
         </p>
 
         <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row">
           <div data-hero-cta>
-            <MagneticButton href="/register" variant="primary">
+            <MagneticButton href="/register" variant="primary" className="font-hero-label">
               {heroContent.registerCtaLabel}
             </MagneticButton>
           </div>
           <div data-hero-cta>
-            <MagneticButton href="/login" variant="secondary" cursorKind="interactive">
+            <MagneticButton
+              href="/login"
+              variant="secondary"
+              cursorKind="interactive"
+              className="font-hero-label"
+            >
               {heroContent.loginCtaLabel}
             </MagneticButton>
           </div>
