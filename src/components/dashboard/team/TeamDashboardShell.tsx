@@ -13,6 +13,7 @@ import type {
   ApprovalRequestRow,
 } from "@/types/database";
 import { Reveal } from "@/components/motion/Reveal";
+import { LogoutButton } from "@/components/dashboard/LogoutButton";
 import { useTabFade } from "@/hooks/useTabFade";
 import { ProfileSection } from "./sections/ProfileSection";
 import { ProblemStatementSection } from "./sections/ProblemStatementSection";
@@ -50,14 +51,17 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
   return (
     <main className="min-h-screen bg-void px-6 pt-28 pb-16 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-6xl">
-        <Reveal className="mb-10 rounded-2xl border border-border bg-surface px-6 py-6 sm:px-8 sm:py-7">
-          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">
-            {props.team.team_id} · {props.team.status}
-          </span>
-          <h1 className="mt-3 font-display text-4xl text-ink sm:text-5xl">{props.team.team_name}</h1>
-          <p className="mt-2 font-heading text-sm text-ink-muted">
-            Signed in as {props.profile.name} ({props.profile.role}) · {props.profile.user_id}
-          </p>
+        <Reveal className="mb-10 flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border bg-surface px-6 py-6 sm:px-8 sm:py-7">
+          <div>
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">
+              {props.team.team_id} · {props.team.status}
+            </span>
+            <h1 className="mt-3 font-display text-4xl text-ink sm:text-5xl">{props.team.team_name}</h1>
+            <p className="mt-2 font-heading text-sm text-ink-muted">
+              Signed in as {props.profile.name} ({props.profile.role}) · {props.profile.user_id}
+            </p>
+          </div>
+          <LogoutButton />
         </Reveal>
 
         <nav aria-label="Dashboard sections" className="mb-10 flex flex-wrap gap-2 border-b border-border pb-4">
