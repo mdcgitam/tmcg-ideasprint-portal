@@ -5,12 +5,13 @@ import type {
   NocRow,
   AttendanceRow,
   AttendanceSessionRow,
-  FoodCouponRow,
   ExitFormRow,
   ProblemStatementRow,
   ApprovalRequestRow,
   ConfigurationRow,
   NotificationRow,
+  RoomRow,
+  ZoneRow,
 } from "@/types/database";
 
 export interface TeamMemberProfile extends ProfileRow {
@@ -23,7 +24,6 @@ export interface AdminDashboardData {
   pendingApprovals: ApprovalRequestRow[];
   attendanceSessions: AttendanceSessionRow[];
   attendance: AttendanceRow[];
-  foodCoupons: FoodCouponRow[];
   nocs: NocRow[];
   exitForms: ExitFormRow[];
   problemStatements: ProblemStatementRow[];
@@ -31,6 +31,8 @@ export interface AdminDashboardData {
   spocs: ProfileRow[];
   staffAccounts: ProfileRow[];
   notifications: NotificationRow[];
+  rooms: RoomRow[];
+  zones: ZoneRow[];
 }
 
 /**
@@ -50,7 +52,6 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     { data: pendingApprovals },
     { data: attendanceSessions },
     { data: attendance },
-    { data: foodCoupons },
     { data: nocs },
     { data: exitForms },
     { data: problemStatements },
@@ -58,13 +59,14 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     { data: spocs },
     { data: staffAccounts },
     { data: notifications },
+    { data: rooms },
+    { data: zones },
   ] = await Promise.all([
     supabase.from("teams").select("*").order("created_at", { ascending: false }),
     supabase.from("team_members").select("team_id, profile_id, is_lead, profiles(*)"),
     supabase.from("approval_requests").select("*").eq("status", "Pending"),
     supabase.from("attendance_sessions").select("*").order("sort_order"),
     supabase.from("attendance").select("*"),
-    supabase.from("food_coupons").select("*"),
     supabase.from("nocs").select("*"),
     supabase.from("exit_forms").select("*"),
     supabase.from("problem_statements").select("*").order("number"),
@@ -72,6 +74,8 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     supabase.from("profiles").select("*").eq("role", "SPOC"),
     supabase.from("profiles").select("*").in("role", ["SPOC", "Super Admin"]).order("created_at", { ascending: false }),
     supabase.from("notifications").select("*").order("created_at", { ascending: false }),
+    supabase.from("rooms").select("*").order("name"),
+    supabase.from("zones").select("*").order("name"),
   ]);
 
   const membersByTeam: Record<string, TeamMemberProfile[]> = {};
@@ -99,7 +103,6 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     pendingApprovals: (pendingApprovals ?? []) as ApprovalRequestRow[],
     attendanceSessions: (attendanceSessions ?? []) as AttendanceSessionRow[],
     attendance: (attendance ?? []) as AttendanceRow[],
-    foodCoupons: (foodCoupons ?? []) as FoodCouponRow[],
     nocs: (nocs ?? []) as NocRow[],
     exitForms: (exitForms ?? []) as ExitFormRow[],
     problemStatements: (problemStatements ?? []) as ProblemStatementRow[],
@@ -107,5 +110,7 @@ export async function fetchAdminDashboardData(): Promise<AdminDashboardData> {
     spocs: (spocs ?? []) as ProfileRow[],
     staffAccounts: (staffAccounts ?? []) as ProfileRow[],
     notifications: (notifications ?? []) as NotificationRow[],
+    rooms: (rooms ?? []) as RoomRow[],
+    zones: (zones ?? []) as ZoneRow[],
   };
 }

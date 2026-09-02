@@ -27,6 +27,19 @@ export function GuidelinesStep() {
 
       <div className="rounded-xl border border-gold/40 bg-gold/10 p-6">
         <p className="font-heading text-sm font-semibold text-gold">{registrationGuidelines.nocNotice}</p>
+        <p className="mt-3 font-heading text-sm text-ink-muted">
+          {registrationGuidelines.nocFormUrl ? (
+            <>
+              Download the NOC form for your parents/guardian to fill and sign:{" "}
+              <a href={registrationGuidelines.nocFormUrl} target="_blank" rel="noopener noreferrer" className="text-gold underline">
+                NOC Form (PDF)
+              </a>
+              . You can submit either the physical signed copy or an uploaded online copy from your team dashboard.
+            </>
+          ) : (
+            "The NOC form link/PDF will be provided by the organizers closer to the event. You'll be able to submit either the physical signed copy or an uploaded online copy from your team dashboard."
+          )}
+        </p>
       </div>
 
       <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-surface p-5 transition-colors hover:border-gold/50">

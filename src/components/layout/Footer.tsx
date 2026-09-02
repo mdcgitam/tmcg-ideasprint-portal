@@ -8,11 +8,10 @@ import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import { Reveal } from "@/components/motion/Reveal";
 
 const LINKS = [
-  { href: "#domains", label: "Domains" },
-  { href: "#gallery", label: "Gallery" },
-  { href: "#prizes", label: "Prizes" },
-  { href: "#faq", label: "FAQ" },
-  { href: "#contact", label: "Contact" },
+  { href: "/#gallery", label: "Gallery" },
+  { href: "/#prizes", label: "Prizes" },
+  { href: "/#faq", label: "FAQ" },
+  { href: "/#contact", label: "Contact" },
 ];
 
 export function Footer() {
@@ -93,6 +92,8 @@ export function Footer() {
           </Link>
         </div>
       </div>
+
+      <p className="mx-auto mt-3 max-w-7xl font-mono text-[11px] text-ink-faint">Developed by MDC GITAM</p>
     </footer>
   );
 }

@@ -9,6 +9,10 @@ import type { ProfileRow } from "@/types/database";
 // server-side, right after the session is created.
 const ALLOWED_DOMAIN_PATTERN = /@(student\.gitam\.edu|gitam\.in)$/i;
 
+// Testing/demo accounts only — bypasses the university-domain rule for these
+// specific addresses. Remove entries (or this whole set) once no longer needed.
+const DOMAIN_EXCEPTION_EMAILS = new Set(["switchone06@gmail.com"]);
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
@@ -27,7 +31,7 @@ export async function GET(request: Request) {
 
   const email = exchangeData.session.user.email?.toLowerCase() ?? "";
 
-  if (!ALLOWED_DOMAIN_PATTERN.test(email)) {
+  if (!ALLOWED_DOMAIN_PATTERN.test(email) && !DOMAIN_EXCEPTION_EMAILS.has(email)) {
     await supabase.auth.signOut();
     return NextResponse.redirect(`${origin}/login?error=domain_not_allowed`);
   }

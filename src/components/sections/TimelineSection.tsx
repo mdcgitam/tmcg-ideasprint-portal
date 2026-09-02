@@ -90,7 +90,7 @@ export function TimelineSection() {
     <section
       ref={sectionRef}
       id="journey"
-      className="border-t border-border bg-surface px-6 py-28 sm:px-10 lg:px-16"
+      className="border-t border-border bg-surface px-6 py-16 sm:px-10 lg:px-16"
     >
       <div className="mx-auto mb-20 max-w-7xl">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 3 — The Journey</span>

@@ -10,6 +10,11 @@ function friendlyError(raw: string): string {
   if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant couldn't be found.";
   if (raw.includes("NOT_A_SPOC")) return "That account isn't a SPOC — assign the SPOC role first.";
   if (raw.includes("DUPLICATE_PS_NUMBER")) return "That problem statement number is already in use.";
+  if (raw.includes("DUPLICATE_ROOM_NAME")) return "A room with that name already exists.";
+  if (raw.includes("DUPLICATE_ZONE_NAME")) return "A zone with that name already exists.";
+  if (raw.includes("ROOM_NOT_FOUND")) return "That room couldn't be found.";
+  if (raw.includes("TEAM_NOT_FOUND")) return "That team couldn't be found.";
+  if (raw.includes("CANNOT_DELETE_LEAD")) return "This member is the Team Lead — delete the whole team instead.";
   if (raw.includes("DUPLICATE_EMAIL")) {
     const email = raw.split(":").slice(1).join(":").trim();
     return email ? `${email} is already registered.` : "That email is already registered.";
@@ -45,10 +50,6 @@ export function createAttendanceSession(name: string, startsAt: string | null, e
   });
 }
 
-export function recordFoodRedemption(profileId: string, meal: "lunch" | "dinner", status: "Redeemed" | "Not Redeemed") {
-  return callRpc<null>("record_food_redemption", { p_profile_id: profileId, p_meal: meal, p_status: status });
-}
-
 export function extendProblemStatementDeadline(teamId: string, extendedUntil: string, reason: string) {
   return callRpc<null>("extend_problem_statement_deadline", {
     p_team_id: teamId,
@@ -75,11 +76,6 @@ export function upsertProblemStatement(input: UpsertProblemStatementInput) {
   });
 }
 
-/** spocProfileId: null unassigns the team. */
-export function assignSpoc(teamId: string, spocProfileId: string | null) {
-  return callRpc<null>("assign_spoc", { p_team_id: teamId, p_spoc_profile_id: spocProfileId });
-}
-
 export function updateUserRole(profileId: string, newRole: "Super Admin" | "SPOC" | "Team Lead" | "Member") {
   return callRpc<null>("update_user_role", { p_profile_id: profileId, p_new_role: newRole });
 }
@@ -101,4 +97,46 @@ export interface CreateStaffInput {
 /** Creates a bare profiles row (no team, no participant fields) — the whole point of this RPC vs. registration. */
 export function createStaffProfile(input: CreateStaffInput) {
   return callRpc<string>("create_staff_profile", { p_name: input.name, p_email: input.email, p_role: input.role });
+}
+
+// ── Rooms & Zones (item 11: SPOC is assigned to a room only, never a team/person) ──
+
+export function createRoom(name: string, zoneId: string | null) {
+  return callRpc<string>("create_room", { p_name: name, p_zone_id: zoneId });
+}
+
+export function createZone(name: string, managerProfileId: string | null) {
+  return callRpc<string>("create_zone", { p_name: name, p_manager_profile_id: managerProfileId });
+}
+
+export function assignZoneManager(zoneId: string, managerProfileId: string | null) {
+  return callRpc<null>("assign_zone_manager", { p_zone_id: zoneId, p_manager_profile_id: managerProfileId });
+}
+
+export function assignRoomToZone(roomId: string, zoneId: string | null) {
+  return callRpc<null>("assign_room_to_zone", { p_room_id: roomId, p_zone_id: zoneId });
+}
+
+/** spocProfileId: null unassigns the room's SPOC. Cascades to every team currently in the room. */
+export function assignSpocToRoom(roomId: string, spocProfileId: string | null) {
+  return callRpc<null>("assign_spoc_to_room", { p_room_id: roomId, p_spoc_profile_id: spocProfileId });
+}
+
+/** roomId: null pulls the team out of its room (and clears its inherited SPOC). */
+export function assignTeamToRoom(teamId: string, roomId: string | null) {
+  return callRpc<null>("assign_team_to_room", { p_team_id: teamId, p_room_id: roomId });
+}
+
+// ── Deletes (item 11: "Delete teams, members and SPOCs") ─────────────────
+
+export function deleteTeam(teamId: string) {
+  return callRpc<null>("delete_team", { p_team_id: teamId });
+}
+
+export function deleteMember(profileId: string) {
+  return callRpc<null>("delete_member", { p_profile_id: profileId });
+}
+
+export function deleteSpoc(profileId: string) {
+  return callRpc<null>("delete_spoc", { p_profile_id: profileId });
 }

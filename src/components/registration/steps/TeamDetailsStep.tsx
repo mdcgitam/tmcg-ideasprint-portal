@@ -3,12 +3,11 @@
 import { useFormContext } from "react-hook-form";
 import { FormField, fieldInputClass } from "@/components/registration/FormField";
 import { MAX_TEAM_SIZE, MIN_TEAM_SIZE, type RegistrationFormValues } from "@/lib/registration/schema";
-import { domains } from "@/data/site-config";
 import { cn } from "@/lib/utils";
 
 /**
- * SPEC.md §9 — Step 1: Team Name, Domain, No. of Members. No other
- * information is requested at this stage.
+ * Step 1: Team Name, No. of Members. Domain has been dropped as a concept
+ * (ideasprint_changes.pdf item 1) — no other information is requested here.
  */
 export function TeamDetailsStep() {
   const {
@@ -36,25 +35,6 @@ export function TeamDetailsStep() {
           className={fieldInputClass}
           {...register("team.teamName")}
         />
-      </FormField>
-
-      <FormField label="Domain" required error={errors.team?.domainId?.message} htmlFor="team-domain">
-        <select
-          id="team-domain"
-          aria-invalid={!!errors.team?.domainId}
-          className={fieldInputClass}
-          defaultValue=""
-          {...register("team.domainId")}
-        >
-          <option value="" disabled>
-            Select a domain
-          </option>
-          {domains.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
       </FormField>
 
       <FormField label="Number of Members" required error={errors.team?.memberCount?.message}>

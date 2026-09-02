@@ -4,7 +4,12 @@ import { useRef, useState } from "react";
 import type { TeamRow, ExitStatus, ExitFormRow } from "@/types/database";
 import { uploadExitFormFile, recordExitForm, getSignedUrl, DashboardActionError } from "@/lib/dashboard/team-actions";
 
-/** SPEC §63-67: only the Team Lead may upload the (already-signed, physical) Exit Form; Members see status only. */
+/**
+ * Only the Team Lead may upload the (already-signed, physical) Exit Form;
+ * Members see status only. Not a mandatory submission for every team — it's
+ * only for teams that want to exit the event partway through
+ * (ideasprint_changes.pdf item 16).
+ */
 export function ExitFormSection({
   team,
   exitForm,
@@ -53,7 +58,8 @@ export function ExitFormSection({
       <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Exit Form</span>
       <p className={`mt-3 font-heading text-lg ${status === "Submitted" ? "text-gitam" : "text-ink-muted"}`}>{status}</p>
       <p className="mt-2 max-w-lg font-heading text-xs text-ink-muted">
-        Only the already-signed, physical exit form needs to be uploaded here — used after the event concludes.
+        This is <span className="text-ink">not a mandatory submission</span> — it&rsquo;s only for teams that want
+        to exit the event partway through. Only the already-signed, physical exit form needs to be uploaded here.
       </p>
 
       <div className="mt-4 flex items-center gap-3">

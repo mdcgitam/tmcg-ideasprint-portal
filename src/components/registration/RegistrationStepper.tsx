@@ -34,7 +34,7 @@ export function RegistrationStepper() {
     mode: "onSubmit",
     defaultValues: {
       guidelinesAcknowledged: false,
-      team: { teamName: "", domainId: "", memberCount: MIN_TEAM_SIZE },
+      team: { teamName: "", memberCount: MIN_TEAM_SIZE },
       members: Array.from({ length: MIN_TEAM_SIZE }, emptyMember),
     },
   });
@@ -47,7 +47,7 @@ export function RegistrationStepper() {
     if (stepIndex === 0) {
       valid = await trigger("guidelinesAcknowledged");
     } else if (stepIndex === 1) {
-      valid = await trigger(["team.teamName", "team.domainId", "team.memberCount"]);
+      valid = await trigger(["team.teamName", "team.memberCount"]);
     } else if (stepIndex === 2) {
       valid = await trigger("members");
       if (valid) {

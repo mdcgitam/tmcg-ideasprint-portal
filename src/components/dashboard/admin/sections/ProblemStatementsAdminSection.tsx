@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { ProblemStatementRow, PsStatus } from "@/types/database";
 import { upsertProblemStatement, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { downloadCsv } from "@/lib/csv";
 
 interface FormState {
   id: string | null;
@@ -108,6 +109,21 @@ export function ProblemStatementsAdminSection({ problemStatements }: { problemSt
           )}
         </div>
       </form>
+
+      {local.length > 0 && (
+        <button
+          type="button"
+          onClick={() =>
+            downloadCsv(
+              "problem-statements",
+              local.map((ps) => ({ Number: ps.number, Title: ps.title, Status: ps.status })),
+            )
+          }
+          className="w-fit rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+        >
+          Download Problem Statements (CSV)
+        </button>
+      )}
 
       <div className="flex flex-col gap-2">
         {local.map((ps) => (

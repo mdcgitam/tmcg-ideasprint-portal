@@ -2,12 +2,10 @@
 
 import { useFormContext } from "react-hook-form";
 import type { RegistrationFormValues } from "@/lib/registration/schema";
-import { domains } from "@/data/site-config";
 
 export function ReviewStep() {
   const { getValues } = useFormContext<RegistrationFormValues>();
   const values = getValues();
-  const domainName = domains.find((d) => d.id === values.team.domainId)?.name ?? "—";
 
   return (
     <div className="flex flex-col gap-8">
@@ -23,7 +21,6 @@ export function ReviewStep() {
         <h2 className="font-heading text-xs tracking-[0.3em] text-gold uppercase">Team</h2>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2">
           <ReviewRow label="Team Name" value={values.team.teamName} />
-          <ReviewRow label="Domain" value={domainName} />
           <ReviewRow label="Team Size" value={`${values.team.memberCount} members`} />
         </dl>
       </div>

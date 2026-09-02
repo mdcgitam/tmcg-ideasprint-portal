@@ -21,7 +21,7 @@ interface RevealProps {
  * their own choreography on top rather than reinventing entrance motion.
  * Always renders a div — wrap in a semantic <section> at the call site.
  */
-export function Reveal({ children, className, stagger = false, y = 40, delay = 0, duration = 0.9 }: RevealProps) {
+export function Reveal({ children, className, stagger = false, y = 24, delay = 0, duration = 0.7 }: RevealProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useGSAP(

@@ -17,6 +17,10 @@ const KNOWN_KEYS = [
   { key: "problem_statement.selection_end", label: "Selection Window End", placeholder: "2026-09-25T21:30:00+05:30" },
 ] as const;
 
+// Item 23: Super Admin edits the /privacy page content directly from here —
+// plain paragraphs, a blank line starts a new one. Empty = built-in default copy.
+const PRIVACY_POLICY_KEY = "privacy_policy.content";
+
 export function ConfigurationSection({ config }: { config: Record<string, unknown> }) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -24,6 +28,8 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
       const raw = config[key];
       initial[key] = typeof raw === "string" ? raw : "";
     }
+    const rawPrivacy = config[PRIVACY_POLICY_KEY];
+    initial[PRIVACY_POLICY_KEY] = typeof rawPrivacy === "string" ? rawPrivacy : "";
     return initial;
   });
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -33,7 +39,7 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     setSavingKey(key);
     setMessage((m) => ({ ...m, [key]: "" }));
     try {
-      await setConfiguration(key, values[key], "");
+      await setConfiguration(key, values[key] || null, "");
       setMessage((m) => ({ ...m, [key]: "Saved." }));
     } catch (err) {
       setMessage((m) => ({ ...m, [key]: err instanceof DashboardActionError ? err.message : "Something went wrong." }));
@@ -66,6 +72,30 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
           {message[key] && <p className="mt-2 font-heading text-xs text-ink-muted">{message[key]}</p>}
         </div>
       ))}
+
+      <div className="rounded-xl border border-border bg-surface p-6">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Privacy Policy Content</span>
+        <p className="mt-1 font-heading text-xs text-ink-muted">
+          Plain paragraphs — a blank line starts a new one. Leave empty to use the built-in default copy.
+        </p>
+        <div className="mt-3 flex flex-col gap-3">
+          <textarea
+            rows={10}
+            value={values[PRIVACY_POLICY_KEY] ?? ""}
+            onChange={(e) => setValues((v) => ({ ...v, [PRIVACY_POLICY_KEY]: e.target.value }))}
+            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            disabled={savingKey === PRIVACY_POLICY_KEY}
+            onClick={() => handleSave(PRIVACY_POLICY_KEY)}
+            className="w-fit rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+          >
+            {savingKey === PRIVACY_POLICY_KEY ? "Saving…" : "Save"}
+          </button>
+        </div>
+        {message[PRIVACY_POLICY_KEY] && <p className="mt-2 font-heading text-xs text-ink-muted">{message[PRIVACY_POLICY_KEY]}</p>}
+      </div>
     </div>
   );
 }

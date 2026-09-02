@@ -35,16 +35,6 @@ export interface EventConfig {
   breakfastNotice: string;
 }
 
-export type DomainIconKey = "artificial-intelligence" | "app-development" | "machine-learning" | "cybersecurity";
-
-export interface Domain {
-  id: string;
-  name: string;
-  description: string;
-  /** key into the icon registry, not a component — keeps this DB-serializable */
-  iconKey: DomainIconKey;
-}
-
 export type TimelineStage = "round-1" | "round-2" | "grand-finale" | "milestone";
 
 export interface TimelineItem {
@@ -96,4 +86,6 @@ export interface Contact {
 export interface RegistrationGuidelines {
   content: string; // markdown/plain text, admin-editable
   nocNotice: string;
+  /** Link to the NOC form (PDF or hosted doc) parents fill out — shown during registration. Null until organizers supply one. */
+  nocFormUrl: string | null;
 }

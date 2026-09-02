@@ -36,7 +36,6 @@ export type MemberFormValues = z.infer<typeof memberSchema>;
 
 export const teamDetailsSchema = z.object({
   teamName: z.string().trim().min(3, "Team name must be at least 3 characters"),
-  domainId: z.string().min(1, "Select a domain"),
   memberCount: z.union([z.literal(MIN_TEAM_SIZE), z.literal(MAX_TEAM_SIZE)]),
 });
 

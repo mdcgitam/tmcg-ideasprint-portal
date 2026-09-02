@@ -9,11 +9,12 @@ import type {
   NocRow,
   AttendanceRow,
   AttendanceSessionRow,
-  FoodCouponRow,
   ExitFormRow,
   ProblemStatementRow,
   ApprovalRequestRow,
   ConfigurationRow,
+  RoomRow,
+  ZoneRow,
 } from "@/types/database";
 
 export default async function TeamDashboardPage() {
@@ -45,7 +46,6 @@ export default async function TeamDashboardPage() {
     { data: nocRows },
     { data: attendanceRows },
     { data: attendanceSessionRows },
-    { data: foodRows },
     { data: exitFormRow },
     { data: pendingRequestRow },
     { data: configRows },
@@ -58,13 +58,27 @@ export default async function TeamDashboardPage() {
     supabase.from("nocs").select("*"),
     supabase.from("attendance").select("*").eq("team_id", teamId),
     supabase.from("attendance_sessions").select("*").order("sort_order"),
-    supabase.from("food_coupons").select("*"),
     supabase.from("exit_forms").select("*").eq("team_id", teamId).maybeSingle(),
     supabase.from("approval_requests").select("*").eq("team_id", teamId).eq("status", "Pending").maybeSingle(),
     supabase.from("configuration").select("*"),
   ]);
 
   const teamRow = team as TeamRow;
+
+  const { data: roomRow } = teamRow.room_id
+    ? await supabase.from("rooms").select("*").eq("id", teamRow.room_id).maybeSingle()
+    : { data: null };
+  const room = (roomRow ?? null) as RoomRow | null;
+
+  const { data: zoneRow } = room?.zone_id
+    ? await supabase.from("zones").select("*").eq("id", room.zone_id).maybeSingle()
+    : { data: null };
+  const zone = (zoneRow ?? null) as ZoneRow | null;
+
+  const { data: spocProfile } = teamRow.spoc_profile_id
+    ? await supabase.from("profiles").select("name").eq("id", teamRow.spoc_profile_id).maybeSingle()
+    : { data: null };
+  const spocName = (spocProfile as { name: string } | null)?.name ?? null;
 
   const members = ((memberRows ?? []) as unknown as { profile_id: string; is_lead: boolean; profiles: ProfileRow }[])
     .map((row) => ({ ...row.profiles, is_lead: row.is_lead }))
@@ -87,11 +101,13 @@ export default async function TeamDashboardPage() {
       nocs={(nocRows ?? []) as NocRow[]}
       attendance={(attendanceRows ?? []) as AttendanceRow[]}
       attendanceSessions={(attendanceSessionRows ?? []) as AttendanceSessionRow[]}
-      foodCoupons={(foodRows ?? []) as FoodCouponRow[]}
       exitForm={(exitFormRow ?? null) as ExitFormRow | null}
       currentProblemStatement={(currentPsRow ?? null) as ProblemStatementRow | null}
       pendingApprovalRequest={(pendingRequestRow ?? null) as ApprovalRequestRow | null}
       config={config}
+      room={room}
+      zone={zone}
+      spocName={spocName}
     />
   );
 }

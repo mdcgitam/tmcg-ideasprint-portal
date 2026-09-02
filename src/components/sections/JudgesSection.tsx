@@ -9,7 +9,7 @@ import { judges } from "@/data/site-config";
  */
 export function JudgesSection() {
   return (
-    <section id="judges" className="border-t border-border bg-void px-6 py-28 sm:px-10 lg:px-16">
+    <section id="judges" className="border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16">
       <Reveal className="mx-auto mb-14 max-w-7xl">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 5 — The Panel</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">JUDGES</h2>
@@ -17,7 +17,7 @@ export function JudgesSection() {
 
       <div className="mx-auto max-w-7xl">
         {judges.length === 0 ? (
-          <Reveal className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border-strong bg-surface/40 px-6 py-24 text-center">
+          <Reveal className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border-strong bg-surface/40 px-6 py-16 text-center">
             <span className="font-mono text-xs tracking-[0.3em] text-ink-faint uppercase">Panel to be announced</span>
             <p className="mt-4 max-w-md font-heading text-ink-muted">
               The judging panel will be published here once confirmed by the organizers.

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import type { AttendanceRow, AttendanceSessionRow, TeamRow } from "@/types/database";
+import type { AttendanceRow, AttendanceSessionRow, ProfileRow, TeamRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { recordAttendance, createAttendanceSession, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { downloadCsv } from "@/lib/csv";
 
 export function AdminAttendanceSection({
   teams,
@@ -11,12 +12,14 @@ export function AdminAttendanceSection({
   attendanceSessions,
   attendance,
   scope,
+  staffAccounts,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   attendanceSessions: AttendanceSessionRow[];
   attendance: AttendanceRow[];
   scope: "spoc" | "admin";
+  staffAccounts: ProfileRow[];
 }) {
   const [localSessions, setLocalSessions] = useState(attendanceSessions);
   const [localAttendance, setLocalAttendance] = useState(attendance);
@@ -77,6 +80,28 @@ export function AdminAttendanceSection({
   }
 
   const allMembers = teams.flatMap((t) => membersByTeam[t.id] ?? []);
+  const teamNameByProfileId: Record<string, string> = {};
+  const spocByProfileId: Record<string, string> = {};
+  for (const t of teams) {
+    const spoc = staffAccounts.find((s) => s.id === t.spoc_profile_id)?.name ?? "Unassigned";
+    for (const m of membersByTeam[t.id] ?? []) {
+      teamNameByProfileId[m.id] = t.team_name;
+      spocByProfileId[m.id] = spoc;
+    }
+  }
+
+  function handleExportSession(session: AttendanceSessionRow) {
+    downloadCsv(
+      `attendance-${session.name}`,
+      allMembers.map((m) => ({
+        "User ID": m.user_id,
+        Name: m.name,
+        Team: teamNameByProfileId[m.id] ?? "—",
+        SPOC: spocByProfileId[m.id] ?? "Unassigned",
+        Status: localAttendance.find((a) => a.session_id === session.id && a.profile_id === m.id)?.status ?? "Not Marked",
+      })),
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -112,9 +137,20 @@ export function AdminAttendanceSection({
             <thead>
               <tr className="border-b border-border text-xs text-ink-muted uppercase">
                 <th className="px-4 py-3">Member</th>
+                <th className="px-4 py-3">Team</th>
+                <th className="px-4 py-3">SPOC</th>
                 {localSessions.map((s) => (
                   <th key={s.id} className="px-4 py-3">
-                    {s.name}
+                    <div className="flex items-center gap-2">
+                      <span>{s.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleExportSession(s)}
+                        className="rounded-full border border-gold/50 px-2 py-0.5 text-[10px] font-medium text-gold normal-case transition-colors hover:bg-gold/10"
+                      >
+                        Export CSV
+                      </button>
+                    </div>
                   </th>
                 ))}
               </tr>
@@ -123,6 +159,8 @@ export function AdminAttendanceSection({
               {allMembers.map((m) => (
                 <tr key={m.id} className="border-b border-border last:border-0">
                   <td className="px-4 py-3 text-ink">{m.name}</td>
+                  <td className="px-4 py-3 text-ink-muted">{teamNameByProfileId[m.id] ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink-muted">{spocByProfileId[m.id] ?? "Unassigned"}</td>
                   {localSessions.map((s) => {
                     const record = localAttendance.find((a) => a.session_id === s.id && a.profile_id === m.id);
                     const status = record?.status ?? null;

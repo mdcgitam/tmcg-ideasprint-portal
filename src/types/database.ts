@@ -41,12 +41,29 @@ export interface TeamRow {
   id: string;
   team_id: string;
   team_name: string;
-  domain_id: string;
   member_count: number;
   team_lead_profile_id: string | null;
   spoc_profile_id: string | null;
+  room_id: string | null;
   status: TeamStatus;
   current_problem_statement_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ZoneRow {
+  id: string;
+  name: string;
+  zone_manager_profile_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RoomRow {
+  id: string;
+  name: string;
+  zone_id: string | null;
+  spoc_profile_id: string | null;
   created_at: string;
   updated_at: string;
 }

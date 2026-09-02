@@ -108,7 +108,7 @@ export function PrizeSection() {
     <section
       ref={sectionRef}
       id="prizes"
-      className="relative isolate overflow-hidden border-t border-border bg-void px-6 py-32 text-center sm:px-10 lg:px-16"
+      className="relative isolate overflow-hidden border-t border-border bg-void px-6 py-20 text-center sm:px-10 lg:px-16"
     >
       <div
         data-prize-glow

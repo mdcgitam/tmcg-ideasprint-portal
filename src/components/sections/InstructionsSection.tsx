@@ -26,9 +26,9 @@ function formatEventDateRange(startIso: string, endIso: string) {
  */
 export function InstructionsSection() {
   return (
-    <section id="instructions" className="border-t border-border bg-void px-6 py-24 sm:px-10 lg:px-16">
+    <section id="instructions" className="border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-5xl">
-        <Reveal className="mb-14">
+        <Reveal className="mb-10">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 7 — The Briefing</span>
           <h2 className="mt-4 font-display text-5xl tracking-wide text-ink sm:text-7xl">GOOD TO KNOW</h2>
         </Reveal>
@@ -50,19 +50,19 @@ export function InstructionsSection() {
           </div>
         </Reveal>
 
-        <Reveal className="mt-10 overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 via-void to-void px-8 py-10 text-center sm:py-12">
+        <Reveal className="mt-8 overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 via-void to-void px-8 py-10 text-center sm:py-12">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Mandatory</span>
           <p className="mt-4 font-display text-3xl tracking-wide text-ink sm:text-5xl">
             NOC SUBMISSION IS COMPULSORY FOR EVERY PARTICIPANT
           </p>
         </Reveal>
 
-        <Reveal className="mt-10 overflow-hidden rounded-2xl border border-mdc/40 bg-mdc/10 px-8 py-6 text-center">
+        <Reveal className="mt-8 overflow-hidden rounded-2xl border border-mdc/40 bg-mdc/10 px-8 py-6 text-center">
           <span className="font-mono text-xs tracking-[0.3em] text-mdc uppercase">Special Mention</span>
           <p className="mt-3 font-heading text-base leading-relaxed text-ink sm:text-lg">{eventConfig.breakfastNotice}</p>
         </Reveal>
 
-        <Reveal className="mt-14 grid gap-10 sm:grid-cols-3">
+        <Reveal className="mt-8 grid gap-8 sm:grid-cols-3">
           <div>
             <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Registration Fee</span>
             <p className="mt-3 font-heading text-2xl text-ink">No Registration Fee</p>
@@ -77,7 +77,18 @@ export function InstructionsSection() {
           </div>
         </Reveal>
 
-        <Reveal className="mt-14">
+        <Reveal className="mt-8 grid gap-8 sm:grid-cols-2">
+          <div>
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Slots</span>
+            <p className="mt-3 font-heading text-2xl text-ink">First Come, First Served (FCFS)</p>
+          </div>
+          <div>
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statements</span>
+            <p className="mt-3 font-heading text-2xl text-ink">Released on the hackathon day</p>
+          </div>
+        </Reveal>
+
+        <Reveal className="mt-10">
           <h3 className="font-heading text-sm tracking-[0.3em] text-ink-muted uppercase">Important Instructions</h3>
           <p className="mt-4 max-w-3xl font-heading leading-relaxed text-ink-muted">{registrationGuidelines.content}</p>
         </Reveal>

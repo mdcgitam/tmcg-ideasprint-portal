@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { ProfileRow, TeamRow, ApprovalRequestRow } from "@/types/database";
+import type { ProfileRow, TeamRow, ApprovalRequestRow, RoomRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "../TeamDashboardShell";
 import { submitTeamEditRequest, DashboardActionError } from "@/lib/dashboard/team-actions";
 
-const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
+const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
 const STAY_OPTIONS = ["Hosteller", "Day Scholar"];
 
@@ -48,12 +48,18 @@ export function ProfileSection({
   members,
   pendingApprovalRequest,
   isLead,
+  room,
+  zone,
+  spocName,
 }: {
   profile: ProfileRow;
   team: TeamRow;
   members: TeamMemberProfile[];
   pendingApprovalRequest: ApprovalRequestRow | null;
   isLead: boolean;
+  room: RoomRow | null;
+  zone: ZoneRow | null;
+  spocName: string | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [teamName, setTeamName] = useState(team.team_name);
@@ -86,7 +92,7 @@ export function ProfileSection({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-6 rounded-xl border border-border bg-surface p-6 sm:grid-cols-3">
+      <div className="grid gap-6 rounded-xl border border-border bg-surface p-6 sm:grid-cols-3 lg:grid-cols-6">
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Team ID</span>
           <p className="mt-2 font-heading text-ink">{team.team_id}</p>
@@ -98,6 +104,18 @@ export function ProfileSection({
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Status</span>
           <p className="mt-2 font-heading text-ink">{team.status}</p>
+        </div>
+        <div>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Room</span>
+          <p className="mt-2 font-heading text-ink">{room?.name ?? "Not yet assigned"}</p>
+        </div>
+        <div>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Zone</span>
+          <p className="mt-2 font-heading text-ink">{zone?.name ?? "—"}</p>
+        </div>
+        <div>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">SPOC</span>
+          <p className="mt-2 font-heading text-ink">{spocName ?? "Not yet assigned"}</p>
         </div>
       </div>
 

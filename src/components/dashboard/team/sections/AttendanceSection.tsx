@@ -6,10 +6,12 @@ export function AttendanceSection({
   members,
   attendance,
   attendanceSessions,
+  spocName,
 }: {
   members: TeamMemberProfile[];
   attendance: AttendanceRow[];
   attendanceSessions: AttendanceSessionRow[];
+  spocName: string | null;
 }) {
   if (attendanceSessions.length === 0) {
     return (
@@ -20,7 +22,9 @@ export function AttendanceSection({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+    <div className="flex flex-col gap-3">
+      <p className="font-heading text-xs text-ink-muted">Assigned SPOC: {spocName ?? "Not yet assigned"}</p>
+      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
       <table className="w-full text-left font-heading text-sm">
         <thead>
           <tr className="border-b border-border text-xs text-ink-muted uppercase">
@@ -62,6 +66,7 @@ export function AttendanceSection({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }

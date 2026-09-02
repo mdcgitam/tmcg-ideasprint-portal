@@ -102,6 +102,7 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
                 alt={image.alt}
                 fill
                 priority={i === 0}
+                loading={i === 0 ? undefined : "eager"}
                 sizes="(min-width: 1024px) 900px, 100vw"
                 className="object-cover"
               />

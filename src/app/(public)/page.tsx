@@ -1,5 +1,4 @@
 import { Hero } from "@/components/sections/Hero";
-import { DomainsSection } from "@/components/sections/DomainsSection";
 import { TimelineSection } from "@/components/sections/TimelineSection";
 import { GallerySection } from "@/components/sections/GallerySection";
 import { JudgesSection } from "@/components/sections/JudgesSection";
@@ -12,7 +11,6 @@ export default function Home() {
   return (
     <main>
       <Hero />
-      <DomainsSection />
       <TimelineSection />
       <GallerySection />
       <JudgesSection />

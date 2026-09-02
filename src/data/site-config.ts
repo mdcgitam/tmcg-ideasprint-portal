@@ -1,6 +1,5 @@
 import type {
   Contact,
-  Domain,
   EventConfig,
   FAQItem,
   GalleryImage,
@@ -51,34 +50,6 @@ export const eventConfig: EventConfig = {
     "Breakfast is not provided on Day 2. Dinner (25th, 8–9 PM) and Lunch (26th, 12–1 PM) are provided at the mess — please plan accordingly for the morning break.",
 };
 
-// Organizer-provided (SPEC.md §9 "Domain" field, admin-configurable list).
-export const domains: Domain[] = [
-  {
-    id: "d1",
-    name: "Artificial Intelligence",
-    description: "Build intelligent systems that learn, reason, and adapt.",
-    iconKey: "artificial-intelligence",
-  },
-  {
-    id: "d2",
-    name: "App Development",
-    description: "Ship fast, functional mobile and web experiences.",
-    iconKey: "app-development",
-  },
-  {
-    id: "d3",
-    name: "Machine Learning and Data Science",
-    description: "Turn raw data into models, insight, and prediction.",
-    iconKey: "machine-learning",
-  },
-  {
-    id: "d4",
-    name: "Cybersecurity",
-    description: "Defend systems, find vulnerabilities, secure the stack.",
-    iconKey: "cybersecurity",
-  },
-];
-
 // Round structure + labels are factual (SPEC.md §2). Exact configured
 // timestamps (release/selection/build/eval windows) are admin-set and unknown
 // pre-launch, so they're left null rather than invented.
@@ -106,9 +77,9 @@ export const timeline: TimelineItem[] = [
 ];
 
 export const prizes: PrizeTier[] = [
-  { id: "p1", place: 1, amountInr: 15000, label: "First Prize" },
-  { id: "p2", place: 2, amountInr: 10000, label: "Second Prize" },
-  { id: "p3", place: 3, amountInr: 5000, label: "Third Prize" },
+  { id: "p1", place: 1, amountInr: 20000, label: "First Prize" },
+  { id: "p2", place: 2, amountInr: 15000, label: "Second Prize" },
+  { id: "p3", place: 3, amountInr: 8000, label: "Third Prize" },
 ];
 
 // Previous-year event photography, supplied by the organizers.
@@ -157,6 +128,9 @@ export const registrationGuidelines: RegistrationGuidelines = {
   content:
     "Registration guidelines will be published by the organizers before registration opens. This content is fully editable from Admin Configuration.",
   nocNotice: "NOC Submission is COMPULSORY for every participant.",
+  // Not yet supplied by organizers — until it is, the guidelines step shows a
+  // "provided closer to the event" note instead of a broken/missing link.
+  nocFormUrl: null,
 };
 
 // Organizer-provided — not yet supplied. Placeholder structure per SPEC.md §87.

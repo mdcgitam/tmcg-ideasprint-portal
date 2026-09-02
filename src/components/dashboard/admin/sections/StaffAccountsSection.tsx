@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import type { ProfileRow, UserRole } from "@/types/database";
-import { createStaffProfile, updateUserRole, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { createStaffProfile, updateUserRole, deleteSpoc, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { downloadCsv } from "@/lib/csv";
 
 const STAFF_ROLES: UserRole[] = ["SPOC", "Super Admin"];
 
@@ -55,6 +56,20 @@ export function StaffAccountsSection({ staffAccounts }: { staffAccounts: Profile
     }
   }
 
+  async function handleDeleteSpoc(profileId: string, name: string) {
+    if (!window.confirm(`Delete SPOC ${name}? This unassigns them from every room first.`)) return;
+    setChangingId(profileId);
+    setRowError(null);
+    try {
+      await deleteSpoc(profileId);
+      setLocal((prev) => prev.filter((p) => p.id !== profileId));
+    } catch (err) {
+      setRowError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setChangingId(null);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <form onSubmit={handleCreate} className="rounded-xl border border-border bg-surface p-6">
@@ -99,6 +114,20 @@ export function StaffAccountsSection({ staffAccounts }: { staffAccounts: Profile
 
       <div className="flex flex-col gap-2">
         {rowError && <p className="font-heading text-sm text-danger">{rowError}</p>}
+        {local.length > 0 && (
+          <button
+            type="button"
+            onClick={() =>
+              downloadCsv(
+                "staff-accounts",
+                local.map((s) => ({ Name: s.name, Email: s.gitam_email, Role: s.role, "User ID": s.user_id })),
+              )
+            }
+            className="w-fit rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+          >
+            Download Staff / SPOC List (CSV)
+          </button>
+        )}
         {local.length === 0 ? (
           <div className="rounded-xl border border-border bg-surface p-8 text-center">
             <p className="font-heading text-sm text-ink-muted">No staff accounts yet.</p>
@@ -110,18 +139,30 @@ export function StaffAccountsSection({ staffAccounts }: { staffAccounts: Profile
                 <p className="font-heading text-sm text-ink">{s.name}</p>
                 <p className="mt-1 font-heading text-xs text-ink-muted">{s.gitam_email}</p>
               </div>
-              <select
-                value={s.role}
-                disabled={changingId === s.id}
-                onChange={(e) => handleRoleChange(s.id, e.target.value as UserRole)}
-                className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
-              >
-                {(["SPOC", "Super Admin", "Team Lead", "Member"] as UserRole[]).map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center gap-2">
+                <select
+                  value={s.role}
+                  disabled={changingId === s.id}
+                  onChange={(e) => handleRoleChange(s.id, e.target.value as UserRole)}
+                  className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                >
+                  {(["SPOC", "Super Admin", "Team Lead", "Member"] as UserRole[]).map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+                {s.role === "SPOC" && (
+                  <button
+                    type="button"
+                    disabled={changingId === s.id}
+                    onClick={() => handleDeleteSpoc(s.id, s.name)}
+                    className="rounded-full border border-danger/50 px-3 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
+                  >
+                    Delete
+                  </button>
+                )}
+              </div>
             </div>
           ))
         )}
