@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/client";
+import { DashboardActionError } from "@/lib/dashboard/team-actions";
 
 /** Same pattern as src/lib/dashboard/team-actions.ts — called directly from the browser with the caller's own session. */
-export class DashboardActionError extends Error {}
+export { DashboardActionError };
 
 function friendlyError(raw: string): string {
   if (raw.includes("NOT_ALLOWED")) return "You don't have permission to do this.";
@@ -19,6 +20,9 @@ function friendlyError(raw: string): string {
     const email = raw.split(":").slice(1).join(":").trim();
     return email ? `${email} is already registered.` : "That email is already registered.";
   }
+  if (raw.includes("DUPLICATE_REGNO")) return "That registration/roll number is already in use.";
+  if (raw.includes("DUPLICATE_PHONE")) return "That phone number is already in use.";
+  if (raw.includes("DUPLICATE_TEAM_NAME")) return "A team with that name already exists.";
   if (raw.includes("INVALID_ROLE")) return "Invalid role.";
   if (raw.includes("INVALID_STATUS") || raw.includes("INVALID_DECISION") || raw.includes("INVALID_MEAL")) {
     return "Invalid value submitted.";
@@ -139,4 +143,39 @@ export function deleteMember(profileId: string) {
 
 export function deleteSpoc(profileId: string) {
   return callRpc<null>("delete_spoc", { p_profile_id: profileId });
+}
+
+// ── Edits (admin-only: rename a team, edit a member's/participant's details) ──
+
+export interface UpdateMemberInput {
+  name: string;
+  gitam_email: string;
+  phone: string;
+  reg_no: string;
+  year_of_study: string;
+  school: string;
+  department: string;
+  branch: string;
+  gender: string;
+  stay: string;
+}
+
+export function updateMember(profileId: string, input: UpdateMemberInput) {
+  return callRpc<null>("update_member", {
+    p_profile_id: profileId,
+    p_name: input.name,
+    p_gitam_email: input.gitam_email,
+    p_phone: input.phone,
+    p_reg_no: input.reg_no,
+    p_year_of_study: input.year_of_study,
+    p_school: input.school,
+    p_department: input.department,
+    p_branch: input.branch,
+    p_gender: input.gender,
+    p_stay: input.stay,
+  });
+}
+
+export function updateTeamName(teamId: string, teamName: string) {
+  return callRpc<null>("update_team_name", { p_team_id: teamId, p_team_name: teamName });
 }

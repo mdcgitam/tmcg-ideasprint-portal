@@ -4,7 +4,14 @@ import { useMemo, useState } from "react";
 import type { TeamRow, NocRow, ExitFormRow, ProfileRow, RoomRow, ZoneRow, ProblemStatementRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { deleteNoc, deleteNocFile, getSignedUrl, DashboardActionError } from "@/lib/dashboard/team-actions";
-import { extendProblemStatementDeadline, deleteTeam, deleteMember } from "@/lib/dashboard/admin-actions";
+import {
+  extendProblemStatementDeadline,
+  deleteTeam,
+  deleteMember,
+  updateMember,
+  updateTeamName,
+  type UpdateMemberInput,
+} from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
 
 const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
@@ -12,6 +19,7 @@ const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
 
 interface DownloadRow {
   [key: string]: string;
+  "Member Name": string;
   "Reg./Roll No.": string;
   "Year of Study": string;
   "Team Name": string;
@@ -52,6 +60,16 @@ export function TeamsListSection({
   const [localTeams, setLocalTeams] = useState(teams);
   const [busyProfileId, setBusyProfileId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
+  const [memberForm, setMemberForm] = useState<UpdateMemberInput | null>(null);
+  const [savingMember, setSavingMember] = useState(false);
+  const [memberError, setMemberError] = useState<string | null>(null);
+
+  const [editingTeamNameId, setEditingTeamNameId] = useState<string | null>(null);
+  const [teamNameDraft, setTeamNameDraft] = useState("");
+  const [savingTeamName, setSavingTeamName] = useState(false);
+  const [teamNameError, setTeamNameError] = useState<string | null>(null);
 
   const [extendUntil, setExtendUntil] = useState<Record<string, string>>({});
   const [extendReason, setExtendReason] = useState<Record<string, string>>({});
@@ -100,6 +118,7 @@ export function TeamsListSection({
     const lead = members.find((m) => m.is_lead);
     const room = roomOf(team);
     return members.map((m) => ({
+      "Member Name": m.name,
       "Reg./Roll No.": m.reg_no,
       "Year of Study": m.year_of_study,
       "Team Name": team.team_name,
@@ -167,6 +186,64 @@ export function TeamsListSection({
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
       setBusyProfileId(null);
+    }
+  }
+
+  function startEditMember(m: TeamMemberProfile) {
+    setEditingMemberId(m.id);
+    setMemberError(null);
+    setMemberForm({
+      name: m.name,
+      gitam_email: m.gitam_email,
+      phone: m.phone,
+      reg_no: m.reg_no,
+      year_of_study: m.year_of_study,
+      school: m.school,
+      department: m.department,
+      branch: m.branch,
+      gender: m.gender,
+      stay: m.stay,
+    });
+  }
+
+  function cancelEditMember() {
+    setEditingMemberId(null);
+    setMemberForm(null);
+    setMemberError(null);
+  }
+
+  async function handleSaveMember(profileId: string) {
+    if (!memberForm) return;
+    setSavingMember(true);
+    setMemberError(null);
+    try {
+      await updateMember(profileId, memberForm);
+      // membersByTeam is server-derived (fetchAdminDashboardData) — reload rather than hand-maintaining a local copy.
+      window.location.reload();
+    } catch (err) {
+      setMemberError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+      setSavingMember(false);
+    }
+  }
+
+  function startEditTeamName(team: TeamRow) {
+    setEditingTeamNameId(team.id);
+    setTeamNameDraft(team.team_name);
+    setTeamNameError(null);
+  }
+
+  async function handleSaveTeamName(teamId: string) {
+    if (!teamNameDraft.trim()) return;
+    setSavingTeamName(true);
+    setTeamNameError(null);
+    try {
+      await updateTeamName(teamId, teamNameDraft.trim());
+      setLocalTeams((prev) => prev.map((t) => (t.id === teamId ? { ...t, team_name: teamNameDraft.trim() } : t)));
+      setEditingTeamNameId(null);
+    } catch (err) {
+      setTeamNameError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setSavingTeamName(false);
     }
   }
 
@@ -289,16 +366,46 @@ export function TeamsListSection({
                       Download Roster (CSV)
                     </button>
                     {scope === "admin" && (
-                      <button
-                        type="button"
-                        disabled={busyProfileId === team.id}
-                        onClick={() => handleDeleteTeam(team)}
-                        className="rounded-full border border-danger/50 px-4 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
-                      >
-                        Delete Team
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            editingTeamNameId === team.id ? setEditingTeamNameId(null) : startEditTeamName(team)
+                          }
+                          className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+                        >
+                          {editingTeamNameId === team.id ? "Cancel Rename" : "Rename Team"}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyProfileId === team.id}
+                          onClick={() => handleDeleteTeam(team)}
+                          className="rounded-full border border-danger/50 px-4 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
+                        >
+                          Delete Team
+                        </button>
+                      </>
                     )}
                   </div>
+
+                  {scope === "admin" && editingTeamNameId === team.id && (
+                    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-gold/30 p-3">
+                      <input
+                        value={teamNameDraft}
+                        onChange={(e) => setTeamNameDraft(e.target.value)}
+                        className="min-w-[200px] flex-1 rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                      />
+                      <button
+                        type="button"
+                        disabled={savingTeamName || !teamNameDraft.trim()}
+                        onClick={() => handleSaveTeamName(team.id)}
+                        className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                      >
+                        {savingTeamName ? "Saving…" : "Save"}
+                      </button>
+                      {teamNameError && <p className="w-full font-heading text-xs text-danger">{teamNameError}</p>}
+                    </div>
+                  )}
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     {members.map((m) => {
@@ -329,6 +436,17 @@ export function TeamsListSection({
                                 </button>
                               </>
                             )}
+                            {scope === "admin" && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  editingMemberId === m.id ? cancelEditMember() : startEditMember(m)
+                                }
+                                className="text-gold underline"
+                              >
+                                {editingMemberId === m.id ? "Cancel" : "Edit"}
+                              </button>
+                            )}
                             {scope === "admin" && !m.is_lead && (
                               <button
                                 type="button"
@@ -340,6 +458,17 @@ export function TeamsListSection({
                               </button>
                             )}
                           </p>
+
+                          {scope === "admin" && editingMemberId === m.id && memberForm && (
+                            <MemberEditForm
+                              form={memberForm}
+                              onChange={setMemberForm}
+                              onSave={() => handleSaveMember(m.id)}
+                              onCancel={cancelEditMember}
+                              saving={savingMember}
+                              error={memberError}
+                            />
+                          )}
                         </div>
                       );
                     })}
@@ -395,6 +524,110 @@ export function TeamsListSection({
         })
       )}
     </div>
+  );
+}
+
+function MemberEditForm({
+  form,
+  onChange,
+  onSave,
+  onCancel,
+  saving,
+  error,
+}: {
+  form: UpdateMemberInput;
+  onChange: (form: UpdateMemberInput) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+  error: string | null;
+}) {
+  return (
+    <div className="mt-3 flex flex-col gap-2 rounded-lg border border-gold/30 bg-void p-3">
+      <div className="grid gap-2 sm:grid-cols-2">
+        <EditField label="Name" value={form.name} onChange={(v) => onChange({ ...form, name: v })} />
+        <EditField label="Email" value={form.gitam_email} onChange={(v) => onChange({ ...form, gitam_email: v })} />
+        <EditField label="Phone" value={form.phone} onChange={(v) => onChange({ ...form, phone: v })} />
+        <EditField label="Reg./Roll No." value={form.reg_no} onChange={(v) => onChange({ ...form, reg_no: v })} />
+        <EditSelect
+          label="Year of Study"
+          value={form.year_of_study}
+          onChange={(v) => onChange({ ...form, year_of_study: v })}
+          options={YEAR_OPTIONS}
+        />
+        <EditSelect
+          label="Gender"
+          value={form.gender}
+          onChange={(v) => onChange({ ...form, gender: v })}
+          options={GENDER_OPTIONS}
+        />
+        <EditField label="School" value={form.school} onChange={(v) => onChange({ ...form, school: v })} />
+        <EditField label="Department" value={form.department} onChange={(v) => onChange({ ...form, department: v })} />
+        <EditField label="Branch" value={form.branch} onChange={(v) => onChange({ ...form, branch: v })} />
+        <EditField label="Stay" value={form.stay} onChange={(v) => onChange({ ...form, stay: v })} />
+      </div>
+      {error && <p className="font-heading text-xs text-danger">{error}</p>}
+      <div className="flex gap-2">
+        <button
+          type="button"
+          disabled={saving}
+          onClick={onSave}
+          className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+        >
+          {saving ? "Saving…" : "Save Changes"}
+        </button>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={onCancel}
+          className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-surface disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function EditField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <label className="flex flex-col gap-1 font-heading text-xs text-ink-muted">
+      {label}
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+      />
+    </label>
+  );
+}
+
+function EditSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  options: string[];
+}) {
+  return (
+    <label className="flex flex-col gap-1 font-heading text-xs text-ink-muted">
+      {label}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
+    </label>
   );
 }
 
