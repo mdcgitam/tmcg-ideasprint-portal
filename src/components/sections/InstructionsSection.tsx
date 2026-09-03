@@ -80,7 +80,7 @@ export function InstructionsSection() {
         <Reveal className="mt-8 grid gap-8 sm:grid-cols-2">
           <div>
             <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Slots</span>
-            <p className="mt-3 font-heading text-2xl text-ink">First Come, First Served (FCFS)</p>
+            <p className="mt-3 font-heading text-2xl text-ink">First 100 teams only</p>
           </div>
           <div>
             <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statements</span>

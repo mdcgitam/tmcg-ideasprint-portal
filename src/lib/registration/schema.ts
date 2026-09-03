@@ -4,9 +4,30 @@ import { z } from "zod";
 // This is UX-layer validation only — the authoritative check happens server-side at auth time.
 const GITAM_EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@(student\.gitam\.edu|gitam\.in)$/i;
 
-export const YEAR_OF_STUDY_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"] as const;
-export const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"] as const;
+export const YEAR_OF_STUDY_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as const;
+export const GENDER_OPTIONS = ["Male", "Female"] as const;
 export const STAY_OPTIONS = ["Hosteller", "Day Scholar"] as const;
+
+// CSE and its allied branches. "Other" lets a member outside this list type
+// their branch manually — see MemberDetailsStep's custom-branch toggle.
+export const BRANCH_OPTIONS = [
+  "CSE",
+  "AIML",
+  "DS",
+  "CS",
+  "IOT",
+  "CSBS",
+  "Biotech",
+  "ECE",
+  "ECE-AIML",
+  "ECE-VLSI",
+] as const;
+
+export const SCHOOL_VALUES = ["GSCSE", "GSCE"] as const;
+export const SCHOOL_LABELS: Record<(typeof SCHOOL_VALUES)[number], string> = {
+  GSCSE: "GSCSE — Gitam School of Computers and System Engineering (CSE & Allied Branches)",
+  GSCE: "GSCE — Gitam School of Core Engineering (ECE, EEE, MECH, CIVIL)",
+};
 
 // SPEC.md §11 — permanent business rule, never configurable.
 export const MIN_TEAM_SIZE = 3;
@@ -25,8 +46,7 @@ export const memberSchema = z.object({
     .trim()
     .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
   yearOfStudy: z.enum(YEAR_OF_STUDY_OPTIONS, { error: "Select a year of study" }),
-  school: z.string().trim().min(2, "Enter the participant's school"),
-  department: z.string().trim().min(2, "Enter the participant's department"),
+  school: z.enum(SCHOOL_VALUES, { error: "Select a school" }),
   branch: z.string().trim().min(2, "Enter the participant's branch"),
   gender: z.enum(GENDER_OPTIONS, { error: "Select a gender" }),
   stay: z.enum(STAY_OPTIONS, { error: "Select hosteller or day scholar" }),
@@ -58,8 +78,7 @@ export function emptyMember(): MemberFormValues {
     gitamEmail: "",
     phone: "",
     yearOfStudy: "1st Year",
-    school: "",
-    department: "",
+    school: SCHOOL_VALUES[0],
     branch: "",
     gender: "Male",
     stay: "Hosteller",

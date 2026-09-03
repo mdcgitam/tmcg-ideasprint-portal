@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import type { RegistrationFormValues } from "@/lib/registration/schema";
+import { SCHOOL_LABELS, type RegistrationFormValues } from "@/lib/registration/schema";
 
 export function ReviewStep() {
   const { getValues } = useFormContext<RegistrationFormValues>();
@@ -37,8 +37,7 @@ export function ReviewStep() {
               <ReviewRow label="GITAM Mail" value={member.gitamEmail} />
               <ReviewRow label="Phone" value={member.phone} />
               <ReviewRow label="Year" value={member.yearOfStudy} />
-              <ReviewRow label="School" value={member.school} />
-              <ReviewRow label="Department" value={member.department} />
+              <ReviewRow label="School" value={SCHOOL_LABELS[member.school]} />
               <ReviewRow label="Branch" value={member.branch} />
               <ReviewRow label="Gender" value={member.gender} />
               <ReviewRow label="Stay" value={member.stay} />

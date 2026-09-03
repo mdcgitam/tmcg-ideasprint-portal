@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { FormField, fieldInputClass } from "@/components/registration/FormField";
 import {
+  BRANCH_OPTIONS,
   emptyMember,
   GENDER_OPTIONS,
+  SCHOOL_LABELS,
+  SCHOOL_VALUES,
   STAY_OPTIONS,
   YEAR_OF_STUDY_OPTIONS,
   type RegistrationFormValues,
@@ -21,12 +24,38 @@ export function MemberDetailsStep() {
   const {
     control,
     register,
+    setValue,
     formState: { errors },
   } = useFormContext<RegistrationFormValues>();
 
   const memberCount = useWatch<RegistrationFormValues>({ control, name: "team.memberCount" }) as number;
+  const memberValues = useWatch({ control, name: "members" });
   const { fields, append, remove } = useFieldArray({ control, name: "members" });
   const [openIndex, setOpenIndex] = useState(0);
+  const [customBranchIds, setCustomBranchIds] = useState<Set<string>>(new Set());
+
+  function selectBranch(index: number, fieldId: string, value: string) {
+    if (value === "Other") {
+      setCustomBranchIds((prev) => new Set(prev).add(fieldId));
+      setValue(`members.${index}.branch`, "", { shouldValidate: true });
+    } else {
+      setCustomBranchIds((prev) => {
+        const next = new Set(prev);
+        next.delete(fieldId);
+        return next;
+      });
+      setValue(`members.${index}.branch`, value, { shouldValidate: true });
+    }
+  }
+
+  function resetBranchToList(index: number, fieldId: string) {
+    setCustomBranchIds((prev) => {
+      const next = new Set(prev);
+      next.delete(fieldId);
+      return next;
+    });
+    setValue(`members.${index}.branch`, "", { shouldValidate: true });
+  }
 
   useEffect(() => {
     if (!memberCount) return;
@@ -126,27 +155,58 @@ export function MemberDetailsStep() {
                     </FormField>
 
                     <FormField label="School" required error={memberErrors?.school?.message}>
-                      <input
+                      <select
                         className={fieldInputClass}
                         aria-invalid={!!memberErrors?.school}
                         {...register(`members.${index}.school`)}
-                      />
-                    </FormField>
-
-                    <FormField label="Department" required error={memberErrors?.department?.message}>
-                      <input
-                        className={fieldInputClass}
-                        aria-invalid={!!memberErrors?.department}
-                        {...register(`members.${index}.department`)}
-                      />
+                      >
+                        {SCHOOL_VALUES.map((s) => (
+                          <option key={s} value={s}>
+                            {SCHOOL_LABELS[s]}
+                          </option>
+                        ))}
+                      </select>
                     </FormField>
 
                     <FormField label="Branch" required error={memberErrors?.branch?.message}>
-                      <input
-                        className={fieldInputClass}
-                        aria-invalid={!!memberErrors?.branch}
-                        {...register(`members.${index}.branch`)}
-                      />
+                      {customBranchIds.has(field.id) ? (
+                        <div className="flex flex-col gap-2">
+                          <input
+                            className={fieldInputClass}
+                            placeholder="Enter your branch"
+                            aria-invalid={!!memberErrors?.branch}
+                            {...register(`members.${index}.branch`)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => resetBranchToList(index, field.id)}
+                            className="self-start font-mono text-xs text-gold underline underline-offset-2"
+                          >
+                            Choose from list instead
+                          </button>
+                        </div>
+                      ) : (
+                        <select
+                          className={fieldInputClass}
+                          aria-invalid={!!memberErrors?.branch}
+                          value={
+                            BRANCH_OPTIONS.includes(memberValues?.[index]?.branch as (typeof BRANCH_OPTIONS)[number])
+                              ? (memberValues?.[index]?.branch ?? "")
+                              : ""
+                          }
+                          onChange={(e) => selectBranch(index, field.id, e.target.value)}
+                        >
+                          <option value="" disabled>
+                            Select branch
+                          </option>
+                          {BRANCH_OPTIONS.map((b) => (
+                            <option key={b} value={b}>
+                              {b}
+                            </option>
+                          ))}
+                          <option value="Other">Other</option>
+                        </select>
+                      )}
                     </FormField>
 
                     <FormField label="Gender" required error={memberErrors?.gender?.message}>

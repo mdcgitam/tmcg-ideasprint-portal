@@ -59,7 +59,16 @@ function friendlyMessage(raw: string): string {
 export async function submitRegistration(input: SubmitRegistrationInput): Promise<SubmitRegistrationOutcome> {
   const supabase = createServiceClient();
 
-  const { data, error } = await supabase.rpc("register_team", { p_payload: input });
+  // The registration form no longer collects "department" (it duplicated
+  // "branch" in practice) — register_team's profiles.department column is
+  // still NOT NULL, so mirror branch into it here rather than touching the
+  // DB schema.
+  const payload = {
+    team: input.team,
+    members: input.members.map((member) => ({ ...member, department: member.branch })),
+  };
+
+  const { data, error } = await supabase.rpc("register_team", { p_payload: payload });
 
   if (error) {
     const known = /^DUPLICATE_(TEAM_NAME|EMAIL|REGNO|PHONE|ENTRY)/.test(error.message);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { TeamRow, NocRow, ExitFormRow, ProfileRow, RoomRow, ZoneRow, ProblemStatementRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { deleteNoc, deleteNocFile, getSignedUrl, DashboardActionError } from "@/lib/dashboard/team-actions";
@@ -16,6 +16,13 @@ import { downloadCsv } from "@/lib/csv";
 
 const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year"];
 const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
+
+// team_id looks like "TeamID01", "TeamID100" — sort on the numeric tail so
+// "View All" orders teams by ID number rather than lexicographically.
+function teamIdSortKey(teamId: string): number {
+  const match = teamId.match(/(\d+)$/);
+  return match ? parseInt(match[1], 10) : 0;
+}
 
 interface DownloadRow {
   [key: string]: string;
@@ -55,7 +62,7 @@ export function TeamsListSection({
   zones: ZoneRow[];
   problemStatements: ProblemStatementRow[];
 }) {
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [managingTeamId, setManagingTeamId] = useState<string | null>(null);
   const [localNocs, setLocalNocs] = useState(nocs);
   const [localTeams, setLocalTeams] = useState(teams);
   const [busyProfileId, setBusyProfileId] = useState<string | null>(null);
@@ -83,6 +90,18 @@ export function TeamsListSection({
   const [zoneFilter, setZoneFilter] = useState("");
   const [psFilter, setPsFilter] = useState("");
   const [teamSizeFilter, setTeamSizeFilter] = useState("");
+  const [sortById, setSortById] = useState(false);
+
+  function handleViewAll() {
+    setSearch("");
+    setYearFilter("");
+    setGenderFilter("");
+    setRoomFilter("");
+    setZoneFilter("");
+    setPsFilter("");
+    setTeamSizeFilter("");
+    setSortById(true);
+  }
 
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
@@ -91,7 +110,7 @@ export function TeamsListSection({
 
   const filteredTeams = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return localTeams.filter((team) => {
+    const result = localTeams.filter((team) => {
       const members = membersByTeam[team.id] ?? [];
       const room = roomOf(team);
       const zone = zoneOf(room);
@@ -110,8 +129,25 @@ export function TeamsListSection({
       if (teamSizeFilter && String(team.member_count) !== teamSizeFilter) return false;
       return true;
     });
+    if (sortById) {
+      result.sort((a, b) => teamIdSortKey(a.team_id) - teamIdSortKey(b.team_id));
+    }
+    return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localTeams, membersByTeam, search, yearFilter, genderFilter, roomFilter, zoneFilter, psFilter, teamSizeFilter, rooms, zones]);
+  }, [
+    localTeams,
+    membersByTeam,
+    search,
+    yearFilter,
+    genderFilter,
+    roomFilter,
+    zoneFilter,
+    psFilter,
+    teamSizeFilter,
+    sortById,
+    rooms,
+    zones,
+  ]);
 
   function teamToRows(team: TeamRow): DownloadRow[] {
     const members = membersByTeam[team.id] ?? [];
@@ -320,6 +356,17 @@ export function TeamsListSection({
             valueOptions={problemStatements.map((p) => p.id)}
           />
           <FilterSelect label="Team Size" value={teamSizeFilter} onChange={setTeamSizeFilter} options={["3", "4"]} />
+          <button
+            type="button"
+            onClick={handleViewAll}
+            className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
+              sortById
+                ? "border-gold bg-gold/10 text-gold"
+                : "border-border text-ink-muted hover:border-gold hover:text-gold"
+            }`}
+          >
+            View All (by ID)
+          </button>
         </div>
       </div>
 
@@ -328,200 +375,245 @@ export function TeamsListSection({
           <p className="font-heading text-sm text-ink-muted">No teams match the current filters.</p>
         </div>
       ) : (
-        filteredTeams.map((team) => {
-          const members = membersByTeam[team.id] ?? [];
-          const lead = members.find((m) => m.is_lead);
-          const isOpen = expanded === team.id;
-          const exitForm = exitForms.find((e) => e.team_id === team.id);
-          const room = roomOf(team);
-          const zone = zoneOf(room);
-          const ps = psOf(team);
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+          <table className="w-full text-left font-heading text-sm">
+            <thead>
+              <tr className="border-b border-border text-xs text-ink-muted uppercase">
+                <th className="px-4 py-3">#</th>
+                <th className="px-4 py-3">Member</th>
+                <th className="px-4 py-3">Reg./Roll No.</th>
+                <th className="px-4 py-3">Year</th>
+                <th className="px-4 py-3">Team</th>
+                <th className="px-4 py-3">Room</th>
+                <th className="px-4 py-3">SPOC</th>
+                <th className="px-4 py-3">NOC</th>
+                <th className="px-4 py-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTeams.map((team, teamIndex) => {
+                const members = membersByTeam[team.id] ?? [];
+                const room = roomOf(team);
+                const zone = zoneOf(room);
+                const ps = psOf(team);
+                const exitForm = exitForms.find((e) => e.team_id === team.id);
+                const isManaging = managingTeamId === team.id;
 
-          return (
-            <div key={team.id} className="rounded-xl border border-border bg-surface">
-              <button
-                type="button"
-                onClick={() => setExpanded(isOpen ? null : team.id)}
-                className="flex w-full flex-wrap items-center justify-between gap-3 px-5 py-4 text-left"
-              >
-                <div>
-                  <p className="font-heading text-sm text-ink">
-                    {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
-                  </p>
-                  <p className="mt-1 font-heading text-xs text-ink-muted">
-                    {lead?.name ?? "No lead"} · {members.length} members · {team.status}
-                  </p>
-                </div>
-                <span className="font-mono text-xs text-gold">{isOpen ? "Hide" : "View"}</span>
-              </button>
-
-              {isOpen && (
-                <div className="border-t border-border p-5">
-                  <div className="mb-4 flex flex-wrap items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadTeam(team)}
-                      className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
-                    >
-                      Download Roster (CSV)
-                    </button>
-                    {scope === "admin" && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            editingTeamNameId === team.id ? setEditingTeamNameId(null) : startEditTeamName(team)
-                          }
-                          className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
-                        >
-                          {editingTeamNameId === team.id ? "Cancel Rename" : "Rename Team"}
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busyProfileId === team.id}
-                          onClick={() => handleDeleteTeam(team)}
-                          className="rounded-full border border-danger/50 px-4 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
-                        >
-                          Delete Team
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {scope === "admin" && editingTeamNameId === team.id && (
-                    <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-gold/30 p-3">
-                      <input
-                        value={teamNameDraft}
-                        onChange={(e) => setTeamNameDraft(e.target.value)}
-                        className="min-w-[200px] flex-1 rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
-                      />
-                      <button
-                        type="button"
-                        disabled={savingTeamName || !teamNameDraft.trim()}
-                        onClick={() => handleSaveTeamName(team.id)}
-                        className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-                      >
-                        {savingTeamName ? "Saving…" : "Save"}
-                      </button>
-                      {teamNameError && <p className="w-full font-heading text-xs text-danger">{teamNameError}</p>}
-                    </div>
-                  )}
-
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {members.map((m) => {
+                return (
+                  <Fragment key={team.id}>
+                    {members.map((m, memberIndex) => {
                       const noc = localNocs.find((n) => n.profile_id === m.id);
                       const uploaded = noc?.status === "Uploaded" && noc.file_path;
-                      return (
-                        <div key={m.id} className="rounded-lg border border-border p-3 font-heading text-sm">
-                          <p className="text-ink">
-                            {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
-                          </p>
-                          <p className="mt-1 text-xs text-ink-muted">
-                            {m.user_id} · {m.gitam_email}
-                          </p>
-                          <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-ink-muted">
-                            NOC: {noc?.status ?? "Not Uploaded"}
-                            {uploaded && (
-                              <>
-                                <button type="button" onClick={() => handleViewNoc(m.id)} className="text-gold underline">
-                                  View
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={busyProfileId === m.id}
-                                  onClick={() => handleDeleteNoc(m.id)}
-                                  className="text-danger underline disabled:opacity-60"
-                                >
-                                  Delete NOC
-                                </button>
-                              </>
-                            )}
-                            {scope === "admin" && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  editingMemberId === m.id ? cancelEditMember() : startEditMember(m)
-                                }
-                                className="text-gold underline"
-                              >
-                                {editingMemberId === m.id ? "Cancel" : "Edit"}
-                              </button>
-                            )}
-                            {scope === "admin" && !m.is_lead && (
-                              <button
-                                type="button"
-                                disabled={busyProfileId === m.id}
-                                onClick={() => handleDeleteMember(m.id, m.name)}
-                                className="text-danger underline disabled:opacity-60"
-                              >
-                                Remove Member
-                              </button>
-                            )}
-                          </p>
+                      const isEditingThis = editingMemberId === m.id;
 
-                          {scope === "admin" && editingMemberId === m.id && memberForm && (
-                            <MemberEditForm
-                              form={memberForm}
-                              onChange={setMemberForm}
-                              onSave={() => handleSaveMember(m.id)}
-                              onCancel={cancelEditMember}
-                              saving={savingMember}
-                              error={memberError}
-                            />
+                      return (
+                        <Fragment key={m.id}>
+                          <tr className="border-b border-border align-top last:border-0">
+                            <td className="px-4 py-3 text-ink-faint">{teamIndex + 1}</td>
+                            <td className="px-4 py-3">
+                              <p className="text-ink">
+                                {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
+                              </p>
+                              <p className="mt-0.5 text-xs text-ink-muted">
+                                {m.user_id} · {m.gitam_email}
+                              </p>
+                            </td>
+                            <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.year_of_study}</td>
+                            <td className="px-4 py-3 text-ink-muted">
+                              {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
+                            </td>
+                            <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
+                            <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
+                            <td className="px-4 py-3 text-ink-muted">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span>{noc?.status ?? "Not Uploaded"}</span>
+                                {uploaded && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleViewNoc(m.id)}
+                                      className="text-gold underline"
+                                    >
+                                      View
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={busyProfileId === m.id}
+                                      onClick={() => handleDeleteNoc(m.id)}
+                                      className="text-danger underline disabled:opacity-60"
+                                    >
+                                      Delete
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap items-center gap-2 text-xs">
+                                {scope === "admin" && (
+                                  <button
+                                    type="button"
+                                    onClick={() => (isEditingThis ? cancelEditMember() : startEditMember(m))}
+                                    className="text-gold underline"
+                                  >
+                                    {isEditingThis ? "Cancel" : "Edit"}
+                                  </button>
+                                )}
+                                {scope === "admin" && !m.is_lead && (
+                                  <button
+                                    type="button"
+                                    disabled={busyProfileId === m.id}
+                                    onClick={() => handleDeleteMember(m.id, m.name)}
+                                    className="text-danger underline disabled:opacity-60"
+                                  >
+                                    Remove
+                                  </button>
+                                )}
+                                {memberIndex === 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setManagingTeamId(isManaging ? null : team.id)}
+                                    className="text-ink-muted underline"
+                                  >
+                                    {isManaging ? "Hide Team" : "Manage Team"}
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+
+                          {scope === "admin" && isEditingThis && memberForm && (
+                            <tr className="border-b border-border bg-void/40">
+                              <td colSpan={9} className="px-4 py-3">
+                                <MemberEditForm
+                                  form={memberForm}
+                                  onChange={setMemberForm}
+                                  onSave={() => handleSaveMember(m.id)}
+                                  onCancel={cancelEditMember}
+                                  saving={savingMember}
+                                  error={memberError}
+                                />
+                              </td>
+                            </tr>
                           )}
-                        </div>
+                        </Fragment>
                       );
                     })}
-                  </div>
 
-                  <p className="mt-4 font-heading text-xs text-ink-muted">
-                    Exit Form: {exitForm?.status ?? "Not Submitted"}
-                  </p>
+                    {isManaging && (
+                      <tr className="border-b border-border bg-void/40">
+                        <td colSpan={9} className="px-4 py-4">
+                          <div className="flex flex-col gap-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadTeam(team)}
+                                className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+                              >
+                                Download Roster (CSV)
+                              </button>
+                              {scope === "admin" && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      editingTeamNameId === team.id ? setEditingTeamNameId(null) : startEditTeamName(team)
+                                    }
+                                    className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+                                  >
+                                    {editingTeamNameId === team.id ? "Cancel Rename" : "Rename Team"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busyProfileId === team.id}
+                                    onClick={() => handleDeleteTeam(team)}
+                                    className="rounded-full border border-danger/50 px-4 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
+                                  >
+                                    Delete Team
+                                  </button>
+                                </>
+                              )}
+                            </div>
 
-                  <p className="mt-2 font-heading text-xs text-ink-muted">
-                    Room: {room?.name ?? "Unassigned"} {zone && `· Zone: ${zone.name}`} · SPOC:{" "}
-                    {spocName(team.spoc_profile_id) ?? "Unassigned"}
-                    {scope === "admin" && <span className="text-ink-faint"> — change this from Rooms & Zones</span>}
-                  </p>
+                            {scope === "admin" && editingTeamNameId === team.id && (
+                              <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gold/30 p-3">
+                                <input
+                                  value={teamNameDraft}
+                                  onChange={(e) => setTeamNameDraft(e.target.value)}
+                                  className="min-w-[200px] flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={savingTeamName || !teamNameDraft.trim()}
+                                  onClick={() => handleSaveTeamName(team.id)}
+                                  className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                                >
+                                  {savingTeamName ? "Saving…" : "Save"}
+                                </button>
+                                {teamNameError && <p className="w-full font-heading text-xs text-danger">{teamNameError}</p>}
+                              </div>
+                            )}
 
-                  {ps && <p className="mt-2 font-heading text-xs text-ink-muted">Problem Statement: {ps.number} — {ps.title}</p>}
+                            <p className="font-heading text-xs text-ink-muted">
+                              Status: {team.status} · Exit Form: {exitForm?.status ?? "Not Submitted"}
+                            </p>
 
-                  <div className="mt-4 rounded-lg border border-border p-3">
-                    <span className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">
-                      Extend PS Selection Deadline
-                    </span>
-                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                      <input
-                        type="datetime-local"
-                        value={extendUntil[team.id] ?? ""}
-                        onChange={(e) => setExtendUntil((v) => ({ ...v, [team.id]: e.target.value }))}
-                        className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Reason (optional)"
-                        value={extendReason[team.id] ?? ""}
-                        onChange={(e) => setExtendReason((v) => ({ ...v, [team.id]: e.target.value }))}
-                        className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
-                      />
-                      <button
-                        type="button"
-                        disabled={extending === team.id || !extendUntil[team.id]}
-                        onClick={() => handleExtend(team.id)}
-                        className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-                      >
-                        {extending === team.id ? "Extending…" : "Extend"}
-                      </button>
-                    </div>
-                    {extendMessage[team.id] && (
-                      <p className="mt-2 font-heading text-xs text-ink-muted">{extendMessage[team.id]}</p>
+                            <p className="font-heading text-xs text-ink-muted">
+                              Room: {room?.name ?? "Unassigned"} {zone && `· Zone: ${zone.name}`} · SPOC:{" "}
+                              {spocName(team.spoc_profile_id) ?? "Unassigned"}
+                              {scope === "admin" && (
+                                <span className="text-ink-faint"> — change this from Rooms & Zones</span>
+                              )}
+                            </p>
+
+                            {ps && (
+                              <p className="font-heading text-xs text-ink-muted">
+                                Problem Statement: {ps.number} — {ps.title}
+                              </p>
+                            )}
+
+                            <div className="rounded-lg border border-border p-3">
+                              <span className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">
+                                Extend PS Selection Deadline
+                              </span>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                <input
+                                  type="datetime-local"
+                                  value={extendUntil[team.id] ?? ""}
+                                  onChange={(e) => setExtendUntil((v) => ({ ...v, [team.id]: e.target.value }))}
+                                  className="rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                                />
+                                <input
+                                  type="text"
+                                  placeholder="Reason (optional)"
+                                  value={extendReason[team.id] ?? ""}
+                                  onChange={(e) => setExtendReason((v) => ({ ...v, [team.id]: e.target.value }))}
+                                  className="rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={extending === team.id || !extendUntil[team.id]}
+                                  onClick={() => handleExtend(team.id)}
+                                  className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                                >
+                                  {extending === team.id ? "Extending…" : "Extend"}
+                                </button>
+                              </div>
+                              {extendMessage[team.id] && (
+                                <p className="mt-2 font-heading text-xs text-ink-muted">{extendMessage[team.id]}</p>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
                     )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
