@@ -10,6 +10,7 @@ import type {
   AttendanceRow,
   AttendanceSessionRow,
   ExitFormRow,
+  PresentationRow,
   ProblemStatementRow,
   ApprovalRequestRow,
   ConfigurationRow,
@@ -47,6 +48,7 @@ export default async function TeamDashboardPage() {
     { data: attendanceRows },
     { data: attendanceSessionRows },
     { data: exitFormRow },
+    { data: presentationRow },
     { data: pendingRequestRow },
     { data: configRows },
   ] = await Promise.all([
@@ -59,6 +61,7 @@ export default async function TeamDashboardPage() {
     supabase.from("attendance").select("*").eq("team_id", teamId),
     supabase.from("attendance_sessions").select("*").order("sort_order"),
     supabase.from("exit_forms").select("*").eq("team_id", teamId).maybeSingle(),
+    supabase.from("presentations").select("*").eq("team_id", teamId).maybeSingle(),
     supabase.from("approval_requests").select("*").eq("team_id", teamId).eq("status", "Pending").maybeSingle(),
     supabase.from("configuration").select("*"),
   ]);
@@ -102,6 +105,7 @@ export default async function TeamDashboardPage() {
       attendance={(attendanceRows ?? []) as AttendanceRow[]}
       attendanceSessions={(attendanceSessionRows ?? []) as AttendanceSessionRow[]}
       exitForm={(exitFormRow ?? null) as ExitFormRow | null}
+      presentation={(presentationRow ?? null) as PresentationRow | null}
       currentProblemStatement={(currentPsRow ?? null) as ProblemStatementRow | null}
       pendingApprovalRequest={(pendingRequestRow ?? null) as ApprovalRequestRow | null}
       config={config}

@@ -15,6 +15,7 @@ export type AttendanceStatus = "Present" | "Absent";
 export type MealStatus = "Not Redeemed" | "Redeemed";
 export type NocStatus = "Not Uploaded" | "Uploaded" | "Verified" | "Missing";
 export type ExitStatus = "Not Submitted" | "Submitted" | "Verified" | "Exited";
+export type PresentationStatus = "Not Uploaded" | "Uploaded";
 export type ApprovalStatus = "Pending" | "Approved" | "Rejected";
 
 export interface ProfileRow {
@@ -144,6 +145,15 @@ export interface ExitFormRow {
   team_id: string;
   file_path: string | null;
   status: ExitStatus;
+  uploaded_by: string | null;
+  uploaded_at: string | null;
+}
+
+export interface PresentationRow {
+  id: string;
+  team_id: string;
+  file_path: string | null;
+  status: PresentationStatus;
   uploaded_by: string | null;
   uploaded_at: string | null;
 }

@@ -9,16 +9,18 @@ import {
   Settings,
   Bell,
   UserCog,
+  FileCheck2,
   type LucideIcon,
 } from "lucide-react";
 import type { ProfileRow } from "@/types/database";
+import type { DashboardCardCounts } from "@/lib/dashboard/admin-data";
 import { Reveal } from "@/components/motion/Reveal";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
 
 export interface AdminDashboardShellProps {
   profile: ProfileRow;
   scope: "spoc" | "admin";
-  unreadCount: number;
+  counts: DashboardCardCounts;
 }
 
 interface CardDef {
@@ -27,12 +29,37 @@ interface CardDef {
   icon: LucideIcon;
 }
 
+/** Cards whose count is an actionable/needs-attention queue get the red "urgent" badge; pure totals get a neutral gold one. */
+const URGENT_SLUGS = new Set(["notifications", "approvals", "noc-ppt"]);
+
+function countForSlug(slug: string, counts: DashboardCardCounts): number {
+  switch (slug) {
+    case "teams":
+      return counts.teams;
+    case "approvals":
+      return counts.pendingApprovals;
+    case "notifications":
+      return counts.unreadNotifications;
+    case "noc-ppt":
+      return counts.incompleteNocPpt;
+    case "rooms-zones":
+      return counts.rooms;
+    case "problem-statements":
+      return counts.problemStatements;
+    case "staff-accounts":
+      return counts.staffAccounts;
+    default:
+      return 0;
+  }
+}
+
 const BASE_CARDS: CardDef[] = [
   { key: "Overview", slug: "overview", icon: LayoutDashboard },
   { key: "Teams", slug: "teams", icon: Users },
   { key: "Approvals", slug: "approvals", icon: ClipboardCheck },
   { key: "Attendance", slug: "attendance", icon: CalendarCheck },
   { key: "Notifications", slug: "notifications", icon: Bell },
+  { key: "NOC & PPT", slug: "noc-ppt", icon: FileCheck2 },
 ];
 const ADMIN_ONLY_CARDS: CardDef[] = [
   { key: "Rooms & Zones", slug: "rooms-zones", icon: DoorOpen },
@@ -47,7 +74,7 @@ const ADMIN_ONLY_CARDS: CardDef[] = [
  * swap here anymore, that logic now lives per-section under
  * src/app/dashboard/{admin,spoc}/<slug>/page.tsx.
  */
-export function AdminDashboardShell({ profile, scope, unreadCount }: AdminDashboardShellProps) {
+export function AdminDashboardShell({ profile, scope, counts }: AdminDashboardShellProps) {
   const cards: CardDef[] = scope === "admin" ? [...BASE_CARDS, ...ADMIN_ONLY_CARDS] : BASE_CARDS;
 
   return (
@@ -64,22 +91,30 @@ export function AdminDashboardShell({ profile, scope, unreadCount }: AdminDashbo
         </Reveal>
 
         <nav aria-label="Dashboard sections" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {cards.map(({ key, slug, icon: Icon }) => (
-            <Link
-              key={key}
-              href={`/dashboard/${scope}/${slug}`}
-              target="_blank"
-              className="relative flex flex-col items-start gap-3 rounded-xl border border-border bg-surface px-4 py-4 text-left transition-colors hover:border-border-strong hover:bg-surface/80"
-            >
-              <Icon className="size-6 text-ink-muted" strokeWidth={1.5} />
-              <span className="font-heading text-sm text-ink">{key}</span>
-              {key === "Notifications" && unreadCount > 0 && (
-                <span className="absolute top-3 right-3 rounded-full bg-danger px-1.5 py-0.5 text-[10px] text-ink">
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
-          ))}
+          {cards.map(({ key, slug, icon: Icon }) => {
+            const count = countForSlug(slug, counts);
+            const urgent = URGENT_SLUGS.has(slug);
+            return (
+              <Link
+                key={key}
+                href={`/dashboard/${scope}/${slug}`}
+                target="_blank"
+                className="relative flex flex-col items-start gap-3 rounded-xl border border-border bg-surface px-4 py-4 text-left transition-colors hover:border-border-strong hover:bg-surface/80"
+              >
+                <Icon className="size-6 text-ink-muted" strokeWidth={1.5} />
+                <span className="font-heading text-sm text-ink">{key}</span>
+                {count > 0 && (
+                  <span
+                    className={`absolute top-3 right-3 rounded-full px-1.5 py-0.5 text-[10px] ${
+                      urgent ? "bg-danger text-ink" : "bg-gold/20 text-gold"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </main>

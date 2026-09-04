@@ -60,6 +60,14 @@ export function recordExitForm(teamId: string, filePath: string) {
   return callRpc<null>("record_exit_form", { p_team_id: teamId, p_file_path: filePath });
 }
 
+export function recordPresentation(teamId: string, filePath: string) {
+  return callRpc<null>("record_presentation", { p_team_id: teamId, p_file_path: filePath });
+}
+
+export function deletePresentation(teamId: string) {
+  return callRpc<null>("delete_presentation", { p_team_id: teamId });
+}
+
 // ── Storage (file bytes never touch our Next.js server — straight to Supabase) ──
 
 export async function uploadNocFile(profileId: string, file: File): Promise<string> {
@@ -84,7 +92,21 @@ export async function uploadExitFormFile(teamId: string, file: File): Promise<st
   return path;
 }
 
-export async function getSignedUrl(bucket: "noc-uploads" | "exit-forms", path: string): Promise<string | null> {
+export async function uploadPresentationFile(teamId: string, file: File): Promise<string> {
+  const supabase = createClient();
+  const path = `${teamId}/${Date.now()}-${file.name}`;
+  const { error } = await supabase.storage.from("ppt-uploads").upload(path, file, { upsert: true });
+  if (error) throw new DashboardActionError("Couldn't upload the file — please try again.");
+  return path;
+}
+
+export async function deletePresentationFile(path: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.storage.from("ppt-uploads").remove([path]);
+  if (error) throw new DashboardActionError("Couldn't delete the file — please try again.");
+}
+
+export async function getSignedUrl(bucket: "noc-uploads" | "exit-forms" | "ppt-uploads", path: string): Promise<string | null> {
   const supabase = createClient();
   const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, 60);
   if (error || !data) return null;

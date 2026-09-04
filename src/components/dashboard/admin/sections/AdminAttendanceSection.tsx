@@ -85,6 +85,38 @@ export function AdminAttendanceSection({
     }
   }
 
+  async function handleMarkTeam(teamId: string, sessionId: string, status: "Present" | "Absent") {
+    const members = membersByTeam[teamId] ?? [];
+    if (members.length === 0) return;
+    const key = `team:${teamId}:${sessionId}`;
+    setBusyKey(key);
+    setError(null);
+    try {
+      await Promise.all(members.map((m) => recordAttendance(sessionId, m.id, status)));
+      setLocalAttendance((prev) => {
+        const memberIds = new Set(members.map((m) => m.id));
+        const untouched = prev.filter((a) => !(a.session_id === sessionId && memberIds.has(a.profile_id)));
+        const updated = members.map((m) => {
+          const existing = prev.find((a) => a.session_id === sessionId && a.profile_id === m.id);
+          return {
+            id: existing?.id ?? crypto.randomUUID(),
+            session_id: sessionId,
+            profile_id: m.id,
+            team_id: teamId,
+            status,
+            recorded_by: existing?.recorded_by ?? "",
+            recorded_at: new Date().toISOString(),
+          };
+        });
+        return [...untouched, ...updated];
+      });
+    } catch (err) {
+      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
   const allMembers = teams.flatMap((t) => membersByTeam[t.id] ?? []);
   const teamNameByProfileId: Record<string, string> = {};
   const spocByProfileId: Record<string, string> = {};
@@ -219,9 +251,34 @@ export function AdminAttendanceSection({
                       return (
                         <Fragment key={team.id}>
                           <tr className="border-b border-border bg-void/40">
-                            <td colSpan={3 + localSessions.length} className="px-4 py-2 font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">
+                            <td colSpan={3} className="px-4 py-2 font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">
                               {team.team_name}
                             </td>
+                            {localSessions.map((s) => {
+                              const busy = busyKey === `team:${team.id}:${s.id}`;
+                              return (
+                                <td key={s.id} className="px-4 py-2">
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      type="button"
+                                      disabled={busy}
+                                      onClick={() => handleMarkTeam(team.id, s.id, "Present")}
+                                      className="rounded-full border border-gitam/40 px-2 py-0.5 text-[10px] font-medium text-gitam normal-case transition-colors hover:bg-gitam/10 disabled:opacity-60"
+                                    >
+                                      All Present
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={busy}
+                                      onClick={() => handleMarkTeam(team.id, s.id, "Absent")}
+                                      className="rounded-full border border-danger/40 px-2 py-0.5 text-[10px] font-medium text-danger normal-case transition-colors hover:bg-danger/10 disabled:opacity-60"
+                                    >
+                                      All Absent
+                                    </button>
+                                  </div>
+                                </td>
+                              );
+                            })}
                           </tr>
                           {members.map((m) => (
                             <tr key={m.id} className="border-b border-border last:border-0">

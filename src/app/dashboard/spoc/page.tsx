@@ -1,11 +1,11 @@
 import { requireProfile } from "@/lib/auth/require-profile";
-import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
+import { fetchAdminDashboardData, computeDashboardCardCounts } from "@/lib/dashboard/admin-data";
 import { AdminDashboardShell } from "@/components/dashboard/admin/AdminDashboardShell";
 
 export default async function SpocDashboardPage() {
   const profile = await requireProfile(["SPOC"]);
-  const { notifications } = await fetchAdminDashboardData(profile);
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const data = await fetchAdminDashboardData(profile);
+  const counts = computeDashboardCardCounts(data);
 
-  return <AdminDashboardShell profile={profile} scope="spoc" unreadCount={unreadCount} />;
+  return <AdminDashboardShell profile={profile} scope="spoc" counts={counts} />;
 }

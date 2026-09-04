@@ -8,6 +8,7 @@ import type {
   AttendanceRow,
   AttendanceSessionRow,
   ExitFormRow,
+  PresentationRow,
   ProblemStatementRow,
   ApprovalRequestRow,
   RoomRow,
@@ -21,6 +22,7 @@ import { ProblemStatementSection } from "./sections/ProblemStatementSection";
 import { AttendanceSection } from "./sections/AttendanceSection";
 import { NocSection } from "./sections/NocSection";
 import { ExitFormSection } from "./sections/ExitFormSection";
+import { PresentationSection } from "./sections/PresentationSection";
 
 export interface TeamMemberProfile extends ProfileRow {
   is_lead: boolean;
@@ -34,6 +36,7 @@ export interface TeamDashboardShellProps {
   attendance: AttendanceRow[];
   attendanceSessions: AttendanceSessionRow[];
   exitForm: ExitFormRow | null;
+  presentation: PresentationRow | null;
   currentProblemStatement: ProblemStatementRow | null;
   pendingApprovalRequest: ApprovalRequestRow | null;
   config: Record<string, unknown>;
@@ -42,7 +45,7 @@ export interface TeamDashboardShellProps {
   spocName: string | null;
 }
 
-const TABS = ["Profile", "Problem Statement", "Attendance", "NOC", "Exit Form"] as const;
+const TABS = ["Profile", "Problem Statement", "Attendance", "NOC", "Presentation", "Exit Form"] as const;
 type Tab = (typeof TABS)[number];
 
 export function TeamDashboardShell(props: TeamDashboardShellProps) {
@@ -112,6 +115,9 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
             />
           )}
           {tab === "NOC" && <NocSection profile={props.profile} members={props.members} nocs={props.nocs} isLead={isLead} />}
+          {tab === "Presentation" && (
+            <PresentationSection team={props.team} presentation={props.presentation} isLead={isLead} />
+          )}
           {tab === "Exit Form" && <ExitFormSection team={props.team} exitForm={props.exitForm} isLead={isLead} />}
         </div>
       </div>
