@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { ProblemStatementRow, PsStatus } from "@/types/database";
+import type { ProblemStatementRow, PsStatus, TeamRow } from "@/types/database";
 import { upsertProblemStatement, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
+import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
+import { useTabFade } from "@/hooks/useTabFade";
 
 interface FormState {
   id: string | null;
@@ -15,11 +17,21 @@ interface FormState {
 
 const EMPTY_FORM: FormState = { id: null, number: "", title: "", description: "", status: "Hidden" };
 
-export function ProblemStatementsAdminSection({ problemStatements }: { problemStatements: ProblemStatementRow[] }) {
+type View = "all" | "by-team";
+
+export function ProblemStatementsAdminSection({
+  problemStatements,
+  teams,
+}: {
+  problemStatements: ProblemStatementRow[];
+  teams: TeamRow[];
+}) {
   const [local, setLocal] = useState(problemStatements);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [view, setView] = useState<View>("all");
+  const fadeRef = useTabFade(view);
 
   function startEdit(ps: ProblemStatementRow) {
     setForm({ id: ps.id, number: ps.number, title: ps.title, description: ps.description ?? "", status: ps.status });
@@ -125,24 +137,49 @@ export function ProblemStatementsAdminSection({ problemStatements }: { problemSt
         </button>
       )}
 
-      <div className="flex flex-col gap-2">
-        {local.map((ps) => (
-          <button
-            key={ps.id}
-            type="button"
-            onClick={() => startEdit(ps)}
-            className="flex items-center justify-between rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-gold/40"
-          >
-            <div>
-              <p className="font-heading text-sm text-ink">
-                #{ps.number} — {ps.title}
-              </p>
-              <p className={`mt-1 font-heading text-xs ${ps.status === "Released" ? "text-gitam" : "text-ink-muted"}`}>
-                {ps.status}
-              </p>
-            </div>
-          </button>
-        ))}
+      <ViewToggle
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "all", label: "View by Problem Statement" },
+          { value: "by-team", label: "View by Team Selection" },
+        ]}
+      />
+
+      <div ref={fadeRef} className="flex flex-col gap-2">
+        {view === "all"
+          ? local.map((ps) => (
+              <button
+                key={ps.id}
+                type="button"
+                onClick={() => startEdit(ps)}
+                className="flex items-center justify-between rounded-xl border border-border bg-surface p-4 text-left transition-colors hover:border-gold/40"
+              >
+                <div>
+                  <p className="font-heading text-sm text-ink">
+                    #{ps.number} — {ps.title}
+                  </p>
+                  <p className={`mt-1 font-heading text-xs ${ps.status === "Released" ? "text-gitam" : "text-ink-muted"}`}>
+                    {ps.status}
+                  </p>
+                </div>
+              </button>
+            ))
+          : local.map((ps) => {
+              const pickedBy = teams.filter((t) => t.current_problem_statement_id === ps.id);
+              return (
+                <div key={ps.id} className="rounded-xl border border-border bg-surface p-4">
+                  <p className="font-heading text-sm text-ink">
+                    #{ps.number} — {ps.title}
+                  </p>
+                  <p className="mt-1 font-heading text-xs text-ink-muted">
+                    {pickedBy.length === 0
+                      ? "No team has selected this yet."
+                      : `${pickedBy.length} team${pickedBy.length === 1 ? "" : "s"}: ${pickedBy.map((t) => t.team_name).join(", ")}`}
+                  </p>
+                </div>
+              );
+            })}
       </div>
     </div>
   );

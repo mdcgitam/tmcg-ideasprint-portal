@@ -1,15 +1,11 @@
-import { redirect } from "next/navigation";
-import { getCurrentProfile } from "@/lib/auth/current-user";
-import { dashboardPathForRole } from "@/lib/auth/roles";
+import { requireProfile } from "@/lib/auth/require-profile";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { AdminDashboardShell } from "@/components/dashboard/admin/AdminDashboardShell";
 
 export default async function SpocDashboardPage() {
-  const profile = await getCurrentProfile();
-  if (!profile) redirect("/login");
-  if (profile.role !== "SPOC") redirect(dashboardPathForRole(profile.role));
+  const profile = await requireProfile(["SPOC"]);
+  const { notifications } = await fetchAdminDashboardData(profile);
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const data = await fetchAdminDashboardData();
-
-  return <AdminDashboardShell profile={profile} scope="spoc" {...data} />;
+  return <AdminDashboardShell profile={profile} scope="spoc" unreadCount={unreadCount} />;
 }

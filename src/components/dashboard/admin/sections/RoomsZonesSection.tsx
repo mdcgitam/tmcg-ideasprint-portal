@@ -11,6 +11,10 @@ import {
   createZone,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
+import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
+import { useTabFade } from "@/hooks/useTabFade";
+
+type View = "manage" | "by-zone";
 
 /**
  * Rooms module (ideasprint_changes.pdf "Room assignment" doubt + item 11):
@@ -44,6 +48,8 @@ export function RoomsZonesSection({
   const [roomName, setRoomName] = useState("");
   const [roomZoneId, setRoomZoneId] = useState("");
   const [creatingRoom, setCreatingRoom] = useState(false);
+  const [view, setView] = useState<View>("manage");
+  const fadeRef = useTabFade(view);
 
   const staffById = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomById = (id: string | null) => localRooms.find((r) => r.id === id) ?? null;
@@ -156,7 +162,19 @@ export function RoomsZonesSection({
     <div className="flex flex-col gap-6">
       {error && <p className="font-heading text-sm text-danger">{error}</p>}
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <ViewToggle
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "manage", label: "Manage" },
+          { value: "by-zone", label: "View by Zone" },
+        ]}
+      />
+
+      <div ref={fadeRef}>
+        {view === "manage" ? (
+          <div className="flex flex-col gap-6">
+            <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Add Zone</span>
           <form onSubmit={handleCreateZone} className="mt-3 flex gap-3">
@@ -273,42 +291,99 @@ export function RoomsZonesSection({
         </div>
       </div>
 
-      <div className="rounded-xl border border-border bg-surface p-6">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Add Teams Into Rooms</span>
-        <p className="mt-2 font-heading text-xs text-ink-muted">
-          Assigning a team to a room immediately gives it that room&rsquo;s SPOC — SPOCs are never assigned to a
-          team directly.
-        </p>
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
-          {localTeams.map((team) => {
-            const room = roomById(team.room_id);
-            const zone = room ? zoneById(room.zone_id) : null;
-            return (
-              <div key={team.id} className="flex flex-col gap-1.5 rounded-lg border border-border px-4 py-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-heading text-sm text-ink">{team.team_name}</span>
-                  <select
-                    value={team.room_id ?? ""}
-                    disabled={busy === `team-room:${team.id}`}
-                    onChange={(e) => handleAssignTeamRoom(team.id, e.target.value)}
-                    className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-xs text-ink outline-none focus:border-gold"
-                  >
-                    <option value="">No room</option>
-                    {localRooms.map((r) => (
-                      <option key={r.id} value={r.id}>
-                        {r.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <span className="font-mono text-[10px] text-ink-faint uppercase">
-                  {zone ? `${zone.name} · ` : ""}
-                  SPOC: {staffById(team.spoc_profile_id) ?? "Unassigned"}
-                </span>
+            <div className="rounded-xl border border-border bg-surface p-6">
+              <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Add Teams Into Rooms</span>
+              <p className="mt-2 font-heading text-xs text-ink-muted">
+                Assigning a team to a room immediately gives it that room&rsquo;s SPOC — SPOCs are never assigned to
+                a team directly.
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                {localTeams.map((team) => {
+                  const room = roomById(team.room_id);
+                  const zone = room ? zoneById(room.zone_id) : null;
+                  return (
+                    <div key={team.id} className="flex flex-col gap-1.5 rounded-lg border border-border px-4 py-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-heading text-sm text-ink">{team.team_name}</span>
+                        <select
+                          value={team.room_id ?? ""}
+                          disabled={busy === `team-room:${team.id}`}
+                          onChange={(e) => handleAssignTeamRoom(team.id, e.target.value)}
+                          className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-xs text-ink outline-none focus:border-gold"
+                        >
+                          <option value="">No room</option>
+                          {localRooms.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <span className="font-mono text-[10px] text-ink-faint uppercase">
+                        {zone ? `${zone.name} · ` : ""}
+                        SPOC: {staffById(team.spoc_profile_id) ?? "Unassigned"}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {[...localZones, null].map((zone) => {
+              const zoneRooms = localRooms.filter((r) => (zone ? r.zone_id === zone.id : !r.zone_id));
+              if (zone === null && zoneRooms.length === 0 && localTeams.every((t) => t.room_id)) return null;
+              return (
+                <div key={zone?.id ?? "unassigned"} className="rounded-xl border border-border bg-surface p-6">
+                  <div className="flex items-center justify-between">
+                    <span className="font-heading text-sm text-ink">{zone?.name ?? "Unassigned"}</span>
+                    {zone && (
+                      <span className="font-mono text-[10px] text-ink-faint uppercase">
+                        Manager: {staffById(zone.zone_manager_profile_id) ?? "Unassigned"}
+                      </span>
+                    )}
+                  </div>
+                  {zoneRooms.length === 0 ? (
+                    <p className="mt-2 font-heading text-xs text-ink-muted">No rooms in this zone.</p>
+                  ) : (
+                    <div className="mt-3 flex flex-col gap-2">
+                      {zoneRooms.map((room) => {
+                        const roomTeams = localTeams.filter((t) => t.room_id === room.id);
+                        return (
+                          <div key={room.id} className="rounded-lg border border-border px-4 py-2.5">
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <span className="font-heading text-sm text-ink">{room.name}</span>
+                              <span className="font-mono text-[10px] text-ink-faint uppercase">
+                                SPOC: {staffById(room.spoc_profile_id) ?? "Unassigned"}
+                              </span>
+                            </div>
+                            <p className="mt-1 font-heading text-xs text-ink-muted">
+                              {roomTeams.length === 0
+                                ? "No teams assigned."
+                                : roomTeams.map((t) => t.team_name).join(", ")}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {zone === null && (
+                    <div className="mt-3 flex flex-col gap-1">
+                      {localTeams
+                        .filter((t) => !t.room_id)
+                        .map((t) => (
+                          <p key={t.id} className="font-heading text-xs text-ink-muted">
+                            {t.team_name} — no room assigned
+                          </p>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

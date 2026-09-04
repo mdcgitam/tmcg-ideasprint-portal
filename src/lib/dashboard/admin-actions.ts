@@ -27,6 +27,8 @@ function friendlyError(raw: string): string {
   if (raw.includes("INVALID_STATUS") || raw.includes("INVALID_DECISION") || raw.includes("INVALID_MEAL")) {
     return "Invalid value submitted.";
   }
+  if (raw.includes("INVALID_AUDIENCE")) return "Choose an audience to notify.";
+  if (raw.includes("INVALID_BROADCAST")) return "Title and message can't be empty.";
   return "Something went wrong. Please try again.";
 }
 
@@ -90,6 +92,13 @@ export function setConfiguration(key: string, value: unknown, description: strin
 
 export function markNotificationRead(notificationId: string) {
   return callRpc<null>("mark_notification_read", { p_notification_id: notificationId });
+}
+
+export type BroadcastAudience = "Member" | "Team Lead" | "SPOC";
+
+/** Pushes a notification to every profile in the chosen audience. Returns the recipient count. */
+export function broadcastNotification(title: string, message: string, audience: BroadcastAudience) {
+  return callRpc<number>("broadcast_notification", { p_title: title, p_message: message, p_audience: audience });
 }
 
 export interface CreateStaffInput {

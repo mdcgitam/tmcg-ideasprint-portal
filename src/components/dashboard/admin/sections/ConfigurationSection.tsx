@@ -2,6 +2,10 @@
 
 import { useState } from "react";
 import { setConfiguration, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
+import { useTabFade } from "@/hooks/useTabFade";
+
+type View = "all" | "by-category";
 
 /**
  * SPEC §79-88: everything admin-configurable lives in one generic
@@ -34,6 +38,8 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
   });
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [message, setMessage] = useState<Record<string, string>>({});
+  const [view, setView] = useState<View>("all");
+  const fadeRef = useTabFade(view);
 
   async function handleSave(key: string) {
     setSavingKey(key);
@@ -48,31 +54,33 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     }
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      {KNOWN_KEYS.map(({ key, label, placeholder }) => (
-        <div key={key} className="rounded-xl border border-border bg-surface p-6">
-          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">{label}</span>
-          <div className="mt-3 flex flex-wrap gap-3">
-            <input
-              value={values[key] ?? ""}
-              onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
-              placeholder={placeholder}
-              className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-            />
-            <button
-              type="button"
-              disabled={savingKey === key}
-              onClick={() => handleSave(key)}
-              className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-            >
-              {savingKey === key ? "Saving…" : "Save"}
-            </button>
-          </div>
-          {message[key] && <p className="mt-2 font-heading text-xs text-ink-muted">{message[key]}</p>}
+  function psSettingFields() {
+    return KNOWN_KEYS.map(({ key, label, placeholder }) => (
+      <div key={key} className="rounded-xl border border-border bg-surface p-6">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">{label}</span>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <input
+            value={values[key] ?? ""}
+            onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
+            placeholder={placeholder}
+            className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            disabled={savingKey === key}
+            onClick={() => handleSave(key)}
+            className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+          >
+            {savingKey === key ? "Saving…" : "Save"}
+          </button>
         </div>
-      ))}
+        {message[key] && <p className="mt-2 font-heading text-xs text-ink-muted">{message[key]}</p>}
+      </div>
+    ));
+  }
 
+  function privacyField() {
+    return (
       <div className="rounded-xl border border-border bg-surface p-6">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Privacy Policy Content</span>
         <p className="mt-1 font-heading text-xs text-ink-muted">
@@ -94,7 +102,44 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
             {savingKey === PRIVACY_POLICY_KEY ? "Saving…" : "Save"}
           </button>
         </div>
-        {message[PRIVACY_POLICY_KEY] && <p className="mt-2 font-heading text-xs text-ink-muted">{message[PRIVACY_POLICY_KEY]}</p>}
+        {message[PRIVACY_POLICY_KEY] && (
+          <p className="mt-2 font-heading text-xs text-ink-muted">{message[PRIVACY_POLICY_KEY]}</p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <ViewToggle
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "all", label: "All Settings" },
+          { value: "by-category", label: "By Category" },
+        ]}
+      />
+
+      <div ref={fadeRef} className="flex flex-col gap-6">
+        {view === "all" ? (
+          <div className="flex flex-col gap-4">
+            {psSettingFields()}
+            {privacyField()}
+          </div>
+        ) : (
+          <>
+            <div>
+              <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">
+                Problem Statement Settings
+              </p>
+              <div className="flex flex-col gap-4">{psSettingFields()}</div>
+            </div>
+            <div>
+              <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">Site Content</p>
+              {privacyField()}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
