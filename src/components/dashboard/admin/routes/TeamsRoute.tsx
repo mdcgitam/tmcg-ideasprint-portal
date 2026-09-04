@@ -4,7 +4,7 @@ import { TeamsPage } from "@/components/dashboard/admin/sections/TeamsPage";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function TeamsRoute({ profile }: { profile: ProfileRow }) {
-  const { teams, membersByTeam, nocs, exitForms, staffAccounts, rooms, zones, problemStatements } =
+  const { teams, membersByTeam, nocs, exitRequests, attendance, attendanceSessions, staffAccounts, rooms, zones, problemStatements } =
     await fetchAdminDashboardData(profile);
   const scope = profile.role === "Super Admin" ? "admin" : "spoc";
 
@@ -14,7 +14,9 @@ export async function TeamsRoute({ profile }: { profile: ProfileRow }) {
         teams={teams}
         membersByTeam={membersByTeam}
         nocs={nocs}
-        exitForms={exitForms}
+        exitRequests={exitRequests}
+        attendance={attendance}
+        attendanceSessions={attendanceSessions}
         scope={scope}
         staffAccounts={staffAccounts}
         rooms={rooms}

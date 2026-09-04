@@ -9,7 +9,7 @@ import type {
   NocRow,
   AttendanceRow,
   AttendanceSessionRow,
-  ExitFormRow,
+  ExitRequestRow,
   PresentationRow,
   ProblemStatementRow,
   ApprovalRequestRow,
@@ -22,6 +22,19 @@ export default async function TeamDashboardPage() {
   const profile = await getCurrentProfile();
   if (!profile) redirect("/login");
   if (profile.role !== "Team Lead" && profile.role !== "Member") redirect(dashboardPathForRole(profile.role));
+
+  if (!profile.is_active) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-void px-6 text-center">
+        <div>
+          <p className="font-display text-2xl text-ink">Your Registration Has Been Exited</p>
+          <p className="mt-3 font-heading text-sm text-ink-muted">
+            If this is a mistake, please contact the organizers.
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   const supabase = await createClient();
 
@@ -47,7 +60,7 @@ export default async function TeamDashboardPage() {
     { data: nocRows },
     { data: attendanceRows },
     { data: attendanceSessionRows },
-    { data: exitFormRow },
+    { data: exitRequestRows },
     { data: presentationRow },
     { data: pendingRequestRow },
     { data: configRows },
@@ -60,7 +73,7 @@ export default async function TeamDashboardPage() {
     supabase.from("nocs").select("*"),
     supabase.from("attendance").select("*").eq("team_id", teamId),
     supabase.from("attendance_sessions").select("*").order("sort_order"),
-    supabase.from("exit_forms").select("*").eq("team_id", teamId).maybeSingle(),
+    supabase.from("exit_requests").select("*"),
     supabase.from("presentations").select("*").eq("team_id", teamId).maybeSingle(),
     supabase.from("approval_requests").select("*").eq("team_id", teamId).eq("status", "Pending").maybeSingle(),
     supabase.from("configuration").select("*"),
@@ -104,7 +117,7 @@ export default async function TeamDashboardPage() {
       nocs={(nocRows ?? []) as NocRow[]}
       attendance={(attendanceRows ?? []) as AttendanceRow[]}
       attendanceSessions={(attendanceSessionRows ?? []) as AttendanceSessionRow[]}
-      exitForm={(exitFormRow ?? null) as ExitFormRow | null}
+      exitRequests={(exitRequestRows ?? []) as ExitRequestRow[]}
       presentation={(presentationRow ?? null) as PresentationRow | null}
       currentProblemStatement={(currentPsRow ?? null) as ProblemStatementRow | null}
       pendingApprovalRequest={(pendingRequestRow ?? null) as ApprovalRequestRow | null}

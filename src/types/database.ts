@@ -14,8 +14,8 @@ export type PsStatus = "Hidden" | "Released";
 export type AttendanceStatus = "Present" | "Absent";
 export type MealStatus = "Not Redeemed" | "Redeemed";
 export type NocStatus = "Not Uploaded" | "Uploaded" | "Verified" | "Missing";
-export type ExitStatus = "Not Submitted" | "Submitted" | "Verified" | "Exited";
 export type PresentationStatus = "Not Uploaded" | "Uploaded";
+export type MemberExitStatus = "Requested" | "Approved" | "Rejected";
 export type ApprovalStatus = "Pending" | "Approved" | "Rejected";
 
 export interface ProfileRow {
@@ -34,6 +34,8 @@ export interface ProfileRow {
   branch: string;
   gender: string;
   stay: string;
+  is_active: boolean;
+  deactivated_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -140,13 +142,16 @@ export interface NocRow {
   updated_at: string;
 }
 
-export interface ExitFormRow {
+export interface ExitRequestRow {
   id: string;
+  profile_id: string;
   team_id: string;
   file_path: string | null;
-  status: ExitStatus;
-  uploaded_by: string | null;
-  uploaded_at: string | null;
+  status: MemberExitStatus;
+  reason: string | null;
+  requested_at: string;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
 }
 
 export interface PresentationRow {

@@ -7,7 +7,7 @@ import type {
   NocRow,
   AttendanceRow,
   AttendanceSessionRow,
-  ExitFormRow,
+  ExitRequestRow,
   PresentationRow,
   ProblemStatementRow,
   ApprovalRequestRow,
@@ -21,7 +21,7 @@ import { ProfileSection } from "./sections/ProfileSection";
 import { ProblemStatementSection } from "./sections/ProblemStatementSection";
 import { AttendanceSection } from "./sections/AttendanceSection";
 import { NocSection } from "./sections/NocSection";
-import { ExitFormSection } from "./sections/ExitFormSection";
+import { ExitRequestSection } from "./sections/ExitRequestSection";
 import { PresentationSection } from "./sections/PresentationSection";
 
 export interface TeamMemberProfile extends ProfileRow {
@@ -35,7 +35,7 @@ export interface TeamDashboardShellProps {
   nocs: NocRow[];
   attendance: AttendanceRow[];
   attendanceSessions: AttendanceSessionRow[];
-  exitForm: ExitFormRow | null;
+  exitRequests: ExitRequestRow[];
   presentation: PresentationRow | null;
   currentProblemStatement: ProblemStatementRow | null;
   pendingApprovalRequest: ApprovalRequestRow | null;
@@ -45,7 +45,7 @@ export interface TeamDashboardShellProps {
   spocName: string | null;
 }
 
-const TABS = ["Profile", "Problem Statement", "Attendance", "NOC", "Presentation", "Exit Form"] as const;
+const TABS = ["Profile", "Problem Statement", "Attendance", "NOC", "Presentation", "Exit Request"] as const;
 type Tab = (typeof TABS)[number];
 
 export function TeamDashboardShell(props: TeamDashboardShellProps) {
@@ -118,7 +118,14 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
           {tab === "Presentation" && (
             <PresentationSection team={props.team} presentation={props.presentation} isLead={isLead} />
           )}
-          {tab === "Exit Form" && <ExitFormSection team={props.team} exitForm={props.exitForm} isLead={isLead} />}
+          {tab === "Exit Request" && (
+            <ExitRequestSection
+              profile={props.profile}
+              members={props.members}
+              exitRequests={props.exitRequests}
+              isLead={isLead}
+            />
+          )}
         </div>
       </div>
     </main>

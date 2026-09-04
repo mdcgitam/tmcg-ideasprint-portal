@@ -5,7 +5,7 @@ import type {
   NocRow,
   AttendanceRow,
   AttendanceSessionRow,
-  ExitFormRow,
+  ExitRequestRow,
   PresentationRow,
   ProblemStatementRow,
   ApprovalRequestRow,
@@ -26,7 +26,7 @@ export interface AdminDashboardData {
   attendanceSessions: AttendanceSessionRow[];
   attendance: AttendanceRow[];
   nocs: NocRow[];
-  exitForms: ExitFormRow[];
+  exitRequests: ExitRequestRow[];
   presentations: PresentationRow[];
   problemStatements: ProblemStatementRow[];
   config: Record<string, unknown>;
@@ -62,7 +62,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
     { data: attendanceSessions },
     { data: attendance },
     { data: nocs },
-    { data: exitForms },
+    { data: exitRequests },
     { data: presentations },
     { data: problemStatements },
     { data: configRows },
@@ -78,7 +78,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
     supabase.from("attendance_sessions").select("*").order("sort_order"),
     supabase.from("attendance").select("*"),
     supabase.from("nocs").select("*"),
-    supabase.from("exit_forms").select("*"),
+    supabase.from("exit_requests").select("*"),
     supabase.from("presentations").select("*"),
     supabase.from("problem_statements").select("*").order("number"),
     supabase.from("configuration").select("*"),
@@ -113,7 +113,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
   let scopedPendingApprovals = (pendingApprovals ?? []) as ApprovalRequestRow[];
   let scopedAttendance = (attendance ?? []) as AttendanceRow[];
   let scopedNocs = (nocs ?? []) as NocRow[];
-  let scopedExitForms = (exitForms ?? []) as ExitFormRow[];
+  let scopedExitRequests = (exitRequests ?? []) as ExitRequestRow[];
   let scopedPresentations = (presentations ?? []) as PresentationRow[];
 
   if (profile.role !== "Super Admin") {
@@ -125,7 +125,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
 
     scopedPendingApprovals = scopedPendingApprovals.filter((a) => teamIds.has(a.team_id));
     scopedAttendance = scopedAttendance.filter((a) => teamIds.has(a.team_id));
-    scopedExitForms = scopedExitForms.filter((e) => teamIds.has(e.team_id));
+    scopedExitRequests = scopedExitRequests.filter((e) => teamIds.has(e.team_id));
     scopedPresentations = scopedPresentations.filter((p) => teamIds.has(p.team_id));
     scopedNocs = scopedNocs.filter((n) => memberIds.has(n.profile_id));
   }
@@ -137,7 +137,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
     attendanceSessions: (attendanceSessions ?? []) as AttendanceSessionRow[],
     attendance: scopedAttendance,
     nocs: scopedNocs,
-    exitForms: scopedExitForms,
+    exitRequests: scopedExitRequests,
     presentations: scopedPresentations,
     problemStatements: (problemStatements ?? []) as ProblemStatementRow[],
     config,
@@ -168,9 +168,11 @@ export function computeDashboardCardCounts(data: AdminDashboardData): DashboardC
     return !(allNocsUploaded && pptUploaded);
   }).length;
 
+  const pendingExitRequests = data.exitRequests.filter((r) => r.status === "Requested").length;
+
   return {
     teams: data.teams.length,
-    pendingApprovals: data.pendingApprovals.length,
+    pendingApprovals: data.pendingApprovals.length + pendingExitRequests,
     unreadNotifications: data.notifications.filter((n) => !n.read).length,
     incompleteNocPpt,
     rooms: data.rooms.length,

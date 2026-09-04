@@ -43,6 +43,11 @@ export function resolveApprovalRequest(requestId: string, decision: "Approved" |
   return callRpc<null>("resolve_approval_request", { p_request_id: requestId, p_decision: decision });
 }
 
+/** Approving deactivates the member's profile server-side (resolve_member_exit). */
+export function resolveMemberExit(requestId: string, decision: "Approved" | "Rejected") {
+  return callRpc<null>("resolve_member_exit", { p_request_id: requestId, p_decision: decision });
+}
+
 export function recordAttendance(sessionId: string, profileId: string, status: "Present" | "Absent") {
   return callRpc<null>("record_attendance", { p_session_id: sessionId, p_profile_id: profileId, p_status: status });
 }

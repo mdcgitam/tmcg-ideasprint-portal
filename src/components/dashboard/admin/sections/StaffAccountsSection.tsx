@@ -45,7 +45,7 @@ export function StaffAccountsSection({
     try {
       const id = await createStaffProfile({ name: name.trim(), email: email.trim(), role: role as "SPOC" | "Super Admin" });
       setLocal((prev) => [
-        { id, auth_user_id: null, user_id: "", campus: "VSP", role, name: name.trim(), gitam_email: email.trim().toLowerCase(), phone: "", reg_no: "", year_of_study: "", school: "", department: "", branch: "", gender: "", stay: "", created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id, auth_user_id: null, user_id: "", campus: "VSP", role, name: name.trim(), gitam_email: email.trim().toLowerCase(), phone: "", reg_no: "", year_of_study: "", school: "", department: "", branch: "", gender: "", stay: "", is_active: true, deactivated_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         ...prev,
       ]);
       setName("");

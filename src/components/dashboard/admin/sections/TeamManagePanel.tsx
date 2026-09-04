@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ExitFormRow, ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import {
   extendProblemStatementDeadline,
@@ -18,7 +18,7 @@ export function TeamManagePanel({
   room,
   zone,
   ps,
-  exitForm,
+  exitedCount,
   spocName,
   scope,
   onTeamRenamed,
@@ -29,7 +29,7 @@ export function TeamManagePanel({
   room: RoomRow | null;
   zone: ZoneRow | null;
   ps: ProblemStatementRow | null;
-  exitForm: ExitFormRow | undefined;
+  exitedCount: number;
   spocName: string | null;
   scope: "spoc" | "admin";
   onTeamRenamed: (teamId: string, name: string) => void;
@@ -159,7 +159,7 @@ export function TeamManagePanel({
       )}
 
       <p className="font-heading text-xs text-ink-muted">
-        Status: {team.status} · Exit Form: {exitForm?.status ?? "Not Submitted"}
+        Status: {team.status} · {exitedCount > 0 ? `${exitedCount} of ${members.length} Exited` : "All Active"}
       </p>
 
       <p className="font-heading text-xs text-ink-muted">

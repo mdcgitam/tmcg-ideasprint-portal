@@ -1,7 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import type { TeamRow, NocRow, ExitFormRow, ProfileRow, RoomRow, ZoneRow, ProblemStatementRow } from "@/types/database";
+import type {
+  AttendanceRow,
+  AttendanceSessionRow,
+  TeamRow,
+  NocRow,
+  ExitRequestRow,
+  ProfileRow,
+  RoomRow,
+  ZoneRow,
+  ProblemStatementRow,
+} from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -14,7 +24,9 @@ export function TeamsPage({
   teams,
   membersByTeam,
   nocs,
-  exitForms,
+  exitRequests,
+  attendance,
+  attendanceSessions,
   scope,
   staffAccounts,
   rooms,
@@ -24,7 +36,9 @@ export function TeamsPage({
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   nocs: NocRow[];
-  exitForms: ExitFormRow[];
+  exitRequests: ExitRequestRow[];
+  attendance: AttendanceRow[];
+  attendanceSessions: AttendanceSessionRow[];
   scope: "spoc" | "admin";
   staffAccounts: ProfileRow[];
   rooms: RoomRow[];
@@ -63,8 +77,10 @@ export function TeamsPage({
             rooms={rooms}
             zones={zones}
             staffAccounts={staffAccounts}
-            exitForms={exitForms}
+            exitRequests={exitRequests}
             nocs={nocs}
+            attendance={attendance}
+            attendanceSessions={attendanceSessions}
             scope={scope}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={onTeamDeleted}
@@ -74,7 +90,7 @@ export function TeamsPage({
             teams={localTeams}
             membersByTeam={membersByTeam}
             nocs={nocs}
-            exitForms={exitForms}
+            exitRequests={exitRequests}
             scope={scope}
             staffAccounts={staffAccounts}
             rooms={rooms}

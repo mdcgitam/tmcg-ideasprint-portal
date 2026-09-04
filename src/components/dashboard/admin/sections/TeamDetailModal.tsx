@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import type { ExitFormRow, NocRow, ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { ExitRequestRow, NocRow, ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { deleteMember, updateMember, DashboardActionError, type UpdateMemberInput } from "@/lib/dashboard/admin-actions";
 import { TeamManagePanel } from "./TeamManagePanel";
 import { NocStatus } from "./NocStatus";
+import { ExitStatusBadge } from "./ExitStatusBadge";
 import { MemberEditForm } from "./TeamFormFields";
 
 /**
@@ -21,7 +22,7 @@ export function TeamDetailModal({
   room,
   zone,
   ps,
-  exitForm,
+  exitRequests,
   nocs,
   spocName,
   scope,
@@ -34,7 +35,7 @@ export function TeamDetailModal({
   room: RoomRow | null;
   zone: ZoneRow | null;
   ps: ProblemStatementRow | null;
-  exitForm: ExitFormRow | undefined;
+  exitRequests: ExitRequestRow[];
   nocs: NocRow[];
   spocName: string | null;
   scope: "spoc" | "admin";
@@ -138,7 +139,7 @@ export function TeamDetailModal({
             room={room}
             zone={zone}
             ps={ps}
-            exitForm={exitForm}
+            exitedCount={members.filter((m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved").length}
             spocName={spocName}
             scope={scope}
             onTeamRenamed={onTeamRenamed}
@@ -159,9 +160,12 @@ export function TeamDetailModal({
                     selectedMemberId === m.id ? "border-gold bg-gold/5" : "border-border hover:border-border-strong"
                   }`}
                 >
-                  <p className="font-heading text-sm text-ink">
-                    {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-heading text-sm text-ink">
+                      {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
+                    </p>
+                    <ExitStatusBadge request={exitRequests.find((r) => r.profile_id === m.id)} />
+                  </div>
                   <p className="mt-0.5 font-heading text-xs text-ink-muted">{m.reg_no}</p>
                   <p className="mt-0.5 font-heading text-xs text-ink-muted">{m.gitam_email}</p>
                 </button>
@@ -179,7 +183,8 @@ export function TeamDetailModal({
                     <h3 className="font-heading text-sm text-ink">
                       {selectedMember.name} {selectedMember.is_lead && <span className="text-xs text-gold">(Lead)</span>}
                     </h3>
-                    <div className="flex items-center gap-2 text-xs">
+                    <div className="flex items-center gap-3 text-xs">
+                      <ExitStatusBadge request={exitRequests.find((r) => r.profile_id === selectedMember.id)} />
                       {scope === "admin" && (
                         <button
                           type="button"

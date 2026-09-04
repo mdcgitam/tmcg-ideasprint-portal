@@ -1,14 +1,16 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import type { TeamRow, NocRow, ExitFormRow, ProfileRow, RoomRow, ZoneRow, ProblemStatementRow } from "@/types/database";
+import type { TeamRow, NocRow, ExitRequestRow, ProfileRow, RoomRow, ZoneRow, ProblemStatementRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { DashboardActionError } from "@/lib/dashboard/team-actions";
 import { deleteMember, updateMember, type UpdateMemberInput } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
-import { MemberEditForm, FilterSelect, YEAR_OPTIONS, GENDER_OPTIONS } from "./TeamFormFields";
+import { MemberEditForm } from "./TeamFormFields";
 import { TeamManagePanel } from "./TeamManagePanel";
 import { NocStatus } from "./NocStatus";
+import { ExitStatusBadge } from "./ExitStatusBadge";
+import { TeamFilterBar, filterTeams, EMPTY_TEAM_FILTERS, type TeamFilters } from "./TeamFilterBar";
 
 // team_id looks like "TeamID01", "TeamID100" — sort on the numeric tail so
 // "View All" orders teams by ID number rather than lexicographically.
@@ -37,7 +39,7 @@ export function TeamsByMembersView({
   teams,
   membersByTeam,
   nocs,
-  exitForms,
+  exitRequests,
   scope,
   staffAccounts,
   rooms,
@@ -49,7 +51,7 @@ export function TeamsByMembersView({
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   nocs: NocRow[];
-  exitForms: ExitFormRow[];
+  exitRequests: ExitRequestRow[];
   scope: "spoc" | "admin";
   staffAccounts: ProfileRow[];
   rooms: RoomRow[];
@@ -68,23 +70,11 @@ export function TeamsByMembersView({
   const [savingMember, setSavingMember] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
 
-  const [search, setSearch] = useState("");
-  const [yearFilter, setYearFilter] = useState("");
-  const [genderFilter, setGenderFilter] = useState("");
-  const [roomFilter, setRoomFilter] = useState("");
-  const [zoneFilter, setZoneFilter] = useState("");
-  const [psFilter, setPsFilter] = useState("");
-  const [teamSizeFilter, setTeamSizeFilter] = useState("");
+  const [filters, setFilters] = useState<TeamFilters>(EMPTY_TEAM_FILTERS);
   const [sortById, setSortById] = useState(false);
 
   function handleViewAll() {
-    setSearch("");
-    setYearFilter("");
-    setGenderFilter("");
-    setRoomFilter("");
-    setZoneFilter("");
-    setPsFilter("");
-    setTeamSizeFilter("");
+    setFilters(EMPTY_TEAM_FILTERS);
     setSortById(true);
   }
 
@@ -94,32 +84,12 @@ export function TeamsByMembersView({
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
   const filteredTeams = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const result = teams.filter((team) => {
-      const members = membersByTeam[team.id] ?? [];
-      const room = roomOf(team);
-      const zone = zoneOf(room);
-
-      if (q) {
-        const haystack = [team.team_name, team.team_id, ...members.map((m) => `${m.name} ${m.user_id} ${m.reg_no}`)]
-          .join(" ")
-          .toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      if (yearFilter && !members.some((m) => m.year_of_study === yearFilter)) return false;
-      if (genderFilter && !members.some((m) => m.gender === genderFilter)) return false;
-      if (roomFilter && team.room_id !== roomFilter) return false;
-      if (zoneFilter && zone?.id !== zoneFilter) return false;
-      if (psFilter && team.current_problem_statement_id !== psFilter) return false;
-      if (teamSizeFilter && String(team.member_count) !== teamSizeFilter) return false;
-      return true;
-    });
+    const result = filterTeams(teams, membersByTeam, exitRequests, rooms, zones, filters);
     if (sortById) {
       result.sort((a, b) => teamIdSortKey(a.team_id) - teamIdSortKey(b.team_id));
     }
     return result;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, search, yearFilter, genderFilter, roomFilter, zoneFilter, psFilter, teamSizeFilter, sortById, rooms, zones]);
+  }, [teams, membersByTeam, exitRequests, rooms, zones, filters, sortById]);
 
   function teamToRows(team: TeamRow): DownloadRow[] {
     const members = membersByTeam[team.id] ?? [];
@@ -205,14 +175,15 @@ export function TeamsByMembersView({
     <div className="flex flex-col gap-4">
       {error && <p className="font-heading text-sm text-danger">{error}</p>}
 
-      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by team, name, reg no, user ID…"
-            className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
-          />
+      <TeamFilterBar
+        filters={filters}
+        onChange={setFilters}
+        rooms={rooms}
+        zones={zones}
+        problemStatements={problemStatements}
+        sortById={sortById}
+        onToggleSort={handleViewAll}
+        extraActions={
           <button
             type="button"
             onClick={handleDownloadAllMembers}
@@ -220,45 +191,8 @@ export function TeamsByMembersView({
           >
             Download All Members (CSV)
           </button>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <FilterSelect label="Year" value={yearFilter} onChange={setYearFilter} options={YEAR_OPTIONS} />
-          <FilterSelect label="Gender" value={genderFilter} onChange={setGenderFilter} options={GENDER_OPTIONS} />
-          <FilterSelect
-            label="Room / SPOC"
-            value={roomFilter}
-            onChange={setRoomFilter}
-            options={rooms.map((r) => r.name)}
-            valueOptions={rooms.map((r) => r.id)}
-          />
-          <FilterSelect
-            label="Zone"
-            value={zoneFilter}
-            onChange={setZoneFilter}
-            options={zones.map((z) => z.name)}
-            valueOptions={zones.map((z) => z.id)}
-          />
-          <FilterSelect
-            label="Problem Statement"
-            value={psFilter}
-            onChange={setPsFilter}
-            options={problemStatements.map((p) => p.number)}
-            valueOptions={problemStatements.map((p) => p.id)}
-          />
-          <FilterSelect label="Team Size" value={teamSizeFilter} onChange={setTeamSizeFilter} options={["3", "4"]} />
-          <button
-            type="button"
-            onClick={handleViewAll}
-            className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
-              sortById
-                ? "border-gold bg-gold/10 text-gold"
-                : "border-border text-ink-muted hover:border-gold hover:text-gold"
-            }`}
-          >
-            View All (by ID)
-          </button>
-        </div>
-      </div>
+        }
+      />
 
       {filteredTeams.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface p-8 text-center">
@@ -277,6 +211,7 @@ export function TeamsByMembersView({
                 <th className="px-4 py-3">Room</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">NOC</th>
+                <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
@@ -286,13 +221,13 @@ export function TeamsByMembersView({
                 const room = roomOf(team);
                 const zone = zoneOf(room);
                 const ps = psOf(team);
-                const exitForm = exitForms.find((e) => e.team_id === team.id);
                 const isManaging = managingTeamId === team.id;
 
                 return (
                   <Fragment key={team.id}>
                     {members.map((m, memberIndex) => {
                       const noc = localNocs.find((n) => n.profile_id === m.id);
+                      const exitRequest = exitRequests.find((r) => r.profile_id === m.id);
                       const isEditingThis = editingMemberId === m.id;
 
                       return (
@@ -326,6 +261,9 @@ export function TeamsByMembersView({
                                   )
                                 }
                               />
+                            </td>
+                            <td className="px-4 py-3">
+                              <ExitStatusBadge request={exitRequest} />
                             </td>
                             <td className="px-4 py-3">
                               <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -363,7 +301,7 @@ export function TeamsByMembersView({
 
                           {scope === "admin" && isEditingThis && memberForm && (
                             <tr className="border-b border-border bg-void/40">
-                              <td colSpan={9} className="px-4 py-3">
+                              <td colSpan={10} className="px-4 py-3">
                                 <MemberEditForm
                                   form={memberForm}
                                   onChange={setMemberForm}
@@ -381,14 +319,14 @@ export function TeamsByMembersView({
 
                     {isManaging && (
                       <tr className="border-b border-border bg-void/40">
-                        <td colSpan={9} className="px-4 py-4">
+                        <td colSpan={10} className="px-4 py-4">
                           <TeamManagePanel
                             team={team}
                             members={members}
                             room={room}
                             zone={zone}
                             ps={ps}
-                            exitForm={exitForm}
+                            exitedCount={members.filter((m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved").length}
                             spocName={spocName(team.spoc_profile_id)}
                             scope={scope}
                             onTeamRenamed={onTeamRenamed}

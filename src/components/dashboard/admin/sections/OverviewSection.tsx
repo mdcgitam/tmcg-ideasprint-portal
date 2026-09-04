@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { TeamRow, ApprovalRequestRow, NocRow, ExitFormRow } from "@/types/database";
+import type { TeamRow, ApprovalRequestRow, NocRow, ExitRequestRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -15,32 +15,38 @@ export function OverviewSection({
   membersByTeam,
   pendingApprovals,
   nocs,
-  exitForms,
+  exitRequests,
 }: {
   scope: "spoc" | "admin";
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   pendingApprovals: ApprovalRequestRow[];
   nocs: NocRow[];
-  exitForms: ExitFormRow[];
+  exitRequests: ExitRequestRow[];
 }) {
   const [view, setView] = useState<View>("aggregate");
   const fadeRef = useTabFade(view);
   const allMembers = Object.values(membersByTeam).flat();
 
+  function isExited(profileId: string) {
+    return exitRequests.find((r) => r.profile_id === profileId)?.status === "Approved";
+  }
+
   const totalParticipants = allMembers.length;
+  const totalActiveMembers = allMembers.filter((m) => !isExited(m.id)).length;
   const missingNocs = allMembers.filter(
     (m) => nocs.find((n) => n.profile_id === m.id)?.status !== "Uploaded",
   ).length;
-  const exitSubmitted = exitForms.filter((e) => e.status === "Submitted").length;
+  const pendingExits = exitRequests.filter((r) => r.status === "Requested").length;
   const unassignedRoom = teams.filter((t) => !t.room_id).length;
 
   const cards = [
     { label: scope === "admin" ? "Total Teams" : "Assigned Teams", value: String(teams.length) },
     { label: scope === "admin" ? "Total Registrations" : "Team Members", value: String(totalParticipants) },
+    { label: "Total Members", value: String(totalActiveMembers) },
     { label: "Pending Approvals", value: String(pendingApprovals.length) },
     { label: "Missing NOCs", value: String(missingNocs) },
-    { label: "Exit Forms Pending", value: `${teams.length - exitSubmitted}/${teams.length}` },
+    { label: "Pending Exit Requests", value: String(pendingExits) },
     { label: "Teams Unassigned To A Room", value: String(unassignedRoom) },
   ];
 
@@ -73,7 +79,7 @@ export function OverviewSection({
                   <th className="px-4 py-3">Team</th>
                   <th className="px-4 py-3">Members</th>
                   <th className="px-4 py-3">Missing NOCs</th>
-                  <th className="px-4 py-3">Exit Form</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Room Assigned</th>
                 </tr>
               </thead>
@@ -83,7 +89,7 @@ export function OverviewSection({
                   const teamMissingNocs = members.filter(
                     (m) => nocs.find((n) => n.profile_id === m.id)?.status !== "Uploaded",
                   ).length;
-                  const exitForm = exitForms.find((e) => e.team_id === team.id);
+                  const exitedCount = members.filter((m) => isExited(m.id)).length;
                   return (
                     <tr key={team.id} className="border-b border-border last:border-0">
                       <td className="px-4 py-3 text-ink">
@@ -91,7 +97,7 @@ export function OverviewSection({
                       </td>
                       <td className="px-4 py-3 text-ink-muted">{members.length}</td>
                       <td className="px-4 py-3 text-ink-muted">{teamMissingNocs}</td>
-                      <td className="px-4 py-3 text-ink-muted">{exitForm?.status ?? "Not Submitted"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{exitedCount > 0 ? `${exitedCount} Exited` : "Active"}</td>
                       <td className="px-4 py-3 text-ink-muted">{team.room_id ? "Yes" : "No"}</td>
                     </tr>
                   );

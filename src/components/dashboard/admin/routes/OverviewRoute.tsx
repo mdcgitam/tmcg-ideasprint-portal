@@ -4,7 +4,7 @@ import { OverviewSection } from "@/components/dashboard/admin/sections/OverviewS
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function OverviewRoute({ profile }: { profile: ProfileRow }) {
-  const { teams, membersByTeam, pendingApprovals, nocs, exitForms } = await fetchAdminDashboardData(profile);
+  const { teams, membersByTeam, pendingApprovals, nocs, exitRequests } = await fetchAdminDashboardData(profile);
   const scope = profile.role === "Super Admin" ? "admin" : "spoc";
 
   return (
@@ -15,7 +15,7 @@ export async function OverviewRoute({ profile }: { profile: ProfileRow }) {
         membersByTeam={membersByTeam}
         pendingApprovals={pendingApprovals}
         nocs={nocs}
-        exitForms={exitForms}
+        exitRequests={exitRequests}
       />
     </SectionPageShell>
   );
