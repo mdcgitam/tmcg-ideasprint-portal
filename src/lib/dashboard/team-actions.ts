@@ -67,6 +67,10 @@ export function deleteExitRequest(profileId: string) {
   return callRpc<null>("delete_exit_request", { p_profile_id: profileId });
 }
 
+export function markNotificationRead(notificationId: string) {
+  return callRpc<null>("mark_notification_read", { p_notification_id: notificationId });
+}
+
 export function recordPresentation(teamId: string, filePath: string) {
   return callRpc<null>("record_presentation", { p_team_id: teamId, p_file_path: filePath });
 }

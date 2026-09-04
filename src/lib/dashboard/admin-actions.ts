@@ -99,11 +99,21 @@ export function markNotificationRead(notificationId: string) {
   return callRpc<null>("mark_notification_read", { p_notification_id: notificationId });
 }
 
-export type BroadcastAudience = "Member" | "Team Lead" | "SPOC";
+export type BroadcastRoleAudience = "Member" | "Team Lead" | "SPOC";
 
-/** Pushes a notification to every profile in the chosen audience. Returns the recipient count. */
-export function broadcastNotification(title: string, message: string, audience: BroadcastAudience) {
-  return callRpc<number>("broadcast_notification", { p_title: title, p_message: message, p_audience: audience });
+/** Pushes a notification to every profile in the chosen audience (a role, or every member of every team assigned to a room). Returns the recipient count. */
+export function broadcastNotification(
+  title: string,
+  message: string,
+  audienceType: "role" | "venue",
+  audienceValue: string,
+) {
+  return callRpc<number>("broadcast_notification", {
+    p_title: title,
+    p_message: message,
+    p_audience_type: audienceType,
+    p_audience_value: audienceValue,
+  });
 }
 
 export interface CreateStaffInput {

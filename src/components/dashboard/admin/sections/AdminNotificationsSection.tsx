@@ -1,38 +1,42 @@
 "use client";
 
 import { useState } from "react";
-import type { NotificationRow } from "@/types/database";
+import type { NotificationRow, RoomRow } from "@/types/database";
 import {
   markNotificationRead,
   broadcastNotification,
   DashboardActionError,
-  type BroadcastAudience,
+  type BroadcastRoleAudience,
 } from "@/lib/dashboard/admin-actions";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
 
 type View = "all" | "by-status";
 
-const AUDIENCE_OPTIONS: { value: BroadcastAudience; label: string }[] = [
+const ROLE_OPTIONS: { value: BroadcastRoleAudience; label: string }[] = [
   { value: "Member", label: "All Members" },
   { value: "Team Lead", label: "Leads" },
   { value: "SPOC", label: "SPOCs" },
 ];
 
-/** SPEC §70-72/§75 — SPOC and Super Admin both get notified on new registrations, pending approvals, NOC/Exit Form uploads, etc. Super Admin can additionally broadcast a notification to a chosen audience. */
+/** SPEC §70-72/§75 — SPOC and Super Admin both get notified on new registrations, pending approvals, NOC/Exit Form uploads, etc. Super Admin can additionally broadcast a notification, either by role or by venue (every team assigned to a room). */
 export function AdminNotificationsSection({
   notifications,
   scope,
+  rooms,
 }: {
   notifications: NotificationRow[];
   scope: "spoc" | "admin";
+  rooms: RoomRow[];
 }) {
   const [local, setLocal] = useState(notifications);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [view, setView] = useState<View>("all");
   const fadeRef = useTabFade(view);
 
-  const [audience, setAudience] = useState<BroadcastAudience>("Member");
+  const [audienceType, setAudienceType] = useState<"role" | "venue">("role");
+  const [roleAudience, setRoleAudience] = useState<BroadcastRoleAudience>("Member");
+  const [venueId, setVenueId] = useState("");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -41,13 +45,21 @@ export function AdminNotificationsSection({
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
+    const audienceValue = audienceType === "role" ? roleAudience : venueId;
+    if (audienceType === "venue" && !venueId) {
+      setSendError("Choose a venue to notify.");
+      return;
+    }
     setSending(true);
     setSendError(null);
     setSendSuccess(null);
     try {
-      const count = await broadcastNotification(title.trim(), message.trim(), audience);
-      const audienceLabel = AUDIENCE_OPTIONS.find((o) => o.value === audience)?.label ?? audience;
-      setSendSuccess(`Sent to ${count} ${audienceLabel.toLowerCase()}.`);
+      const count = await broadcastNotification(title.trim(), message.trim(), audienceType, audienceValue);
+      const audienceLabel =
+        audienceType === "role"
+          ? (ROLE_OPTIONS.find((o) => o.value === roleAudience)?.label ?? roleAudience).toLowerCase()
+          : `team${count === 1 ? "" : "s"} at ${rooms.find((r) => r.id === venueId)?.name ?? "that venue"}`;
+      setSendSuccess(`Sent to ${count} ${audienceLabel}.`);
       setTitle("");
       setMessage("");
     } catch (err) {
@@ -97,22 +109,64 @@ export function AdminNotificationsSection({
       {scope === "admin" && (
         <form onSubmit={handleSend} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Send Notification</span>
+
           <div className="flex flex-wrap gap-2">
-            {AUDIENCE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setAudience(opt.value)}
-                className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
-                  audience === opt.value
-                    ? "border-gold bg-gold/10 text-gold"
-                    : "border-border text-ink-muted hover:border-gold hover:text-gold"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            <button
+              type="button"
+              onClick={() => setAudienceType("role")}
+              className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
+                audienceType === "role"
+                  ? "border-gold bg-gold/10 text-gold"
+                  : "border-border text-ink-muted hover:border-gold hover:text-gold"
+              }`}
+            >
+              By Role
+            </button>
+            <button
+              type="button"
+              onClick={() => setAudienceType("venue")}
+              className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
+                audienceType === "venue"
+                  ? "border-gold bg-gold/10 text-gold"
+                  : "border-border text-ink-muted hover:border-gold hover:text-gold"
+              }`}
+            >
+              By Venue
+            </button>
           </div>
+
+          {audienceType === "role" ? (
+            <div className="flex flex-wrap gap-2">
+              {ROLE_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setRoleAudience(opt.value)}
+                  className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
+                    roleAudience === opt.value
+                      ? "border-gold bg-gold/10 text-gold"
+                      : "border-border text-ink-muted hover:border-gold hover:text-gold"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <select
+              value={venueId}
+              onChange={(e) => setVenueId(e.target.value)}
+              className="w-fit rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+            >
+              <option value="">Select a venue…</option>
+              {rooms.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}

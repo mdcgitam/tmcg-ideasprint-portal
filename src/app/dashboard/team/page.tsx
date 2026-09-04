@@ -10,6 +10,7 @@ import type {
   AttendanceRow,
   AttendanceSessionRow,
   ExitRequestRow,
+  NotificationRow,
   PresentationRow,
   ProblemStatementRow,
   ApprovalRequestRow,
@@ -61,19 +62,22 @@ export default async function TeamDashboardPage() {
     { data: attendanceRows },
     { data: attendanceSessionRows },
     { data: exitRequestRows },
+    { data: notificationRows },
     { data: presentationRow },
     { data: pendingRequestRow },
     { data: configRows },
   ] = await Promise.all([
     supabase.from("teams").select("*").eq("id", teamId).single(),
     supabase.from("team_members").select("profile_id, is_lead, profiles(*)").eq("team_id", teamId),
-    // No .eq(team_id) filters below — RLS alone correctly scopes each of
-    // these to what this caller's role is allowed to see (e.g. a Member
-    // only gets their own NOC row, a Team Lead gets every teammate's).
+    // No .eq(team_id)/.eq(recipient_profile_id) filters below — RLS alone
+    // correctly scopes each of these to what this caller's role is allowed
+    // to see (e.g. a Member only gets their own NOC row and notifications,
+    // a Team Lead gets every teammate's).
     supabase.from("nocs").select("*"),
     supabase.from("attendance").select("*").eq("team_id", teamId),
     supabase.from("attendance_sessions").select("*").order("sort_order"),
     supabase.from("exit_requests").select("*"),
+    supabase.from("notifications").select("*").order("created_at", { ascending: false }),
     supabase.from("presentations").select("*").eq("team_id", teamId).maybeSingle(),
     supabase.from("approval_requests").select("*").eq("team_id", teamId).eq("status", "Pending").maybeSingle(),
     supabase.from("configuration").select("*"),
@@ -118,6 +122,7 @@ export default async function TeamDashboardPage() {
       attendance={(attendanceRows ?? []) as AttendanceRow[]}
       attendanceSessions={(attendanceSessionRows ?? []) as AttendanceSessionRow[]}
       exitRequests={(exitRequestRows ?? []) as ExitRequestRow[]}
+      notifications={(notificationRows ?? []) as NotificationRow[]}
       presentation={(presentationRow ?? null) as PresentationRow | null}
       currentProblemStatement={(currentPsRow ?? null) as ProblemStatementRow | null}
       pendingApprovalRequest={(pendingRequestRow ?? null) as ApprovalRequestRow | null}

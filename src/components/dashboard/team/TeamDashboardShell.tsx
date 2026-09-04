@@ -8,6 +8,7 @@ import type {
   AttendanceRow,
   AttendanceSessionRow,
   ExitRequestRow,
+  NotificationRow,
   PresentationRow,
   ProblemStatementRow,
   ApprovalRequestRow,
@@ -23,6 +24,7 @@ import { AttendanceSection } from "./sections/AttendanceSection";
 import { NocSection } from "./sections/NocSection";
 import { ExitRequestSection } from "./sections/ExitRequestSection";
 import { PresentationSection } from "./sections/PresentationSection";
+import { NotificationsSection } from "./sections/NotificationsSection";
 
 export interface TeamMemberProfile extends ProfileRow {
   is_lead: boolean;
@@ -36,6 +38,7 @@ export interface TeamDashboardShellProps {
   attendance: AttendanceRow[];
   attendanceSessions: AttendanceSessionRow[];
   exitRequests: ExitRequestRow[];
+  notifications: NotificationRow[];
   presentation: PresentationRow | null;
   currentProblemStatement: ProblemStatementRow | null;
   pendingApprovalRequest: ApprovalRequestRow | null;
@@ -45,13 +48,14 @@ export interface TeamDashboardShellProps {
   spocName: string | null;
 }
 
-const TABS = ["Profile", "Problem Statement", "Attendance", "NOC", "Presentation", "Exit Request"] as const;
+const TABS = ["Profile", "Problem Statement", "Attendance", "NOC", "Presentation", "Exit Request", "Notifications"] as const;
 type Tab = (typeof TABS)[number];
 
 export function TeamDashboardShell(props: TeamDashboardShellProps) {
   const [tab, setTab] = useState<Tab>("Profile");
   const isLead = props.profile.role === "Team Lead";
   const fadeRef = useTabFade(tab);
+  const unreadCount = props.notifications.filter((n) => !n.read).length;
 
   return (
     <main className="min-h-screen bg-void px-6 pt-12 pb-16 sm:px-10 sm:pt-14 lg:px-16">
@@ -76,11 +80,16 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`rounded-full px-4 py-2 font-heading text-sm transition-colors ${
+              className={`relative rounded-full px-4 py-2 font-heading text-sm transition-colors ${
                 tab === t ? "bg-gold text-void" : "text-ink-muted hover:bg-surface hover:text-ink"
               }`}
             >
               {t}
+              {t === "Notifications" && unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 rounded-full bg-danger px-1.5 py-0.5 text-[10px] text-ink">
+                  {unreadCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -126,6 +135,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
               isLead={isLead}
             />
           )}
+          {tab === "Notifications" && <NotificationsSection notifications={props.notifications} />}
         </div>
       </div>
     </main>
