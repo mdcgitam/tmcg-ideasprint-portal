@@ -40,6 +40,7 @@ export function AdminAttendanceSection({
   const [view, setView] = useState<View>("all-members");
   const [venueFilter, setVenueFilter] = useState("");
   const [spocFilter, setSpocFilter] = useState("");
+  const [positionFilter, setPositionFilter] = useState("");
   const fadeRef = useTabFade(view);
 
   const canMark = scope === "spoc";
@@ -148,11 +149,16 @@ export function AdminAttendanceSection({
       ),
     [teams, venueFilter, spocFilter],
   );
+  function matchesPosition(m: TeamMemberProfile) {
+    if (!positionFilter) return true;
+    return positionFilter === "lead" ? m.is_lead : !m.is_lead;
+  }
+
   const filteredMembers = useMemo(() => {
     const ids = new Set(filteredTeams.flatMap((t) => (membersByTeam[t.id] ?? []).map((m) => m.id)));
-    return allMembers.filter((m) => ids.has(m.id));
+    return allMembers.filter((m) => ids.has(m.id) && matchesPosition(m));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filteredTeams, membersByTeam]);
+  }, [filteredTeams, membersByTeam, positionFilter]);
 
   function handleExportSession(session: AttendanceSessionRow) {
     downloadCsv(
@@ -292,6 +298,13 @@ export function AdminAttendanceSection({
               options={spocs.map((s) => s.name)}
               valueOptions={spocs.map((s) => s.id)}
             />
+            <FilterSelect
+              label="Position"
+              value={positionFilter}
+              onChange={setPositionFilter}
+              options={["Team Lead", "Member"]}
+              valueOptions={["lead", "member"]}
+            />
             <button
               type="button"
               onClick={handleExportAll}
@@ -330,7 +343,7 @@ export function AdminAttendanceSection({
                       </tr>
                     ))
                   : filteredTeams.map((team) => {
-                      const members = membersByTeam[team.id] ?? [];
+                      const members = (membersByTeam[team.id] ?? []).filter(matchesPosition);
                       if (members.length === 0) return null;
                       return (
                         <Fragment key={team.id}>
