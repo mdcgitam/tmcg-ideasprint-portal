@@ -48,10 +48,17 @@ const steps: Step[] = timeline.map(toStep);
  * repeat the Domains pattern) — Round 1 → Round 2 → Grand Finale joined by a
  * line that draws in as the section scrolls through view. No pinning, no
  * scroll-jacking — just a smooth, lightly-scrubbed reveal. Also carries the
- * event's date/reporting-time/venue (moved here from Instructions) — one
- * shared strip since none of that is per-phase.
+ * date/reporting-time/venue for both phases (moved here from Instructions) —
+ * Phase 1's is fixed (eventConfig), Phase 2's (Grand Finale) is admin-set via
+ * Configuration and may still be unconfirmed, hence the nullable props.
  */
-export function TimelineSection() {
+export function TimelineSection({
+  grandFinaleDate,
+  grandFinaleVenue,
+}: {
+  grandFinaleDate: string | null;
+  grandFinaleVenue: string | null;
+}) {
   const sectionRef = useRef<HTMLElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
 
@@ -117,18 +124,20 @@ export function TimelineSection() {
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 2 — The Journey</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">THE JOURNEY</h2>
 
-        <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 font-heading text-sm text-ink-muted">
-          <span>
-            <span className="font-mono text-xs tracking-[0.2em] text-gold uppercase">Dates</span>{" "}
-            {formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)}
-          </span>
-          <span>
-            <span className="font-mono text-xs tracking-[0.2em] text-gold uppercase">Reporting</span>{" "}
-            {eventConfig.reportingTime}
-          </span>
-          <span>
-            <span className="font-mono text-xs tracking-[0.2em] text-gold uppercase">Venue</span> {eventConfig.venue}
-          </span>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-xl border border-border bg-void/60 px-5 py-4">
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Phase 1 — Campus Round</span>
+            <p className="mt-2 font-heading text-sm text-ink-muted">
+              {formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)} · Reporting{" "}
+              {eventConfig.reportingTime}
+            </p>
+            <p className="mt-1 font-heading text-sm text-ink-muted">{eventConfig.venue}</p>
+          </div>
+          <div className="rounded-xl border border-border bg-void/60 px-5 py-4">
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Phase 2 — Grand Finale</span>
+            <p className="mt-2 font-heading text-sm text-ink-muted">{grandFinaleDate ?? "Date to be announced"}</p>
+            <p className="mt-1 font-heading text-sm text-ink-muted">{grandFinaleVenue ?? "Venue to be announced"}</p>
+          </div>
         </div>
       </div>
 

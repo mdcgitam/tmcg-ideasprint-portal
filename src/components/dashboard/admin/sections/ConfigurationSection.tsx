@@ -21,6 +21,14 @@ const KNOWN_KEYS = [
   { key: "problem_statement.selection_end", label: "Selection Window End", placeholder: "2026-09-25T21:30:00+05:30" },
 ] as const;
 
+// Homepage Journey section (Phase 2 card) shows "to be announced" for either
+// of these until set — the Grand Finale's date/venue genuinely isn't
+// confirmed pre-launch.
+const GRAND_FINALE_KEYS = [
+  { key: "grand_finale.date", label: "Grand Finale Date", placeholder: "e.g. December 2026" },
+  { key: "grand_finale.venue", label: "Grand Finale Venue", placeholder: "e.g. GITAM Bengaluru" },
+] as const;
+
 // Item 23: Super Admin edits the /privacy page content directly from here —
 // plain paragraphs, a blank line starts a new one. Empty = built-in default copy.
 const PRIVACY_POLICY_KEY = "privacy_policy.content";
@@ -32,7 +40,7 @@ const TNC_URL_KEY = "terms_and_conditions.url";
 export function ConfigurationSection({ config }: { config: Record<string, unknown> }) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
-    for (const { key } of KNOWN_KEYS) {
+    for (const { key } of [...KNOWN_KEYS, ...GRAND_FINALE_KEYS]) {
       const raw = config[key];
       initial[key] = typeof raw === "string" ? raw : "";
     }
@@ -60,8 +68,8 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     }
   }
 
-  function psSettingFields() {
-    return KNOWN_KEYS.map(({ key, label, placeholder }) => (
+  function simpleFields(keys: readonly { key: string; label: string; placeholder: string }[]) {
+    return keys.map(({ key, label, placeholder }) => (
       <div key={key} className="rounded-xl border border-border bg-surface p-6">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">{label}</span>
         <div className="mt-3 flex flex-wrap gap-3">
@@ -157,7 +165,8 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
       <div ref={fadeRef} className="flex flex-col gap-6">
         {view === "all" ? (
           <div className="flex flex-col gap-4">
-            {psSettingFields()}
+            {simpleFields(KNOWN_KEYS)}
+            {simpleFields(GRAND_FINALE_KEYS)}
             {tncField()}
             {privacyField()}
           </div>
@@ -167,7 +176,11 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
               <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">
                 Problem Statement Settings
               </p>
-              <div className="flex flex-col gap-4">{psSettingFields()}</div>
+              <div className="flex flex-col gap-4">{simpleFields(KNOWN_KEYS)}</div>
+            </div>
+            <div>
+              <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">Grand Finale (Phase 2)</p>
+              <div className="flex flex-col gap-4">{simpleFields(GRAND_FINALE_KEYS)}</div>
             </div>
             <div>
               <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">Site Content</p>
