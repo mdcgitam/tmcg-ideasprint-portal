@@ -45,7 +45,9 @@ export function NotificationsSection({ notifications }: { notifications: Notific
             {!n.read && <span className="size-1.5 rounded-full bg-gold" aria-hidden />}
           </div>
           <p className="mt-1 font-heading text-sm text-ink-muted">{n.message}</p>
-          <p className="mt-2 font-mono text-xs text-ink-faint">{new Date(n.created_at).toLocaleString()}</p>
+          <p className="mt-2 font-mono text-xs text-ink-faint">
+            {new Date(n.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+          </p>
         </button>
       ))}
     </div>
