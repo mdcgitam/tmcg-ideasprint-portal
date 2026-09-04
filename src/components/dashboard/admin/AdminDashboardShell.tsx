@@ -10,6 +10,7 @@ import {
   Bell,
   UserCog,
   FileCheck2,
+  Presentation,
   type LucideIcon,
 } from "lucide-react";
 import type { ProfileRow } from "@/types/database";
@@ -30,7 +31,7 @@ interface CardDef {
 }
 
 /** Cards whose count is an actionable/needs-attention queue get the red "urgent" badge; pure totals get a neutral gold one. */
-const URGENT_SLUGS = new Set(["notifications", "approvals", "noc-ppt"]);
+const URGENT_SLUGS = new Set(["notifications", "approvals", "noc", "ppt"]);
 
 function countForSlug(slug: string, counts: DashboardCardCounts): number {
   switch (slug) {
@@ -40,8 +41,10 @@ function countForSlug(slug: string, counts: DashboardCardCounts): number {
       return counts.pendingApprovals;
     case "notifications":
       return counts.unreadNotifications;
-    case "noc-ppt":
-      return counts.incompleteNocPpt;
+    case "noc":
+      return counts.missingNocs;
+    case "ppt":
+      return counts.missingPpt;
     case "rooms-zones":
       return counts.rooms;
     case "problem-statements":
@@ -59,7 +62,8 @@ const BASE_CARDS: CardDef[] = [
   { key: "Approvals", slug: "approvals", icon: ClipboardCheck },
   { key: "Attendance", slug: "attendance", icon: CalendarCheck },
   { key: "Notifications", slug: "notifications", icon: Bell },
-  { key: "NOC & PPT", slug: "noc-ppt", icon: FileCheck2 },
+  { key: "NOC", slug: "noc", icon: FileCheck2 },
+  { key: "PPT", slug: "ppt", icon: Presentation },
 ];
 const ADMIN_ONLY_CARDS: CardDef[] = [
   { key: "Rooms & Zones", slug: "rooms-zones", icon: DoorOpen },

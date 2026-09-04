@@ -1,0 +1,423 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { AttendanceRow, AttendanceSessionRow, NocRow, ProfileRow, RoomRow, TeamRow } from "@/types/database";
+import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
+import {
+  deleteNoc,
+  deleteNocFile,
+  extendNocDeadline,
+  getSignedUrl,
+  recordNocMetadata,
+  uploadNocFile,
+  DashboardActionError,
+} from "@/lib/dashboard/team-actions";
+import { downloadCsv } from "@/lib/csv";
+import { FilterSelect } from "./TeamFormFields";
+
+interface Row {
+  member: TeamMemberProfile;
+  team: TeamRow;
+}
+
+/** "Individuals" view of the NOC page (NOC3/NOC4 reference) — one row per member. */
+export function NocIndividualsView({
+  teams,
+  membersByTeam,
+  nocs,
+  attendance,
+  attendanceSessions,
+  rooms,
+  staffAccounts,
+  scope,
+}: {
+  teams: TeamRow[];
+  membersByTeam: Record<string, TeamMemberProfile[]>;
+  nocs: NocRow[];
+  attendance: AttendanceRow[];
+  attendanceSessions: AttendanceSessionRow[];
+  rooms: RoomRow[];
+  staffAccounts: ProfileRow[];
+  scope: "spoc" | "admin";
+}) {
+  const [localNocs, setLocalNocs] = useState(nocs);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeadline, setBulkDeadline] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
+  const [rowDeadlines, setRowDeadlines] = useState<Record<string, string>>({});
+  const [rowBusy, setRowBusy] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const [uploadFiles, setUploadFiles] = useState<Record<string, File | null>>({});
+
+  const [campusFilter, setCampusFilter] = useState("");
+  const [attendanceFilter, setAttendanceFilter] = useState("");
+  const [venueFilter, setVenueFilter] = useState("");
+  const [spocFilter, setSpocFilter] = useState("");
+  const [fileStatusFilter, setFileStatusFilter] = useState("");
+  const [search, setSearch] = useState("");
+
+  const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
+  const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
+  const latestSession = attendanceSessions[attendanceSessions.length - 1] ?? null;
+
+  const nocOf = (profileId: string) => localNocs.find((n) => n.profile_id === profileId);
+  const memberAttendance = (profileId: string): "Present" | "Absent" | null => {
+    if (!latestSession) return null;
+    const record = attendance.find((a) => a.session_id === latestSession.id && a.profile_id === profileId);
+    return record ? (record.status as "Present" | "Absent") : "Absent";
+  };
+
+  const allRows: Row[] = useMemo(
+    () => teams.flatMap((team) => (membersByTeam[team.id] ?? []).map((member) => ({ member, team }))),
+    [teams, membersByTeam],
+  );
+
+  const campusOptions = useMemo(
+    () => Array.from(new Set(allRows.map((r) => r.member.campus).filter(Boolean))) as string[],
+    [allRows],
+  );
+
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return allRows.filter(({ member, team }) => {
+      if (q) {
+        const haystack = `${member.name} ${member.reg_no} ${team.team_name}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (campusFilter && member.campus !== campusFilter) return false;
+      if (attendanceFilter && memberAttendance(member.id) !== attendanceFilter) return false;
+      if (venueFilter && team.room_id !== venueFilter) return false;
+      if (spocFilter && team.spoc_profile_id !== spocFilter) return false;
+      if (fileStatusFilter && (nocOf(member.id)?.status ?? "Not Uploaded") !== fileStatusFilter) return false;
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allRows, search, campusFilter, attendanceFilter, venueFilter, spocFilter, fileStatusFilter, localNocs, attendance]);
+
+  function toggleSelected(profileId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(profileId)) next.delete(profileId);
+      else next.add(profileId);
+      return next;
+    });
+  }
+
+  async function handleBulkExtend() {
+    if (!bulkDeadline || selected.size === 0) return;
+    setBulkBusy(true);
+    setBulkError(null);
+    try {
+      const deadlineIso = new Date(bulkDeadline).toISOString();
+      await Promise.all(Array.from(selected).map((id) => extendNocDeadline(id, deadlineIso)));
+      setLocalNocs((prev) =>
+        prev.map((n) => (selected.has(n.profile_id) ? { ...n, deadline: deadlineIso } : n)),
+      );
+      setSelected(new Set());
+      setBulkDeadline("");
+    } catch (err) {
+      setBulkError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
+  async function handleRowExtend(profileId: string) {
+    const value = rowDeadlines[profileId];
+    if (!value) return;
+    setRowBusy(profileId);
+    setRowErrors((prev) => ({ ...prev, [profileId]: "" }));
+    try {
+      const deadlineIso = new Date(value).toISOString();
+      await extendNocDeadline(profileId, deadlineIso);
+      setLocalNocs((prev) => {
+        const exists = prev.find((n) => n.profile_id === profileId);
+        return exists
+          ? prev.map((n) => (n.profile_id === profileId ? { ...n, deadline: deadlineIso } : n))
+          : [...prev, { profile_id: profileId, status: "Not Uploaded", file_path: null, deadline: deadlineIso } as NocRow];
+      });
+    } catch (err) {
+      setRowErrors((prev) => ({
+        ...prev,
+        [profileId]: err instanceof DashboardActionError ? err.message : "Something went wrong.",
+      }));
+    } finally {
+      setRowBusy(null);
+    }
+  }
+
+  async function handleAdminUpload(profileId: string) {
+    const file = uploadFiles[profileId];
+    if (!file) return;
+    setRowBusy(profileId);
+    setRowErrors((prev) => ({ ...prev, [profileId]: "" }));
+    try {
+      const path = await uploadNocFile(profileId, file);
+      await recordNocMetadata(profileId, path);
+      setLocalNocs((prev) => {
+        const exists = prev.find((n) => n.profile_id === profileId);
+        return exists
+          ? prev.map((n) => (n.profile_id === profileId ? { ...n, status: "Uploaded", file_path: path } : n))
+          : [...prev, { profile_id: profileId, status: "Uploaded", file_path: path, deadline: null } as NocRow];
+      });
+      setUploadFiles((prev) => ({ ...prev, [profileId]: null }));
+    } catch (err) {
+      setRowErrors((prev) => ({
+        ...prev,
+        [profileId]: err instanceof DashboardActionError ? err.message : "Something went wrong.",
+      }));
+    } finally {
+      setRowBusy(null);
+    }
+  }
+
+  async function handleView(profileId: string) {
+    const noc = nocOf(profileId);
+    if (!noc?.file_path) return;
+    const url = await getSignedUrl("noc-uploads", noc.file_path);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  async function handleDelete(profileId: string) {
+    const noc = nocOf(profileId);
+    if (!noc?.file_path) return;
+    if (!window.confirm("Delete this NOC file?")) return;
+    setRowBusy(profileId);
+    try {
+      await deleteNocFile(noc.file_path);
+      await deleteNoc(profileId);
+      setLocalNocs((prev) =>
+        prev.map((n) => (n.profile_id === profileId ? { ...n, status: "Not Uploaded", file_path: null } : n)),
+      );
+    } catch (err) {
+      setRowErrors((prev) => ({
+        ...prev,
+        [profileId]: err instanceof DashboardActionError ? err.message : "Something went wrong.",
+      }));
+    } finally {
+      setRowBusy(null);
+    }
+  }
+
+  function handleExportCsv() {
+    downloadCsv(
+      "noc-individuals",
+      filteredRows.map(({ member, team }) => ({
+        Campus: member.campus ?? "—",
+        "Team Name": team.team_name,
+        Name: member.name,
+        "Reg No": member.reg_no,
+        Email: member.gitam_email,
+        Phone: member.phone,
+        Attendance: memberAttendance(member.id) ?? "No sessions yet",
+        Venue: roomOf(team)?.name ?? "Unassigned",
+        SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
+        "File Status": nocOf(member.id)?.status ?? "Not Uploaded",
+      })),
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">
+          Bulk Extend For Selected Individuals
+        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="datetime-local"
+            value={bulkDeadline}
+            onChange={(e) => setBulkDeadline(e.target.value)}
+            className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            disabled={bulkBusy || !bulkDeadline || selected.size === 0}
+            onClick={handleBulkExtend}
+            className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+          >
+            {bulkBusy ? "Applying…" : "Apply Bulk Extend"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
+          >
+            Clear
+          </button>
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+          >
+            Export CSV
+          </button>
+          <span className="font-heading text-xs text-ink-muted">Selected: {selected.size} individual(s)</span>
+        </div>
+        {bulkError && <p className="font-heading text-xs text-danger">{bulkError}</p>}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
+        <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} />
+        <FilterSelect
+          label="Attendance"
+          value={attendanceFilter}
+          onChange={setAttendanceFilter}
+          options={["Present", "Absent"]}
+        />
+        <FilterSelect
+          label="Venue"
+          value={venueFilter}
+          onChange={setVenueFilter}
+          options={rooms.map((r) => r.name)}
+          valueOptions={rooms.map((r) => r.id)}
+        />
+        <FilterSelect
+          label="SPOC"
+          value={spocFilter}
+          onChange={setSpocFilter}
+          options={staffAccounts.map((s) => s.name)}
+          valueOptions={staffAccounts.map((s) => s.id)}
+        />
+        <FilterSelect
+          label="File Status"
+          value={fileStatusFilter}
+          onChange={setFileStatusFilter}
+          options={["Uploaded", "Not Uploaded"]}
+        />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Name / reg no / team…"
+          className="min-w-[180px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+        />
+      </div>
+
+      <p className="font-heading text-xs text-ink-muted">Showing {filteredRows.length} individuals</p>
+
+      {filteredRows.length === 0 ? (
+        <div className="rounded-xl border border-border bg-surface p-8 text-center">
+          <p className="font-heading text-sm text-ink-muted">No individuals match the current filters.</p>
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+          <table className="w-full text-left font-heading text-sm">
+            <thead>
+              <tr className="border-b border-border text-xs text-ink-muted uppercase">
+                <th className="px-4 py-3" />
+                <th className="px-4 py-3">Campus</th>
+                <th className="px-4 py-3">Team Name</th>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Reg No</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Phone</th>
+                <th className="px-4 py-3">Attendance</th>
+                <th className="px-4 py-3">Venue</th>
+                <th className="px-4 py-3">SPOC</th>
+                <th className="px-4 py-3">File Status</th>
+                <th className="px-4 py-3">File</th>
+                {scope === "admin" && <th className="px-4 py-3">Admin Upload</th>}
+                <th className="px-4 py-3">Extend Deadline</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredRows.map(({ member, team }) => {
+                const noc = nocOf(member.id);
+                const uploaded = noc?.status === "Uploaded" && noc.file_path;
+                const busy = rowBusy === member.id;
+                const rowError = rowErrors[member.id];
+                return (
+                  <tr key={member.id} className="border-b border-border align-top last:border-0">
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(member.id)}
+                        onChange={() => toggleSelected(member.id)}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-ink-muted">{member.campus ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
+                    <td className="px-4 py-3 text-ink">
+                      {member.name} {member.is_lead && <span className="text-xs text-gold">(Lead)</span>}
+                    </td>
+                    <td className="px-4 py-3 text-ink-muted">{member.reg_no}</td>
+                    <td className="px-4 py-3 text-ink-muted">{member.gitam_email}</td>
+                    <td className="px-4 py-3 text-ink-muted">{member.phone}</td>
+                    <td className="px-4 py-3 text-ink-muted">{memberAttendance(member.id) ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
+                    <td className="px-4 py-3">
+                      <span className={uploaded ? "text-gitam" : "text-gold"}>{noc?.status ?? "Not Uploaded"}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        {uploaded && (
+                          <>
+                            <button type="button" onClick={() => handleView(member.id)} className="text-gold underline">
+                              View
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => handleDelete(member.id)}
+                              className="text-danger underline disabled:opacity-60"
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                    {scope === "admin" && (
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            onChange={(e) =>
+                              setUploadFiles((prev) => ({ ...prev, [member.id]: e.target.files?.[0] ?? null }))
+                            }
+                            className="w-40 font-heading text-xs text-ink-muted"
+                          />
+                          <button
+                            type="button"
+                            disabled={busy || !uploadFiles[member.id]}
+                            onClick={() => handleAdminUpload(member.id)}
+                            className="w-fit rounded-full bg-gold px-3 py-1 font-heading text-[11px] font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                          >
+                            {busy ? "Uploading…" : "Upload"}
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        <input
+                          type="datetime-local"
+                          value={rowDeadlines[member.id] ?? ""}
+                          onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [member.id]: e.target.value }))}
+                          className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
+                        />
+                        <button
+                          type="button"
+                          disabled={busy || !rowDeadlines[member.id]}
+                          onClick={() => handleRowExtend(member.id)}
+                          className="w-fit rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
+                        >
+                          Extend
+                        </button>
+                        {rowError && <span className="font-heading text-[11px] text-danger">{rowError}</span>}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -139,6 +139,7 @@ export interface NocRow {
   status: NocStatus;
   uploaded_by: string | null;
   uploaded_at: string | null;
+  deadline: string | null;
   updated_at: string;
 }
 

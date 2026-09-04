@@ -59,6 +59,10 @@ export function deleteNoc(profileId: string) {
   return callRpc<null>("delete_noc", { p_profile_id: profileId });
 }
 
+export function extendNocDeadline(profileId: string, deadlineIso: string) {
+  return callRpc<null>("extend_noc_deadline", { p_profile_id: profileId, p_deadline: deadlineIso });
+}
+
 export function requestMemberExit(profileId: string, filePath: string, reason: string) {
   return callRpc<null>("request_member_exit", { p_profile_id: profileId, p_file_path: filePath, p_reason: reason });
 }

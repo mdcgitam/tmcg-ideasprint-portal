@@ -153,7 +153,8 @@ export interface DashboardCardCounts {
   teams: number;
   pendingApprovals: number;
   unreadNotifications: number;
-  incompleteNocPpt: number;
+  missingNocs: number;
+  missingPpt: number;
   rooms: number;
   problemStatements: number;
   staffAccounts: number;
@@ -161,12 +162,13 @@ export interface DashboardCardCounts {
 
 /** Badge counts for the dashboard's card grid — one number per card, computed from data the caller already fetched. */
 export function computeDashboardCardCounts(data: AdminDashboardData): DashboardCardCounts {
-  const incompleteNocPpt = data.teams.filter((t) => {
-    const members = data.membersByTeam[t.id] ?? [];
-    const allNocsUploaded = members.every((m) => data.nocs.find((n) => n.profile_id === m.id)?.status === "Uploaded");
-    const pptUploaded = data.presentations.find((p) => p.team_id === t.id)?.status === "Uploaded";
-    return !(allNocsUploaded && pptUploaded);
-  }).length;
+  const missingNocs = Object.values(data.membersByTeam)
+    .flat()
+    .filter((m) => data.nocs.find((n) => n.profile_id === m.id)?.status !== "Uploaded").length;
+
+  const missingPpt = data.teams.filter(
+    (t) => data.presentations.find((p) => p.team_id === t.id)?.status !== "Uploaded",
+  ).length;
 
   const pendingExitRequests = data.exitRequests.filter((r) => r.status === "Requested").length;
 
@@ -174,7 +176,8 @@ export function computeDashboardCardCounts(data: AdminDashboardData): DashboardC
     teams: data.teams.length,
     pendingApprovals: data.pendingApprovals.length + pendingExitRequests,
     unreadNotifications: data.notifications.filter((n) => !n.read).length,
-    incompleteNocPpt,
+    missingNocs,
+    missingPpt,
     rooms: data.rooms.length,
     problemStatements: data.problemStatements.length,
     staffAccounts: data.staffAccounts.length,

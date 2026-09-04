@@ -55,6 +55,7 @@ export function NocSection({
           uploaded_by: profile.id,
           uploaded_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          deadline: existing?.deadline ?? null,
         };
         return existing ? prev.map((n) => (n.profile_id === profileId ? updated : n)) : [...prev, updated];
       });

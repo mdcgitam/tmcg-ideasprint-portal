@@ -1,7 +1,7 @@
 import { requireProfile } from "@/lib/auth/require-profile";
-import { NocPptRoute } from "@/components/dashboard/admin/routes/NocPptRoute";
+import { NocRoute } from "@/components/dashboard/admin/routes/NocRoute";
 
 export default async function Page() {
   const profile = await requireProfile(["Super Admin", "SPOC"]);
-  return <NocPptRoute profile={profile} />;
+  return <NocRoute profile={profile} />;
 }
