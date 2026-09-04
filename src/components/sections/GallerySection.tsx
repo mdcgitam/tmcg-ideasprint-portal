@@ -3,7 +3,7 @@ import { GalleryCarousel } from "@/components/sections/GalleryCarousel";
 import { gallery } from "@/data/site-config";
 
 /**
- * Act 4 — The Energy (prompt.md §13, §43). Previous-year photography as a
+ * Act 6 — The Energy (prompt.md §13, §43). Previous-year photography as a
  * single-photo carousel — smooth auto-advancing crossfade — rather than a
  * plain grid. `gallery` is empty until organizers supply real photos
  * (prompt.md "No Fake Data") — this renders a structurally-complete empty
@@ -13,7 +13,7 @@ export function GallerySection() {
   return (
     <section id="gallery" className="border-t border-border bg-surface px-6 py-16 sm:px-10 lg:px-16">
       <Reveal className="mx-auto mb-14 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 4 — The Energy</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 6 — The Energy</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">IDEASPRINT 3.0</h2>
       </Reveal>
 

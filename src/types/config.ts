@@ -31,8 +31,6 @@ export interface EventConfig {
   /** display string, e.g. "4:00 PM" — when participants must have reported in */
   reportingTime: string;
   venue: string;
-  /** highlighted separately from registrationGuidelines — meant to stand out, not get buried */
-  breakfastNotice: string;
 }
 
 export type TimelineStage = "round-1" | "round-2" | "grand-finale" | "milestone";

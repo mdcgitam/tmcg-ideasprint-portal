@@ -18,12 +18,11 @@ interface GalleryCarouselProps {
  * 2.2.2 — auto-advancing content must be pausable). Previous-year gallery
  * (prompt.md §13): an immersive moment, not a plain grid.
  *
- * The transition is driven purely by `index === i` (a plain CSS clip-path
- * transition — a horizontal curtain wipe, echoing the Hero's own curtain
- * reveal) rather than imperative GSAP tweens on tracked refs — with N
- * stacked slides, per-pair ref/z-index bookkeeping is easy to get subtly out
- * of sync (a stale z-index or a missed reset leaves everything invisible).
- * A pure function of state can't get stuck.
+ * The transition is driven purely by `index === i` (a plain CSS opacity
+ * cross-dissolve) rather than imperative GSAP tweens on tracked refs — with
+ * N stacked slides, per-pair ref/z-index bookkeeping is easy to get subtly
+ * out of sync (a stale z-index or a missed reset leaves everything
+ * invisible). A pure function of state can't get stuck.
  */
 export function GalleryCarousel({ images }: GalleryCarouselProps) {
   const [index, setIndex] = useState(0);
@@ -88,10 +87,10 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
             key={image.id}
             className="absolute inset-0"
             style={{
-              clipPath: isActive ? "inset(0% 0% 0% 0%)" : "inset(0% 50% 0% 50%)",
-              transitionProperty: "clip-path",
-              transitionDuration: reduced ? "0ms" : "900ms",
-              transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)",
+              opacity: isActive ? 1 : 0,
+              transitionProperty: "opacity",
+              transitionDuration: reduced ? "0ms" : "1000ms",
+              transitionTimingFunction: "ease-in-out",
               zIndex: isActive ? 1 : 0,
             }}
             aria-hidden={!isActive}

@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
-import { timeline } from "@/data/site-config";
+import { timeline, eventConfig } from "@/data/site-config";
 
 interface Step {
   id: string;
@@ -11,6 +11,25 @@ interface Step {
   big: string;
   unit?: string;
   detail: string;
+}
+
+function ordinal(n: number) {
+  if (n % 10 === 1 && n % 100 !== 11) return `${n}st`;
+  if (n % 10 === 2 && n % 100 !== 12) return `${n}nd`;
+  if (n % 10 === 3 && n % 100 !== 13) return `${n}rd`;
+  return `${n}th`;
+}
+
+function formatEventDateRange(startIso: string, endIso: string) {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const day = (d: Date) => ordinal(d.getDate());
+  const month = (d: Date) => d.toLocaleDateString("en-IN", { month: "long" });
+  const year = (d: Date) => d.getFullYear();
+  if (month(start) === month(end) && year(start) === year(end)) {
+    return `${day(start)}–${day(end)} ${month(start)} ${year(start)}`;
+  }
+  return `${day(start)} ${month(start)} ${year(start)} – ${day(end)} ${month(end)} ${year(end)}`;
 }
 
 function toStep(item: (typeof timeline)[number]): Step {
@@ -24,11 +43,13 @@ function toStep(item: (typeof timeline)[number]): Step {
 const steps: Step[] = timeline.map(toStep);
 
 /**
- * Act 3 — The Journey (prompt.md §11, §43). A connected roadmap rather than
+ * Act 2 — The Journey (prompt.md §11, §43). A connected roadmap rather than
  * a pinned cycle of giant numbers or another card row (which would just
  * repeat the Domains pattern) — Round 1 → Round 2 → Grand Finale joined by a
  * line that draws in as the section scrolls through view. No pinning, no
- * scroll-jacking — just a smooth, lightly-scrubbed reveal.
+ * scroll-jacking — just a smooth, lightly-scrubbed reveal. Also carries the
+ * event's date/reporting-time/venue (moved here from Instructions) — one
+ * shared strip since none of that is per-phase.
  */
 export function TimelineSection() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -92,9 +113,23 @@ export function TimelineSection() {
       id="journey"
       className="border-t border-border bg-surface px-6 py-16 sm:px-10 lg:px-16"
     >
-      <div className="mx-auto mb-20 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 3 — The Journey</span>
+      <div className="mx-auto mb-12 max-w-7xl">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 2 — The Journey</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">THE JOURNEY</h2>
+
+        <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-2 font-heading text-sm text-ink-muted">
+          <span>
+            <span className="font-mono text-xs tracking-[0.2em] text-gold uppercase">Dates</span>{" "}
+            {formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)}
+          </span>
+          <span>
+            <span className="font-mono text-xs tracking-[0.2em] text-gold uppercase">Reporting</span>{" "}
+            {eventConfig.reportingTime}
+          </span>
+          <span>
+            <span className="font-mono text-xs tracking-[0.2em] text-gold uppercase">Venue</span> {eventConfig.venue}
+          </span>
+        </div>
       </div>
 
       <div className="mx-auto max-w-5xl">

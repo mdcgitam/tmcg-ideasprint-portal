@@ -46,8 +46,6 @@ export const eventConfig: EventConfig = {
   eventEnd: "2026-09-26T18:00:00+05:30",
   reportingTime: "04:00 PM",
   venue: "Shivaji Auditorium, GITAM Visakhapatnam",
-  breakfastNotice:
-    "Breakfast is not provided on Day 2. Dinner (25th, 8–9 PM) and Lunch (26th, 12–1 PM) are provided at the mess — please plan accordingly for the morning break.",
 };
 
 // Round structure + labels are factual (SPEC.md §2). Exact configured
@@ -57,14 +55,14 @@ export const timeline: TimelineItem[] = [
   {
     id: "round-1",
     stage: "round-1",
-    label: "Round 1",
+    label: "Phase 1 – Round 1",
     duration: "100 Minutes",
     detail: "Naukri Assessment — mandatory for every registered participant.",
   },
   {
     id: "round-2",
     stage: "round-2",
-    label: "Round 2",
+    label: "Phase 1 – Round 2",
     duration: "18 Hours",
     detail: "Build Hackathon — mandatory for every registered participant.",
   },

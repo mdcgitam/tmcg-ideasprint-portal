@@ -25,6 +25,10 @@ const KNOWN_KEYS = [
 // plain paragraphs, a blank line starts a new one. Empty = built-in default copy.
 const PRIVACY_POLICY_KEY = "privacy_policy.content";
 
+// Homepage Instructions section shows the Terms & Conditions box only once
+// this is set — empty means no dead link ships on the live site.
+const TNC_URL_KEY = "terms_and_conditions.url";
+
 export function ConfigurationSection({ config }: { config: Record<string, unknown> }) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -34,6 +38,8 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     }
     const rawPrivacy = config[PRIVACY_POLICY_KEY];
     initial[PRIVACY_POLICY_KEY] = typeof rawPrivacy === "string" ? rawPrivacy : "";
+    const rawTnc = config[TNC_URL_KEY];
+    initial[TNC_URL_KEY] = typeof rawTnc === "string" ? rawTnc : "";
     return initial;
   });
   const [savingKey, setSavingKey] = useState<string | null>(null);
@@ -109,6 +115,34 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     );
   }
 
+  function tncField() {
+    return (
+      <div className="rounded-xl border border-border bg-surface p-6">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Terms &amp; Conditions URL</span>
+        <p className="mt-1 font-heading text-xs text-ink-muted">
+          Shown as a box in the homepage Instructions section only once this is set.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <input
+            value={values[TNC_URL_KEY] ?? ""}
+            onChange={(e) => setValues((v) => ({ ...v, [TNC_URL_KEY]: e.target.value }))}
+            placeholder="https://docs.google.com/document/..."
+            className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            disabled={savingKey === TNC_URL_KEY}
+            onClick={() => handleSave(TNC_URL_KEY)}
+            className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+          >
+            {savingKey === TNC_URL_KEY ? "Saving…" : "Save"}
+          </button>
+        </div>
+        {message[TNC_URL_KEY] && <p className="mt-2 font-heading text-xs text-ink-muted">{message[TNC_URL_KEY]}</p>}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <ViewToggle
@@ -124,6 +158,7 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
         {view === "all" ? (
           <div className="flex flex-col gap-4">
             {psSettingFields()}
+            {tncField()}
             {privacyField()}
           </div>
         ) : (
@@ -136,7 +171,10 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
             </div>
             <div>
               <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">Site Content</p>
-              {privacyField()}
+              <div className="flex flex-col gap-4">
+                {tncField()}
+                {privacyField()}
+              </div>
             </div>
           </>
         )}

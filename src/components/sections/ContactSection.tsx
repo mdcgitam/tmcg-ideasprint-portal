@@ -2,7 +2,7 @@ import { Reveal } from "@/components/motion/Reveal";
 import { contacts } from "@/data/site-config";
 
 /**
- * Act 9 — Contact. All 4 organizer contacts (3 TMCG + 1 MDC) in a single
+ * Act 8 — Contact. All 4 organizer contacts (3 TMCG + 1 MDC) in a single
  * horizontal row (ideasprint_changes.pdf item 7), wrapping only below the
  * `sm` breakpoint. Names/numbers are organizer-provided placeholders
  * (SPEC.md §87) until Admin Configuration is populated.
@@ -11,7 +11,7 @@ export function ContactSection() {
   return (
     <section id="contact" className="border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16">
       <Reveal className="mx-auto mb-10 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 9 — Contact</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 8 — Contact</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-7xl">TALK TO US</h2>
       </Reveal>
 

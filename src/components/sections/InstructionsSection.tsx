@@ -1,65 +1,26 @@
 import { Reveal } from "@/components/motion/Reveal";
-import { registrationGuidelines, eventConfig } from "@/data/site-config";
-
-function ordinal(n: number) {
-  if (n % 10 === 1 && n % 100 !== 11) return `${n}st`;
-  if (n % 10 === 2 && n % 100 !== 12) return `${n}nd`;
-  if (n % 10 === 3 && n % 100 !== 13) return `${n}rd`;
-  return `${n}th`;
-}
-
-function formatEventDateRange(startIso: string, endIso: string) {
-  const start = new Date(startIso);
-  const end = new Date(endIso);
-  const day = (d: Date) => ordinal(d.getDate());
-  const month = (d: Date) => d.toLocaleDateString("en-IN", { month: "long" });
-  const year = (d: Date) => d.getFullYear();
-  if (month(start) === month(end) && year(start) === year(end)) {
-    return `${day(start)}–${day(end)} ${month(start)} ${year(start)}`;
-  }
-  return `${day(start)} ${month(start)} ${year(start)} – ${day(end)} ${month(end)} ${year(end)}`;
-}
+import { eventConfig } from "@/data/site-config";
 
 /**
- * Important Instructions + the NOC notice (SPEC.md §39, "highly visible
- * throughout the registration period" — not a footnote).
+ * Act 3 — The Briefing. Event date/venue/reporting-time now lives in the
+ * Journey section (Act 2) instead of here — this section is registration
+ * logistics + the mandatory NOC notice + (when configured) Terms &
+ * Conditions.
  */
-export function InstructionsSection() {
+export function InstructionsSection({ tncUrl }: { tncUrl: string | null }) {
   return (
     <section id="instructions" className="border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-5xl">
         <Reveal className="mb-10">
-          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 7 — The Briefing</span>
-          <h2 className="mt-4 font-display text-5xl tracking-wide text-ink sm:text-7xl">GOOD TO KNOW</h2>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 3 — The Briefing</span>
+          <h2 className="mt-4 font-display text-5xl tracking-wide text-ink sm:text-7xl">INSTRUCTIONS</h2>
         </Reveal>
 
-        <Reveal className="grid gap-10 rounded-2xl border border-border bg-surface px-8 py-10 text-center sm:grid-cols-3 sm:py-12">
-          <div>
-            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Event Dates</span>
-            <p className="mt-3 font-heading text-2xl text-ink">
-              {formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)}
-            </p>
-          </div>
-          <div>
-            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Reporting Time</span>
-            <p className="mt-3 font-heading text-2xl text-ink">{eventConfig.reportingTime}</p>
-          </div>
-          <div>
-            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Venue</span>
-            <p className="mt-3 font-heading text-2xl text-ink">{eventConfig.venue}</p>
-          </div>
-        </Reveal>
-
-        <Reveal className="mt-8 overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 via-void to-void px-8 py-10 text-center sm:py-12">
+        <Reveal className="overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 via-void to-void px-8 py-10 text-center sm:py-12">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Mandatory</span>
           <p className="mt-4 font-display text-3xl tracking-wide text-ink sm:text-5xl">
             NOC SUBMISSION IS COMPULSORY FOR EVERY PARTICIPANT
           </p>
-        </Reveal>
-
-        <Reveal className="mt-8 overflow-hidden rounded-2xl border border-mdc/40 bg-mdc/10 px-8 py-6 text-center">
-          <span className="font-mono text-xs tracking-[0.3em] text-mdc uppercase">Special Mention</span>
-          <p className="mt-3 font-heading text-base leading-relaxed text-ink sm:text-lg">{eventConfig.breakfastNotice}</p>
         </Reveal>
 
         <Reveal className="mt-8 grid gap-8 sm:grid-cols-3">
@@ -88,10 +49,25 @@ export function InstructionsSection() {
           </div>
         </Reveal>
 
-        <Reveal className="mt-10">
-          <h3 className="font-heading text-sm tracking-[0.3em] text-ink-muted uppercase">Important Instructions</h3>
-          <p className="mt-4 max-w-3xl font-heading leading-relaxed text-ink-muted">{registrationGuidelines.content}</p>
-        </Reveal>
+        {tncUrl && (
+          <Reveal className="mt-8 overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 via-void to-void px-8 py-8 text-center">
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Terms &amp; Conditions</span>
+            <p className="mt-3 font-heading text-sm text-ink-muted">
+              Please review the official Terms &amp; Conditions before registering.
+            </p>
+            <a
+              href={tncUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 inline-block rounded-full border border-gold/50 px-6 py-2.5 font-heading text-sm font-medium text-gold transition-colors hover:bg-gold/10"
+            >
+              Read Terms &amp; Conditions
+            </a>
+            <p className="mt-4 font-heading text-xs text-ink-faint">
+              By registering for IdeaSprint 4.0, you agree to these Terms &amp; Conditions.
+            </p>
+          </Reveal>
+        )}
       </div>
     </section>
   );
