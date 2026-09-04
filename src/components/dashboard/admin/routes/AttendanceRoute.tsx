@@ -4,7 +4,7 @@ import { AdminAttendanceSection } from "@/components/dashboard/admin/sections/Ad
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function AttendanceRoute({ profile }: { profile: ProfileRow }) {
-  const { teams, membersByTeam, attendanceSessions, attendance, staffAccounts } =
+  const { teams, membersByTeam, attendanceSessions, attendance, staffAccounts, spocs, rooms } =
     await fetchAdminDashboardData(profile);
   const scope = profile.role === "Super Admin" ? "admin" : "spoc";
 
@@ -17,6 +17,8 @@ export async function AttendanceRoute({ profile }: { profile: ProfileRow }) {
         attendance={attendance}
         scope={scope}
         staffAccounts={staffAccounts}
+        spocs={spocs}
+        rooms={rooms}
       />
     </SectionPageShell>
   );

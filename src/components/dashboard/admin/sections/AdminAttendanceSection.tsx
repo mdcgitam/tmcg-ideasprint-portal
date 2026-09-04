@@ -1,15 +1,17 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import type { AttendanceRow, AttendanceSessionRow, ProfileRow, TeamRow } from "@/types/database";
+import { Fragment, useMemo, useState } from "react";
+import type { AttendanceRow, AttendanceSessionRow, ProfileRow, RoomRow, TeamRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { recordAttendance, createAttendanceSession, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
+import { FilterSelect } from "@/components/dashboard/admin/sections/TeamFormFields";
 import { useTabFade } from "@/hooks/useTabFade";
 
 type View = "all-members" | "by-team";
 
+/** SPOC marks attendance for their own room; Super Admin can only view it (with the SPOC assigned to each team visible). */
 export function AdminAttendanceSection({
   teams,
   membersByTeam,
@@ -17,6 +19,8 @@ export function AdminAttendanceSection({
   attendance,
   scope,
   staffAccounts,
+  spocs,
+  rooms,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -24,6 +28,8 @@ export function AdminAttendanceSection({
   attendance: AttendanceRow[];
   scope: "spoc" | "admin";
   staffAccounts: ProfileRow[];
+  spocs: ProfileRow[];
+  rooms: RoomRow[];
 }) {
   const [localSessions, setLocalSessions] = useState(attendanceSessions);
   const [localAttendance, setLocalAttendance] = useState(attendance);
@@ -32,7 +38,11 @@ export function AdminAttendanceSection({
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("all-members");
+  const [venueFilter, setVenueFilter] = useState("");
+  const [spocFilter, setSpocFilter] = useState("");
   const fadeRef = useTabFade(view);
+
+  const canMark = scope === "spoc";
 
   async function handleCreateSession(e: React.FormEvent) {
     e.preventDefault();
@@ -120,43 +130,83 @@ export function AdminAttendanceSection({
   const allMembers = teams.flatMap((t) => membersByTeam[t.id] ?? []);
   const teamNameByProfileId: Record<string, string> = {};
   const spocByProfileId: Record<string, string> = {};
+  const venueByProfileId: Record<string, string> = {};
   for (const t of teams) {
     const spoc = staffAccounts.find((s) => s.id === t.spoc_profile_id)?.name ?? "Unassigned";
+    const venue = rooms.find((r) => r.id === t.room_id)?.name ?? "Unassigned";
     for (const m of membersByTeam[t.id] ?? []) {
       teamNameByProfileId[m.id] = t.team_name;
       spocByProfileId[m.id] = spoc;
+      venueByProfileId[m.id] = venue;
     }
   }
+
+  const filteredTeams = useMemo(
+    () =>
+      teams.filter(
+        (t) => (!venueFilter || t.room_id === venueFilter) && (!spocFilter || t.spoc_profile_id === spocFilter),
+      ),
+    [teams, venueFilter, spocFilter],
+  );
+  const filteredMembers = useMemo(() => {
+    const ids = new Set(filteredTeams.flatMap((t) => (membersByTeam[t.id] ?? []).map((m) => m.id)));
+    return allMembers.filter((m) => ids.has(m.id));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredTeams, membersByTeam]);
 
   function handleExportSession(session: AttendanceSessionRow) {
     downloadCsv(
       `attendance-${session.name}`,
-      allMembers.map((m) => ({
+      filteredMembers.map((m) => ({
         "User ID": m.user_id,
         Name: m.name,
         Team: teamNameByProfileId[m.id] ?? "—",
+        Position: m.is_lead ? "Team Lead" : "Member",
         SPOC: spocByProfileId[m.id] ?? "Unassigned",
+        Venue: venueByProfileId[m.id] ?? "Unassigned",
         Status: localAttendance.find((a) => a.session_id === session.id && a.profile_id === m.id)?.status ?? "Not Marked",
       })),
     );
   }
 
-  function statusButton(m: TeamMemberProfile, s: AttendanceSessionRow) {
+  function handleExportAll() {
+    downloadCsv(
+      "attendance-all-sessions",
+      filteredMembers.flatMap((m) =>
+        localSessions.map((s) => ({
+          Team: teamNameByProfileId[m.id] ?? "—",
+          Member: m.name,
+          Position: m.is_lead ? "Team Lead" : "Member",
+          SPOC: spocByProfileId[m.id] ?? "Unassigned",
+          Venue: venueByProfileId[m.id] ?? "Unassigned",
+          Session: s.name,
+          Status: localAttendance.find((a) => a.session_id === s.id && a.profile_id === m.id)?.status ?? "Not Marked",
+        })),
+      ),
+    );
+  }
+
+  function statusCell(m: TeamMemberProfile, s: AttendanceSessionRow) {
     const record = localAttendance.find((a) => a.session_id === s.id && a.profile_id === m.id);
     const status = record?.status ?? null;
     const key = `${s.id}:${m.id}`;
+    const className = `rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-60 ${
+      status === "Present"
+        ? "border-gitam/40 bg-gitam/10 text-gitam"
+        : status === "Absent"
+          ? "border-danger/40 bg-danger/10 text-danger"
+          : "border-border text-ink-faint"
+    }`;
+
+    if (!canMark) {
+      return <span className={`inline-block ${className}`}>{status ?? "Not Marked"}</span>;
+    }
     return (
       <button
         type="button"
         disabled={busyKey === key}
         onClick={() => handleToggle(s.id, m.id, status)}
-        className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-60 ${
-          status === "Present"
-            ? "border-gitam/40 bg-gitam/10 text-gitam"
-            : status === "Absent"
-              ? "border-danger/40 bg-danger/10 text-danger"
-              : "border-border text-ink-faint"
-        }`}
+        className={className}
       >
         {status ?? "Not Marked"}
       </button>
@@ -202,6 +252,12 @@ export function AdminAttendanceSection({
         </form>
       )}
 
+      {!canMark && (
+        <p className="font-heading text-xs text-ink-muted">
+          View only — the assigned SPOC marks attendance for each team.
+        </p>
+      )}
+
       {error && <p className="font-heading text-sm text-danger">{error}</p>}
 
       {localSessions.length === 0 ? (
@@ -221,73 +277,105 @@ export function AdminAttendanceSection({
             ]}
           />
 
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
+            <FilterSelect
+              label="Venue"
+              value={venueFilter}
+              onChange={setVenueFilter}
+              options={rooms.map((r) => r.name)}
+              valueOptions={rooms.map((r) => r.id)}
+            />
+            <FilterSelect
+              label="SPOC"
+              value={spocFilter}
+              onChange={setSpocFilter}
+              options={spocs.map((s) => s.name)}
+              valueOptions={spocs.map((s) => s.id)}
+            />
+            <button
+              type="button"
+              onClick={handleExportAll}
+              className="ml-auto rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+            >
+              Download All (CSV)
+            </button>
+          </div>
+
           <div ref={fadeRef} className="overflow-x-auto rounded-xl border border-border bg-surface">
             <table className="w-full text-left font-heading text-sm">
               <thead>
                 <tr className="border-b border-border text-xs text-ink-muted uppercase">
-                  <th className="px-4 py-3">Member</th>
-                  <th className="px-4 py-3">Team</th>
+                  <th className="px-4 py-3">Team Name</th>
+                  <th className="px-4 py-3">Member Name</th>
+                  <th className="px-4 py-3">Position</th>
                   <th className="px-4 py-3">SPOC</th>
+                  <th className="px-4 py-3">Venue</th>
                   {sessionHeaderCells}
                 </tr>
               </thead>
               <tbody>
                 {view === "all-members"
-                  ? allMembers.map((m) => (
+                  ? filteredMembers.map((m) => (
                       <tr key={m.id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-3 text-ink">{m.name}</td>
                         <td className="px-4 py-3 text-ink-muted">{teamNameByProfileId[m.id] ?? "—"}</td>
+                        <td className="px-4 py-3 text-ink">{m.name}</td>
+                        <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
                         <td className="px-4 py-3 text-ink-muted">{spocByProfileId[m.id] ?? "Unassigned"}</td>
+                        <td className="px-4 py-3 text-ink-muted">{venueByProfileId[m.id] ?? "Unassigned"}</td>
                         {localSessions.map((s) => (
                           <td key={s.id} className="px-4 py-3">
-                            {statusButton(m, s)}
+                            {statusCell(m, s)}
                           </td>
                         ))}
                       </tr>
                     ))
-                  : teams.map((team) => {
+                  : filteredTeams.map((team) => {
                       const members = membersByTeam[team.id] ?? [];
                       if (members.length === 0) return null;
                       return (
                         <Fragment key={team.id}>
                           <tr className="border-b border-border bg-void/40">
-                            <td colSpan={3} className="px-4 py-2 font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">
+                            <td colSpan={5} className="px-4 py-2 font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">
                               {team.team_name}
                             </td>
                             {localSessions.map((s) => {
                               const busy = busyKey === `team:${team.id}:${s.id}`;
                               return (
                                 <td key={s.id} className="px-4 py-2">
-                                  <div className="flex gap-1.5">
-                                    <button
-                                      type="button"
-                                      disabled={busy}
-                                      onClick={() => handleMarkTeam(team.id, s.id, "Present")}
-                                      className="rounded-full border border-gitam/40 px-2 py-0.5 text-[10px] font-medium text-gitam normal-case transition-colors hover:bg-gitam/10 disabled:opacity-60"
-                                    >
-                                      All Present
-                                    </button>
-                                    <button
-                                      type="button"
-                                      disabled={busy}
-                                      onClick={() => handleMarkTeam(team.id, s.id, "Absent")}
-                                      className="rounded-full border border-danger/40 px-2 py-0.5 text-[10px] font-medium text-danger normal-case transition-colors hover:bg-danger/10 disabled:opacity-60"
-                                    >
-                                      All Absent
-                                    </button>
-                                  </div>
+                                  {canMark ? (
+                                    <div className="flex gap-1.5">
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => handleMarkTeam(team.id, s.id, "Present")}
+                                        className="rounded-full border border-gitam/40 px-2 py-0.5 text-[10px] font-medium text-gitam normal-case transition-colors hover:bg-gitam/10 disabled:opacity-60"
+                                      >
+                                        All Present
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={busy}
+                                        onClick={() => handleMarkTeam(team.id, s.id, "Absent")}
+                                        className="rounded-full border border-danger/40 px-2 py-0.5 text-[10px] font-medium text-danger normal-case transition-colors hover:bg-danger/10 disabled:opacity-60"
+                                      >
+                                        All Absent
+                                      </button>
+                                    </div>
+                                  ) : null}
                                 </td>
                               );
                             })}
                           </tr>
                           {members.map((m) => (
                             <tr key={m.id} className="border-b border-border last:border-0">
-                              <td className="px-4 py-3 text-ink">{m.name}</td>
                               <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
+                              <td className="px-4 py-3 text-ink">{m.name}</td>
+                              <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
                               <td className="px-4 py-3 text-ink-muted">{spocByProfileId[m.id] ?? "Unassigned"}</td>
+                              <td className="px-4 py-3 text-ink-muted">{venueByProfileId[m.id] ?? "Unassigned"}</td>
                               {localSessions.map((s) => (
                                 <td key={s.id} className="px-4 py-3">
-                                  {statusButton(m, s)}
+                                  {statusCell(m, s)}
                                 </td>
                               ))}
                             </tr>
