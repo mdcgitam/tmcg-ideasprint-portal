@@ -12,17 +12,66 @@ interface GalleryCarouselProps {
   images: GalleryImage[];
 }
 
+// Each photo gets its own reveal style, cycling through this list by index —
+// not one uniform crossfade for every slide.
+const TRANSITIONS = ["fade", "wipe", "slide", "zoom"] as const;
+type TransitionType = (typeof TRANSITIONS)[number];
+
+function slideStyle(type: TransitionType, isActive: boolean, reduced: boolean): React.CSSProperties {
+  const transitionDuration = reduced ? "0ms" : "950ms";
+  const zIndex = isActive ? 1 : 0;
+  switch (type) {
+    case "wipe":
+      return {
+        opacity: isActive ? 1 : 0,
+        clipPath: isActive ? "inset(0% 0% 0% 0%)" : "inset(0% 50% 0% 50%)",
+        transitionProperty: "opacity, clip-path",
+        transitionDuration,
+        transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)",
+        zIndex,
+      };
+    case "slide":
+      return {
+        opacity: isActive ? 1 : 0,
+        transform: isActive ? "translateX(0%)" : "translateX(6%)",
+        transitionProperty: "opacity, transform",
+        transitionDuration,
+        transitionTimingFunction: "cubic-bezier(0.65, 0, 0.35, 1)",
+        zIndex,
+      };
+    case "zoom":
+      return {
+        opacity: isActive ? 1 : 0,
+        transform: isActive ? "scale(1)" : "scale(1.12)",
+        transitionProperty: "opacity, transform",
+        transitionDuration,
+        transitionTimingFunction: "ease-in-out",
+        zIndex,
+      };
+    case "fade":
+    default:
+      return {
+        opacity: isActive ? 1 : 0,
+        transitionProperty: "opacity",
+        transitionDuration,
+        transitionTimingFunction: "ease-in-out",
+        zIndex,
+      };
+  }
+}
+
 /**
- * One photo at a time, smooth crossfade + slow Ken Burns drift, auto-advance
- * every ~2.6s, pausable on hover/focus and via an explicit control (WCAG
- * 2.2.2 — auto-advancing content must be pausable). Previous-year gallery
- * (prompt.md §13): an immersive moment, not a plain grid.
+ * One photo at a time, auto-advance every ~2.6s, pausable on hover/focus and
+ * via an explicit control (WCAG 2.2.2 — auto-advancing content must be
+ * pausable). Previous-year gallery (prompt.md §13): an immersive moment, not
+ * a plain grid.
  *
- * The transition is driven purely by `index === i` (a plain CSS opacity
- * cross-dissolve) rather than imperative GSAP tweens on tracked refs — with
- * N stacked slides, per-pair ref/z-index bookkeeping is easy to get subtly
- * out of sync (a stale z-index or a missed reset leaves everything
- * invisible). A pure function of state can't get stuck.
+ * Each slide's reveal is driven purely by `index === i` plus its own
+ * transition type (cycling fade → wipe → slide → zoom by index) rather than
+ * imperative GSAP tweens on tracked refs — with N stacked slides, per-pair
+ * ref/z-index bookkeeping is easy to get subtly out of sync (a stale z-index
+ * or a missed reset leaves everything invisible). A pure function of state
+ * can't get stuck.
  */
 export function GalleryCarousel({ images }: GalleryCarouselProps) {
   const [index, setIndex] = useState(0);
@@ -82,17 +131,12 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
     >
       {images.map((image, i) => {
         const isActive = i === index;
+        const transitionType = TRANSITIONS[i % TRANSITIONS.length];
         return (
           <div
             key={image.id}
             className="absolute inset-0"
-            style={{
-              opacity: isActive ? 1 : 0,
-              transitionProperty: "opacity",
-              transitionDuration: reduced ? "0ms" : "1000ms",
-              transitionTimingFunction: "ease-in-out",
-              zIndex: isActive ? 1 : 0,
-            }}
+            style={slideStyle(transitionType, isActive, reduced)}
             aria-hidden={!isActive}
           >
             <div ref={isActive ? activeImageRef : undefined} className="absolute inset-0">

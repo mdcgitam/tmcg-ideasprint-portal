@@ -11,6 +11,11 @@ import { RegistrationClosedPopup } from "@/components/sections/RegistrationClose
 
 const TEAM_CAP = 100;
 
+// Placeholder until the real Terms & Conditions doc is set via admin
+// Configuration → Site Content — keeps the box visible now instead of
+// staying hidden while nobody has configured a real link yet.
+const PLACEHOLDER_TNC_URL = "https://docs.google.com/document/d/1PLACEHOLDER-ideasprint-4-0-terms-and-conditions/edit";
+
 const CONFIG_KEYS = ["terms_and_conditions.url", "grand_finale.date", "grand_finale.venue"] as const;
 
 function readConfigString(rows: { key: string; value: unknown }[] | null, key: string): string | null {
@@ -27,7 +32,7 @@ export default async function Home() {
   ]);
 
   const isFull = (teamCount ?? 0) >= TEAM_CAP;
-  const tncUrl = readConfigString(configRows, "terms_and_conditions.url");
+  const tncUrl = readConfigString(configRows, "terms_and_conditions.url") ?? PLACEHOLDER_TNC_URL;
   const grandFinaleDate = readConfigString(configRows, "grand_finale.date");
   const grandFinaleVenue = readConfigString(configRows, "grand_finale.venue");
 
