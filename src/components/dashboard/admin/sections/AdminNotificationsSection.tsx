@@ -14,12 +14,12 @@ import { useTabFade } from "@/hooks/useTabFade";
 type View = "all" | "by-status";
 
 const ROLE_OPTIONS: { value: BroadcastRoleAudience; label: string }[] = [
-  { value: "Member", label: "All Members" },
+  { value: "Member", label: "Members" },
   { value: "Team Lead", label: "Leads" },
   { value: "SPOC", label: "SPOCs" },
 ];
 
-/** SPEC §70-72/§75 — SPOC and Super Admin both get notified on new registrations, pending approvals, NOC/Exit Form uploads, etc. Super Admin can additionally broadcast a notification, either by role or by venue (every team assigned to a room). */
+/** SPEC §70-72/§75 — SPOC and Super Admin both get notified on new registrations, pending approvals, NOC/Exit Form uploads, etc. Super Admin can additionally broadcast a notification to everyone, a single role, or by venue (every team assigned to a room). */
 export function AdminNotificationsSection({
   notifications,
   scope,
@@ -34,7 +34,7 @@ export function AdminNotificationsSection({
   const [view, setView] = useState<View>("all");
   const fadeRef = useTabFade(view);
 
-  const [audienceType, setAudienceType] = useState<"role" | "venue">("role");
+  const [audienceType, setAudienceType] = useState<"all" | "role" | "venue">("all");
   const [roleAudience, setRoleAudience] = useState<BroadcastRoleAudience>("Member");
   const [venueId, setVenueId] = useState("");
   const [title, setTitle] = useState("");
@@ -45,7 +45,7 @@ export function AdminNotificationsSection({
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    const audienceValue = audienceType === "role" ? roleAudience : venueId;
+    const audienceValue = audienceType === "role" ? roleAudience : audienceType === "venue" ? venueId : "";
     if (audienceType === "venue" && !venueId) {
       setSendError("Choose a venue to notify.");
       return;
@@ -56,9 +56,11 @@ export function AdminNotificationsSection({
     try {
       const count = await broadcastNotification(title.trim(), message.trim(), audienceType, audienceValue);
       const audienceLabel =
-        audienceType === "role"
-          ? (ROLE_OPTIONS.find((o) => o.value === roleAudience)?.label ?? roleAudience).toLowerCase()
-          : `team${count === 1 ? "" : "s"} at ${rooms.find((r) => r.id === venueId)?.name ?? "that venue"}`;
+        audienceType === "all"
+          ? "people (whole community)"
+          : audienceType === "role"
+            ? (ROLE_OPTIONS.find((o) => o.value === roleAudience)?.label ?? roleAudience).toLowerCase()
+            : `team${count === 1 ? "" : "s"} at ${rooms.find((r) => r.id === venueId)?.name ?? "that venue"}`;
       setSendSuccess(`Sent to ${count} ${audienceLabel}.`);
       setTitle("");
       setMessage("");
@@ -115,6 +117,17 @@ export function AdminNotificationsSection({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
+              onClick={() => setAudienceType("all")}
+              className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
+                audienceType === "all"
+                  ? "border-gold bg-gold/10 text-gold"
+                  : "border-border text-ink-muted hover:border-gold hover:text-gold"
+              }`}
+            >
+              All
+            </button>
+            <button
+              type="button"
               onClick={() => setAudienceType("role")}
               className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
                 audienceType === "role"
@@ -154,7 +167,7 @@ export function AdminNotificationsSection({
                 </button>
               ))}
             </div>
-          ) : (
+          ) : audienceType === "venue" ? (
             <select
               value={venueId}
               onChange={(e) => setVenueId(e.target.value)}
@@ -167,6 +180,10 @@ export function AdminNotificationsSection({
                 </option>
               ))}
             </select>
+          ) : (
+            <p className="font-heading text-xs text-ink-muted">
+              Reaches every Member, Team Lead, and SPOC — the whole community.
+            </p>
           )}
 
           <input

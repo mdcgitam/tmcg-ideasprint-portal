@@ -101,11 +101,11 @@ export function markNotificationRead(notificationId: string) {
 
 export type BroadcastRoleAudience = "Member" | "Team Lead" | "SPOC";
 
-/** Pushes a notification to every profile in the chosen audience (a role, or every member of every team assigned to a room). Returns the recipient count. */
+/** Pushes a notification to every profile in the chosen audience (everyone, a single role, or every member of every team assigned to a room). Returns the recipient count. */
 export function broadcastNotification(
   title: string,
   message: string,
-  audienceType: "role" | "venue",
+  audienceType: "all" | "role" | "venue",
   audienceValue: string,
 ) {
   return callRpc<number>("broadcast_notification", {
