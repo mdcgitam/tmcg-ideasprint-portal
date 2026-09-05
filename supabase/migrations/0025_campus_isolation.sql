@@ -1327,3 +1327,147 @@ grant execute on function public.record_noc_metadata(uuid, text) to authenticate
 -- and never on the team-lead path; with no admin branch to hang it on there
 -- is nothing to guard (a Team Lead is intrinsically in their own campus).
 -- Flagged to the controller as NEEDS_CONTEXT.
+
+-- ══════════════════════════════════════════════════════════════════════════
+-- Task 7: Per-campus notification scoping + campus Super Admin seeds.
+-- ══════════════════════════════════════════════════════════════════════════
+
+-- Step 1 — "new team registration" admin notification: NO-OP.
+-- No function or trigger anywhere in 0001-0024 inserts a "New Team
+-- Registration" (or equivalent) notification for staff on team registration.
+-- register_team (0006) sends no notification at all, and the only
+-- registration-adjacent staff notification is 'TeamEditRequested' from
+-- request_team_edit (0002), which is an edit-approval request, not a new
+-- registration. There is nothing to scope here.
+
+-- Step 2 — broadcast_notification (source 0017): every recipient-selecting
+-- query gains `and campus = public.current_campus()` (aliased `t.campus` for
+-- the venue branch). Audience-branching logic is otherwise identical.
+create or replace function public.broadcast_notification(
+  p_title text,
+  p_message text,
+  p_audience_type text,
+  p_audience_value text
+)
+returns integer language plpgsql security definer set search_path = public as $$
+declare v_count integer;
+begin
+  if public.current_role() <> 'Super Admin' then raise exception 'NOT_ALLOWED'; end if;
+  if trim(p_title) = '' or trim(p_message) = '' then raise exception 'INVALID_BROADCAST'; end if;
+
+  if p_audience_type = 'all' then
+    insert into public.notifications (recipient_profile_id, type, title, message)
+    select id, 'AdminBroadcast', p_title, p_message
+    from public.profiles
+    where role in ('Member', 'Team Lead', 'SPOC') and campus = public.current_campus();
+
+  elsif p_audience_type = 'role' then
+    if p_audience_value not in ('Member', 'Team Lead', 'SPOC') then raise exception 'INVALID_AUDIENCE'; end if;
+
+    insert into public.notifications (recipient_profile_id, type, title, message)
+    select id, 'AdminBroadcast', p_title, p_message
+    from public.profiles
+    where role = p_audience_value::public.user_role and campus = public.current_campus();
+
+  elsif p_audience_type = 'venue' then
+    if not exists (select 1 from public.rooms where id = p_audience_value::uuid) then
+      raise exception 'ROOM_NOT_FOUND';
+    end if;
+
+    insert into public.notifications (recipient_profile_id, type, title, message)
+    select tm.profile_id, 'AdminBroadcast', p_title, p_message
+    from public.team_members tm
+    join public.teams t on t.id = tm.team_id
+    where t.room_id = p_audience_value::uuid and t.campus = public.current_campus();
+
+  else
+    raise exception 'INVALID_AUDIENCE';
+  end if;
+
+  get diagnostics v_count = row_count;
+
+  insert into public.audit_logs (actor_profile_id, action, entity_type, new_value)
+  values (
+    public.current_profile_id(), 'Notification Broadcast', 'notification',
+    jsonb_build_object(
+      'audience_type', p_audience_type, 'audience_value', p_audience_value,
+      'title', p_title, 'recipient_count', v_count
+    )
+  );
+
+  return v_count;
+end;
+$$;
+revoke all on function public.broadcast_notification(text, text, text, text) from public, anon;
+grant execute on function public.broadcast_notification(text, text, text, text) to authenticated;
+
+-- Step 3 — seed helper + the three campus Super Admin seed calls.
+
+-- One-shot seeding for the three campus Super Admins. No current_role() check
+-- (only the migration calls it); revoked from every client role afterwards.
+create or replace function public.seed_campus_super_admin(p_campus public.campus, p_email text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_id uuid;
+begin
+  if exists (select 1 from public.profiles where gitam_email = lower(p_email)) then
+    return null;  -- idempotent: already seeded
+  end if;
+  insert into public.profiles (user_id, campus, role, name, gitam_email)
+  values (public.next_user_id(p_campus::text), p_campus, 'Super Admin',
+          'Super Admin (' || p_campus::text || ')', lower(p_email))
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+revoke all on function public.seed_campus_super_admin(public.campus, text) from public, anon, authenticated;
+
+-- ⚠️ Replace the three placeholder emails before applying this migration.
+select public.seed_campus_super_admin('VSP', 'REPLACE_VSP_ADMIN_EMAIL');
+select public.seed_campus_super_admin('BLR', 'REPLACE_BLR_ADMIN_EMAIL');
+select public.seed_campus_super_admin('HYD', 'REPLACE_HYD_ADMIN_EMAIL');
+
+-- ── Storage policy campus gaps (controller ruling, Batch A review) ──
+-- Two storage policies with an unscoped Super-Admin branch that Task 4 did
+-- not cover. Scoped here the same way Batch A scoped the others: drop+create,
+-- body copied verbatim from source, only the Super-Admin clause changed to
+-- also require public.is_same_campus_profile() on the path's profile-id
+-- segment.
+
+-- 1) noc_uploads_insert — latest def in 0015_noc_deadline_and_admin_upload.sql.
+drop policy if exists noc_uploads_insert on storage.objects;
+create policy noc_uploads_insert on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'noc-uploads'
+  and (public.is_own_or_led_profile((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid)))
+);
+
+-- 2) exit_requests_{select,update,delete}_storage — defined in
+-- 0012_member_exit_requests.sql. Path segment 1 is a PROFILE id.
+drop policy if exists exit_requests_select_storage on storage.objects;
+create policy exit_requests_select_storage on storage.objects for select to authenticated
+using (
+  bucket_id = 'exit-requests'
+  and (
+    public.is_own_or_led_profile((storage.foldername(name))[1]::uuid)
+    or public.is_assigned_spoc_of_profile((storage.foldername(name))[1]::uuid)
+    or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid))
+  )
+);
+
+drop policy if exists exit_requests_update_storage on storage.objects;
+create policy exit_requests_update_storage on storage.objects for update to authenticated
+using (
+  bucket_id = 'exit-requests'
+  and (public.is_led_profile((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid)))
+)
+with check (
+  bucket_id = 'exit-requests'
+  and (public.is_led_profile((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid)))
+);
+
+drop policy if exists exit_requests_delete_storage on storage.objects;
+create policy exit_requests_delete_storage on storage.objects for delete to authenticated
+using (
+  bucket_id = 'exit-requests'
+  and (public.is_led_profile((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid)))
+);
