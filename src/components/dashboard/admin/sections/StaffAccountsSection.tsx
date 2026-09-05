@@ -134,7 +134,7 @@ export function StaffAccountsSection({
             onClick={() =>
               downloadCsv(
                 "staff-accounts",
-                local.map((s) => ({ Name: s.name, Email: s.gitam_email, Role: s.role, "User ID": s.user_id })),
+                local.map((s) => ({ Name: s.name, Email: s.gitam_email, Campus: s.campus, Role: s.role, "User ID": s.user_id })),
               )
             }
             className="w-fit rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
@@ -166,7 +166,7 @@ export function StaffAccountsSection({
                     >
                       <div>
                         <p className="font-heading text-sm text-ink">{s.name}</p>
-                        <p className="mt-1 font-heading text-xs text-ink-muted">{s.gitam_email}</p>
+                        <p className="mt-1 font-heading text-xs text-ink-muted">{s.gitam_email} · {s.campus}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <select

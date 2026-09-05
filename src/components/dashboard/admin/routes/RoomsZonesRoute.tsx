@@ -9,6 +9,7 @@ export async function RoomsZonesRoute({ profile }: { profile: ProfileRow }) {
   return (
     <SectionPageShell title="Rooms & Zones" scope="admin">
       <RoomsZonesSection
+        campus={profile.campus}
         teams={teams}
         membersByTeam={membersByTeam}
         rooms={rooms}

@@ -2,7 +2,7 @@
 
 import { useFormContext } from "react-hook-form";
 import { FormField, fieldInputClass } from "@/components/registration/FormField";
-import { MAX_TEAM_SIZE, MIN_TEAM_SIZE, type RegistrationFormValues } from "@/lib/registration/schema";
+import { CAMPUS_OPTIONS, MAX_TEAM_SIZE, MIN_TEAM_SIZE, type RegistrationFormValues } from "@/lib/registration/schema";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,6 +25,19 @@ export function TeamDetailsStep() {
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Step 1</span>
         <h1 className="mt-3 font-display text-4xl tracking-wide text-ink sm:text-5xl">Basic Team Details</h1>
       </div>
+
+      <FormField label="Campus" required error={errors.team?.campus?.message} htmlFor="team-campus">
+        <select
+          id="team-campus"
+          aria-invalid={!!errors.team?.campus}
+          className={fieldInputClass}
+          {...register("team.campus")}
+        >
+          {CAMPUS_OPTIONS.map((c) => (
+            <option key={c.code} value={c.code}>{c.label}</option>
+          ))}
+        </select>
+      </FormField>
 
       <FormField label="Team Name" required error={errors.team?.teamName?.message} htmlFor="team-name">
         <input

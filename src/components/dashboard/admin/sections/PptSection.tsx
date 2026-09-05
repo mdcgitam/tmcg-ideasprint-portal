@@ -160,7 +160,7 @@ export function PptSection({
         new Set(
           teams
             .map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)
-            .filter((c): c is string => Boolean(c)),
+            .filter((c): c is NonNullable<typeof c> => Boolean(c)),
         ),
       ),
     [teams, membersByTeam],

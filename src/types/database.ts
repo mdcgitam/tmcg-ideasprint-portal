@@ -8,6 +8,8 @@
  * wholesale with `supabase gen types` once the CLI is linked.
  */
 
+export type CampusCode = "VSP" | "BLR" | "HYD";
+
 export type UserRole = "Super Admin" | "SPOC" | "Team Lead" | "Member";
 export type TeamStatus = "Registered" | "Active" | "Pending Approval" | "Qualified for Grand Finale" | "Exited";
 export type PsStatus = "Hidden" | "Released";
@@ -22,7 +24,7 @@ export interface ProfileRow {
   id: string;
   auth_user_id: string | null;
   user_id: string;
-  campus: string;
+  campus: CampusCode;
   role: UserRole;
   name: string;
   gitam_email: string;
@@ -44,6 +46,7 @@ export interface TeamRow {
   id: string;
   team_id: string;
   team_name: string;
+  campus: CampusCode;
   member_count: number;
   team_lead_profile_id: string | null;
   spoc_profile_id: string | null;
@@ -57,6 +60,7 @@ export interface TeamRow {
 export interface ZoneRow {
   id: string;
   name: string;
+  campus: CampusCode;
   zone_manager_profile_id: string | null;
   created_at: string;
   updated_at: string;
@@ -65,6 +69,7 @@ export interface ZoneRow {
 export interface RoomRow {
   id: string;
   name: string;
+  campus: CampusCode;
   zone_id: string | null;
   spoc_profile_id: string | null;
   created_at: string;

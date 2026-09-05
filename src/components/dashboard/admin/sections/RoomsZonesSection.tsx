@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { CampusCode, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import {
   assignRoomToZone,
@@ -37,6 +37,7 @@ const UNASSIGN = "__unassign__";
  * later" pattern.
  */
 export function RoomsZonesSection({
+  campus,
   rooms,
   zones,
   teams,
@@ -44,6 +45,7 @@ export function RoomsZonesSection({
   spocs,
   staffAccounts,
 }: {
+  campus: CampusCode;
   rooms: RoomRow[];
   zones: ZoneRow[];
   teams: TeamRow[];
@@ -114,7 +116,7 @@ export function RoomsZonesSection({
       const id = await createZone(zoneName.trim(), null);
       setLocalZones((prev) => [
         ...prev,
-        { id, name: zoneName.trim(), zone_manager_profile_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id, name: zoneName.trim(), campus, zone_manager_profile_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       ]);
       setZoneName("");
     } catch (err) {
@@ -141,6 +143,7 @@ export function RoomsZonesSection({
         {
           id,
           name: roomName.trim(),
+          campus,
           zone_id: zoneId,
           spoc_profile_id: spocId,
           created_at: new Date().toISOString(),

@@ -120,7 +120,7 @@ export function TeamDetailModal({
           <div>
             <h2 className="font-display text-2xl text-ink">{team.team_name}</h2>
             <p className="mt-1 font-heading text-xs text-ink-muted">
-              {team.team_id} · Members: {members.length}
+              {team.team_id} · Campus: {team.campus} · Members: {members.length}
             </p>
           </div>
           <button
