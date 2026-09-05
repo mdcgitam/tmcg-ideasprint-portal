@@ -15,7 +15,8 @@
 
 with expected_enums(name) as (
   values ('user_role'),('team_status'),('ps_status'),('attendance_status'),
-         ('meal_status'),('noc_status'),('exit_status'),('approval_status')
+         ('meal_status'),('noc_status'),('exit_status'),('approval_status'),
+         ('campus')
 ),
 enum_check as (
   select 'enum'::text as category, e.name,
@@ -73,7 +74,11 @@ expected_functions(name, expected_arg_count) as (
     ('assign_spoc', 2),
     ('update_user_role', 2),
     ('set_configuration', 3),
-    ('create_staff_profile', 3)
+    ('create_staff_profile', 3),
+    ('current_campus', 0),
+    ('is_same_campus_team', 1),
+    ('is_same_campus_profile', 1),
+    ('seed_campus_super_admin', 2)
 ),
 function_check as (
   select 'function'::text as category,
@@ -163,6 +168,66 @@ drift_checks as (
   from information_schema.columns
   where table_schema='public' and table_name='profiles'
     and column_name in ('reg_no','phone','year_of_study','school','department','branch','gender','stay')
+  union all
+  select 'drift check', 'teams_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='teams' and policyname='teams_select'
+  union all
+  select 'drift check', 'profiles_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='profiles' and policyname='profiles_select'
+  union all
+  select 'drift check', 'team_members_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='team_members' and policyname='team_members_select'
+  union all
+  select 'drift check', 'nocs_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='nocs' and policyname='nocs_select'
+  union all
+  select 'drift check', 'attendance_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='attendance' and policyname='attendance_select'
+  union all
+  select 'drift check', 'approval_requests_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='approval_requests' and policyname='approval_requests_select'
+  union all
+  select 'drift check', 'presentations_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='presentations' and policyname='presentations_select'
+  union all
+  select 'drift check', 'exit_requests_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='exit_requests' and policyname='exit_requests_select'
+  union all
+  select 'drift check', 'rooms_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='rooms' and policyname='rooms_select'
+  union all
+  select 'drift check', 'zones_select is campus-scoped (0025)',
+    case when qual ilike '%current_campus%' then 'OK' else 'NOT CAMPUS-SCOPED' end,
+    qual
+  from pg_policies where schemaname='public' and tablename='zones' and policyname='zones_select'
+  union all
+  select 'drift check', 'teams/rooms/zones each have a campus column of type campus (0025)',
+    case when count(*) filter (where udt_name = 'campus') = 3 then 'OK' else 'MISSING / WRONG TYPE' end,
+    string_agg(table_name || '.' || column_name || '=' || udt_name, ', ' order by table_name)
+  from information_schema.columns
+  where table_schema='public' and table_name in ('teams','rooms','zones') and column_name='campus'
+  union all
+  select 'drift check', 'campus_counters has 3 rows (VSP, BLR, HYD) (0025)',
+    case when (select count(*) from public.campus_counters) = 3 then 'OK' else 'WRONG ROW COUNT' end,
+    (select string_agg(campus_code, ', ' order by campus_code) from public.campus_counters)
 ),
 
 grant_checks as (
