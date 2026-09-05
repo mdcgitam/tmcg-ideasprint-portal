@@ -11,10 +11,14 @@ import {
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
 
-const ACCEPT =
-  ".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation";
+const ACCEPT = ".pdf,application/pdf";
+const MAX_FILE_SIZE = 16 * 1024 * 1024;
 
-/** Team Lead uploads the team's pitch deck; Members see status only — same shape as ExitFormSection. */
+/**
+ * Team Lead uploads the team's pitch deck; Members see status only — same
+ * shape as ExitFormSection. Files must be a PDF under 16MB (matches the
+ * ppt-uploads storage bucket's file_size_limit/allowed_mime_types).
+ */
 export function PresentationSection({
   team,
   presentation,
@@ -33,6 +37,14 @@ export function PresentationSection({
   const uploaded = status === "Uploaded" && local?.file_path;
 
   async function handleUpload(file: File) {
+    if (file.type !== "application/pdf") {
+      setError("Only PDF files are allowed.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError("File exceeds the 16MB limit.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -79,7 +91,7 @@ export function PresentationSection({
       <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Presentation (PPT)</span>
       <p className={`mt-3 font-heading text-lg ${uploaded ? "text-gitam" : "text-ink-muted"}`}>{status}</p>
       <p className="mt-2 max-w-lg font-heading text-xs text-ink-muted">
-        Upload your team&rsquo;s pitch deck — PDF, PPT, or PPTX.
+        Upload your team&rsquo;s pitch deck. Only the Team Lead can upload — PDF only, max 16MB.
       </p>
 
       <div className="mt-4 flex items-center gap-3">

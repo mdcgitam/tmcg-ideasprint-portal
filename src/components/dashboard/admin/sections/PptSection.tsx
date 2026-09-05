@@ -9,7 +9,7 @@ import { useTabFade } from "@/hooks/useTabFade";
 
 type View = "all" | "missing";
 
-/** Presentation (PPT) tracker, grouped by team. */
+/** Presentation (PPT) tracker, grouped by team, matching the admin NOC page's format. Files must be a PDF under 16MB, uploaded by the Team Lead only. */
 export function PptSection({
   teams,
   membersByTeam,
@@ -42,6 +42,10 @@ export function PptSection({
 
   return (
     <div className="flex flex-col gap-4">
+      <p className="font-heading text-xs text-ink-muted">
+        PPT files must be a PDF under 16MB. Only the Team Lead can upload.
+      </p>
+
       <ViewToggle
         value={view}
         onChange={setView}
