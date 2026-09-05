@@ -605,7 +605,12 @@ begin
   if public.current_role() <> 'Super Admin' then
     raise exception 'NOT_ALLOWED';
   end if;
-  if (select campus from public.profiles where id = p_spoc_profile_id) is distinct from (select campus from public.teams where id = p_team_id) then raise exception 'CROSS_CAMPUS'; end if;
+  if p_spoc_profile_id is not null
+     and (select campus from public.profiles where id = p_spoc_profile_id)
+         is distinct from (select campus from public.teams where id = p_team_id)
+  then
+    raise exception 'CROSS_CAMPUS';
+  end if;
   if p_spoc_profile_id is not null and not exists (select 1 from public.profiles where id = p_spoc_profile_id and role = 'SPOC') then
     raise exception 'NOT_A_SPOC';
   end if;
