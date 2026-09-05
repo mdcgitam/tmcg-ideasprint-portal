@@ -12,10 +12,14 @@ import {
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
 
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+
 /**
  * SPEC §39-48: every participant has an individual NOC. Team Lead can
  * upload/view/replace/delete any member's; a Member can only upload/view
- * their own — never edit/replace/delete it once uploaded.
+ * their own — never edit/replace/delete it once uploaded. Files must be a
+ * PDF under 2MB (matches the noc-uploads storage bucket's
+ * file_size_limit/allowed_mime_types).
  */
 export function NocSection({
   profile,
@@ -39,7 +43,24 @@ export function NocSection({
     return localNocs.find((n) => n.profile_id === profileId) ?? null;
   }
 
+  function deadlinePassed(profileId: string): boolean {
+    const deadline = nocFor(profileId)?.deadline;
+    return !!deadline && new Date(deadline) < new Date();
+  }
+
   async function handleUpload(profileId: string, file: File) {
+    if (deadlinePassed(profileId)) {
+      setError("Time exceeded — the upload deadline has passed. Ask your SPOC or Super Admin to extend it.");
+      return;
+    }
+    if (file.type !== "application/pdf") {
+      setError("Only PDF files are allowed.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setError("File exceeds the 2MB limit.");
+      return;
+    }
     setBusyProfileId(profileId);
     setError(null);
     try {
@@ -93,6 +114,7 @@ export function NocSection({
 
   return (
     <div className="flex flex-col gap-4">
+      <p className="font-heading text-xs text-ink-muted">NOC files must be a PDF under 2MB.</p>
       {error && (
         <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 font-heading text-sm text-danger">
           {error}
@@ -104,6 +126,7 @@ export function NocSection({
         const canManage = isLead; // Team Lead: upload/replace/delete any; Member: upload own only, no replace/delete.
         const canUpload = canManage || (m.id === profile.id && !uploaded);
         const busy = busyProfileId === m.id;
+        const expired = deadlinePassed(m.id);
 
         return (
           <div key={m.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface p-5">
@@ -113,6 +136,13 @@ export function NocSection({
               </p>
               <p className={`mt-1 font-heading text-xs ${uploaded ? "text-gitam" : "text-ink-faint"}`}>
                 {noc?.status ?? "Not Uploaded"}
+              </p>
+              <p className={`mt-1 font-heading text-xs ${expired ? "text-danger" : "text-ink-faint"}`}>
+                Deadline:{" "}
+                {noc?.deadline
+                  ? new Date(noc.deadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+                  : "Not set"}
+                {expired && " — Time exceeded"}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -142,11 +172,12 @@ export function NocSection({
                   />
                   <button
                     type="button"
-                    disabled={busy}
+                    disabled={busy || expired}
                     onClick={() => fileInputRefs.current[m.id]?.click()}
+                    title={expired ? "Deadline passed — ask your SPOC or Super Admin to extend it." : undefined}
                     className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
                   >
-                    {busy ? "Working…" : uploaded ? "Replace" : "Upload"}
+                    {busy ? "Working…" : expired ? "Time Exceeded" : uploaded ? "Replace" : "Upload"}
                   </button>
                 </>
               )}

@@ -35,8 +35,13 @@ export function PresentationSection({
 
   const status: PresentationStatus = local?.status ?? "Not Uploaded";
   const uploaded = status === "Uploaded" && local?.file_path;
+  const expired = !!local?.deadline && new Date(local.deadline) < new Date();
 
   async function handleUpload(file: File) {
+    if (expired) {
+      setError("Time exceeded — the upload deadline has passed. Ask your SPOC or Super Admin to extend it.");
+      return;
+    }
     if (file.type !== "application/pdf") {
       setError("Only PDF files are allowed.");
       return;
@@ -57,6 +62,7 @@ export function PresentationSection({
         status: "Uploaded",
         uploaded_by: null,
         uploaded_at: new Date().toISOString(),
+        deadline: local?.deadline ?? null,
       });
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
@@ -93,6 +99,13 @@ export function PresentationSection({
       <p className="mt-2 max-w-lg font-heading text-xs text-ink-muted">
         Upload your team&rsquo;s pitch deck. Only the Team Lead can upload — PDF only, max 16MB.
       </p>
+      <p className={`mt-2 font-heading text-xs ${expired ? "text-danger" : "text-ink-faint"}`}>
+        Deadline:{" "}
+        {local?.deadline
+          ? new Date(local.deadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+          : "Not set"}
+        {expired && " — Time exceeded"}
+      </p>
 
       <div className="mt-4 flex items-center gap-3">
         {uploaded && (
@@ -115,11 +128,12 @@ export function PresentationSection({
             />
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || expired}
               onClick={() => fileInputRef.current?.click()}
+              title={expired ? "Deadline passed — ask your SPOC or Super Admin to extend it." : undefined}
               className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
             >
-              {busy ? "Working…" : uploaded ? "Replace" : "Upload"}
+              {busy ? "Working…" : expired ? "Time Exceeded" : uploaded ? "Replace" : "Upload"}
             </button>
             {uploaded && (
               <button

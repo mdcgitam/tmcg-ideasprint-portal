@@ -23,6 +23,9 @@ function friendlyError(raw: string): string {
   if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant couldn't be found.";
   if (raw.includes("REQUEST_NOT_FOUND")) return "That request couldn't be found.";
   if (raw.includes("INVALID_DECISION")) return "Invalid decision.";
+  if (raw.includes("DEADLINE_PASSED")) {
+    return "Time exceeded — the upload deadline has passed. Ask your SPOC or Super Admin to extend it.";
+  }
   return "Something went wrong. Please try again.";
 }
 
@@ -81,6 +84,10 @@ export function recordPresentation(teamId: string, filePath: string) {
 
 export function deletePresentation(teamId: string) {
   return callRpc<null>("delete_presentation", { p_team_id: teamId });
+}
+
+export function extendPresentationDeadline(teamId: string, deadlineIso: string) {
+  return callRpc<null>("extend_presentation_deadline", { p_team_id: teamId, p_deadline: deadlineIso });
 }
 
 // ── Storage (file bytes never touch our Next.js server — straight to Supabase) ──

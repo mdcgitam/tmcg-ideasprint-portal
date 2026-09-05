@@ -62,6 +62,13 @@ export function NocIndividualsView({
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
   const latestSession = attendanceSessions[attendanceSessions.length - 1] ?? null;
 
+  function toDatetimeLocal(iso: string | null | undefined): string {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
   const nocOf = (profileId: string) => localNocs.find((n) => n.profile_id === profileId);
   const memberAttendance = (profileId: string): "Present" | "Absent" | null => {
     if (!latestSession) return null;
@@ -125,7 +132,7 @@ export function NocIndividualsView({
   }
 
   async function handleRowExtend(profileId: string) {
-    const value = rowDeadlines[profileId];
+    const value = rowDeadlines[profileId] ?? toDatetimeLocal(nocOf(profileId)?.deadline);
     if (!value) return;
     setRowBusy(profileId);
     setRowErrors((prev) => ({ ...prev, [profileId]: "" }));
@@ -394,19 +401,35 @@ export function NocIndividualsView({
                     )}
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
+                        {(() => {
+                          const currentDeadline = noc?.deadline ?? null;
+                          const expired = !!currentDeadline && new Date(currentDeadline) < new Date();
+                          return (
+                            <span className={`font-heading text-[11px] ${expired ? "text-danger" : "text-ink-muted"}`}>
+                              Current:{" "}
+                              {currentDeadline
+                                ? new Date(currentDeadline).toLocaleString("en-IN", {
+                                    dateStyle: "medium",
+                                    timeStyle: "short",
+                                  })
+                                : "Not set"}
+                              {expired && " — Time exceeded"}
+                            </span>
+                          );
+                        })()}
                         <input
                           type="datetime-local"
-                          value={rowDeadlines[member.id] ?? ""}
+                          value={rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline)}
                           onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [member.id]: e.target.value }))}
                           className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
                         />
                         <button
                           type="button"
-                          disabled={busy || !rowDeadlines[member.id]}
+                          disabled={busy || !(rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline))}
                           onClick={() => handleRowExtend(member.id)}
                           className="w-fit rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
                         >
-                          Extend
+                          {noc?.deadline ? "Update" : "Extend"}
                         </button>
                         {rowError && <span className="font-heading text-[11px] text-danger">{rowError}</span>}
                       </div>

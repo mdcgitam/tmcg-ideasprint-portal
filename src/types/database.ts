@@ -162,6 +162,7 @@ export interface PresentationRow {
   status: PresentationStatus;
   uploaded_by: string | null;
   uploaded_at: string | null;
+  deadline: string | null;
 }
 
 export interface NotificationRow {
