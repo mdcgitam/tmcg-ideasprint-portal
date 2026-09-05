@@ -8,7 +8,7 @@ export async function StaffAccountsRoute({ profile }: { profile: ProfileRow }) {
 
   return (
     <SectionPageShell title="Staff Accounts" scope="admin">
-      <StaffAccountsSection staffAccounts={staffAccounts} rooms={rooms} zones={zones} />
+      <StaffAccountsSection campus={profile.campus} staffAccounts={staffAccounts} rooms={rooms} zones={zones} />
     </SectionPageShell>
   );
 }
