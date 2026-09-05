@@ -2,8 +2,6 @@
 
 import { useMemo, useState } from "react";
 import type {
-  AttendanceRow,
-  AttendanceSessionRow,
   ExitRequestRow,
   NocRow,
   ProblemStatementRow,
@@ -26,8 +24,6 @@ export function TeamsByTeamView({
   staffAccounts,
   exitRequests,
   nocs,
-  attendance,
-  attendanceSessions,
   scope,
   onTeamRenamed,
   onTeamDeleted,
@@ -40,8 +36,6 @@ export function TeamsByTeamView({
   staffAccounts: ProfileRow[];
   exitRequests: ExitRequestRow[];
   nocs: NocRow[];
-  attendance: AttendanceRow[];
-  attendanceSessions: AttendanceSessionRow[];
   scope: "spoc" | "admin";
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
@@ -53,11 +47,10 @@ export function TeamsByTeamView({
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
-  const latestSession = attendanceSessions[attendanceSessions.length - 1] ?? null;
 
   const filteredTeams = useMemo(
-    () => filterTeams(teams, membersByTeam, exitRequests, rooms, zones, filters),
-    [teams, membersByTeam, exitRequests, rooms, zones, filters],
+    () => filterTeams(teams, membersByTeam, filters),
+    [teams, membersByTeam, filters],
   );
 
   if (teams.length === 0) {
@@ -74,7 +67,14 @@ export function TeamsByTeamView({
 
   return (
     <div className="flex flex-col gap-4">
-      <TeamFilterBar filters={filters} onChange={setFilters} rooms={rooms} zones={zones} problemStatements={problemStatements} />
+      <TeamFilterBar
+        filters={filters}
+        onChange={setFilters}
+        teams={teams}
+        membersByTeam={membersByTeam}
+        rooms={rooms}
+        staffAccounts={staffAccounts}
+      />
 
       {filteredTeams.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface p-8 text-center">
@@ -94,7 +94,6 @@ export function TeamsByTeamView({
                 <th className="px-4 py-3">Size</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
-                <th className="px-4 py-3">Attendance</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
@@ -107,11 +106,6 @@ export function TeamsByTeamView({
                 const exitedCount = members.filter(
                   (m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved",
                 ).length;
-                const presentCount = latestSession
-                  ? members.filter(
-                      (m) => attendance.find((a) => a.session_id === latestSession.id && a.profile_id === m.id)?.status === "Present",
-                    ).length
-                  : 0;
 
                 return (
                   <tr key={team.id} className="border-b border-border align-top last:border-0">
@@ -124,9 +118,6 @@ export function TeamsByTeamView({
                     <td className="px-4 py-3 text-ink-muted">{members.length}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
-                    <td className="px-4 py-3 text-ink-muted">
-                      {latestSession ? `${presentCount}/${members.length} Present` : "No sessions yet"}
-                    </td>
                     <td className="px-4 py-3 text-ink-muted">
                       {exitedCount > 0 ? `${exitedCount} Exited` : "Active"}
                     </td>

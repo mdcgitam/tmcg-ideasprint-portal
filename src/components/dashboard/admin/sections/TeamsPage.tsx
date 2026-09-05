@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import type {
-  AttendanceRow,
-  AttendanceSessionRow,
   TeamRow,
   NocRow,
   ExitRequestRow,
@@ -25,8 +23,6 @@ export function TeamsPage({
   membersByTeam,
   nocs,
   exitRequests,
-  attendance,
-  attendanceSessions,
   scope,
   staffAccounts,
   rooms,
@@ -37,8 +33,6 @@ export function TeamsPage({
   membersByTeam: Record<string, TeamMemberProfile[]>;
   nocs: NocRow[];
   exitRequests: ExitRequestRow[];
-  attendance: AttendanceRow[];
-  attendanceSessions: AttendanceSessionRow[];
   scope: "spoc" | "admin";
   staffAccounts: ProfileRow[];
   rooms: RoomRow[];
@@ -79,8 +73,6 @@ export function TeamsPage({
             staffAccounts={staffAccounts}
             exitRequests={exitRequests}
             nocs={nocs}
-            attendance={attendance}
-            attendanceSessions={attendanceSessions}
             scope={scope}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={onTeamDeleted}

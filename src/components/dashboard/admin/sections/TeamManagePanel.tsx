@@ -3,15 +3,10 @@
 import { useState } from "react";
 import type { ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
-import {
-  extendProblemStatementDeadline,
-  deleteTeam,
-  updateTeamName,
-  DashboardActionError,
-} from "@/lib/dashboard/admin-actions";
+import { changeTeamLead, deleteTeam, updateTeamName, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
 
-/** The "Manage Team" panel — rename, delete, extend PS deadline, roster CSV. Shared by TeamsByTeamView and TeamsByMembersView so both views reuse one implementation. */
+/** The "Manage Team" panel — rename, delete, change lead, roster CSV. Shared by TeamsByTeamView and TeamsByMembersView so both views reuse one implementation. */
 export function TeamManagePanel({
   team,
   members,
@@ -43,13 +38,13 @@ export function TeamManagePanel({
   const [savingTeamName, setSavingTeamName] = useState(false);
   const [teamNameError, setTeamNameError] = useState<string | null>(null);
 
-  const [extendUntil, setExtendUntil] = useState("");
-  const [extendReason, setExtendReason] = useState("");
-  const [extending, setExtending] = useState(false);
-  const [extendMessage, setExtendMessage] = useState("");
+  const lead = members.find((m) => m.is_lead);
+  const otherMembers = members.filter((m) => !m.is_lead);
+  const [newLeadId, setNewLeadId] = useState(otherMembers[0]?.id ?? "");
+  const [changingLead, setChangingLead] = useState(false);
+  const [changeLeadError, setChangeLeadError] = useState<string | null>(null);
 
   function handleDownloadTeam() {
-    const lead = members.find((m) => m.is_lead);
     downloadCsv(
       `${team.team_name}-roster`,
       members.map((m) => ({
@@ -92,17 +87,21 @@ export function TeamManagePanel({
     }
   }
 
-  async function handleExtend() {
-    if (!extendUntil) return;
-    setExtending(true);
-    setExtendMessage("");
+  async function handleChangeLead() {
+    if (!newLeadId) return;
+    const target = otherMembers.find((m) => m.id === newLeadId);
+    if (!target || !window.confirm(`Make ${target.name} the Team Lead? ${lead?.name ?? "The current lead"} becomes a Member.`)) {
+      return;
+    }
+    setChangingLead(true);
+    setChangeLeadError(null);
     try {
-      await extendProblemStatementDeadline(team.id, new Date(extendUntil).toISOString(), extendReason);
-      setExtendMessage("Deadline extended.");
+      await changeTeamLead(team.id, newLeadId);
+      // is_lead/role changes are server-derived (fetchAdminDashboardData) — reload rather than hand-maintaining a local copy.
+      window.location.reload();
     } catch (err) {
-      setExtendMessage(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setExtending(false);
+      setChangeLeadError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+      setChangingLead(false);
     }
   }
 
@@ -173,33 +172,40 @@ export function TeamManagePanel({
         </p>
       )}
 
-      <div className="rounded-lg border border-border p-3">
-        <span className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">Extend PS Selection Deadline</span>
-        <div className="mt-2 flex flex-wrap items-center gap-2">
-          <input
-            type="datetime-local"
-            value={extendUntil}
-            onChange={(e) => setExtendUntil(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
-          />
-          <input
-            type="text"
-            placeholder="Reason (optional)"
-            value={extendReason}
-            onChange={(e) => setExtendReason(e.target.value)}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
-          />
-          <button
-            type="button"
-            disabled={extending || !extendUntil}
-            onClick={handleExtend}
-            className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-          >
-            {extending ? "Extending…" : "Extend"}
-          </button>
+      {scope === "admin" && (
+        <div className="rounded-lg border border-border p-3">
+          <span className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">Change Team Lead</span>
+          <p className="mt-1 font-heading text-xs text-ink-muted">
+            Current Lead: {lead?.name ?? "Unassigned"}
+          </p>
+          {otherMembers.length === 0 ? (
+            <p className="mt-2 font-heading text-xs text-ink-faint">No other members to promote.</p>
+          ) : (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <select
+                value={newLeadId}
+                onChange={(e) => setNewLeadId(e.target.value)}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+              >
+                {otherMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.reg_no})
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={changingLead || !newLeadId}
+                onClick={handleChangeLead}
+                className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+              >
+                {changingLead ? "Changing…" : "Make Lead"}
+              </button>
+            </div>
+          )}
+          {changeLeadError && <p className="mt-2 font-heading text-xs text-danger">{changeLeadError}</p>}
         </div>
-        {extendMessage && <p className="mt-2 font-heading text-xs text-ink-muted">{extendMessage}</p>}
-      </div>
+      )}
     </div>
   );
 }

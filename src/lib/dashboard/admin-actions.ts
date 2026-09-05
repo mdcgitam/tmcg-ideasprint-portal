@@ -15,6 +15,7 @@ function friendlyError(raw: string): string {
   if (raw.includes("DUPLICATE_ZONE_NAME")) return "A zone with that name already exists.";
   if (raw.includes("ROOM_NOT_FOUND")) return "That room couldn't be found.";
   if (raw.includes("TEAM_NOT_FOUND")) return "That team couldn't be found.";
+  if (raw.includes("ALREADY_LEAD")) return "That member is already the Team Lead.";
   if (raw.includes("CANNOT_DELETE_LEAD")) return "This member is the Team Lead — delete the whole team instead.";
   if (raw.includes("DUPLICATE_EMAIL")) {
     const email = raw.split(":").slice(1).join(":").trim();
@@ -202,4 +203,8 @@ export function updateMember(profileId: string, input: UpdateMemberInput) {
 
 export function updateTeamName(teamId: string, teamName: string) {
   return callRpc<null>("update_team_name", { p_team_id: teamId, p_team_name: teamName });
+}
+
+export function changeTeamLead(teamId: string, newLeadProfileId: string) {
+  return callRpc<null>("change_team_lead", { p_team_id: teamId, p_new_lead_profile_id: newLeadProfileId });
 }

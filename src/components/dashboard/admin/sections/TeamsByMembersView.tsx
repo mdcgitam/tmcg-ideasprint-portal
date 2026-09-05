@@ -10,7 +10,7 @@ import { MemberEditForm } from "./TeamFormFields";
 import { TeamManagePanel } from "./TeamManagePanel";
 import { NocStatus } from "./NocStatus";
 import { ExitStatusBadge } from "./ExitStatusBadge";
-import { TeamFilterBar, filterTeams, EMPTY_TEAM_FILTERS, type TeamFilters } from "./TeamFilterBar";
+import { MembersFilterBar, filterMembers, EMPTY_MEMBER_FILTERS, type MemberFilters, type MemberRow } from "./MembersFilterBar";
 
 // team_id looks like "TeamID01", "TeamID100" — sort on the numeric tail so
 // "View All" orders teams by ID number rather than lexicographically.
@@ -19,21 +19,13 @@ function teamIdSortKey(teamId: string): number {
   return match ? parseInt(match[1], 10) : 0;
 }
 
-interface DownloadRow {
-  [key: string]: string;
-  "Member Name": string;
-  "Reg./Roll No.": string;
-  "Year of Study": string;
-  "Team Name": string;
-  "Team Lead": string;
-  SPOC: string;
-  "Room Number": string;
-}
+const COLUMN_COUNT = 17; // Campus, User ID, Team Name, Name, Position, Email, Reg No, Phone, Year, School, Branch, Stay, Venue, SPOC, NOC, Status, Actions
 
 /**
- * "View by Members" — grouped-by-team member table with search/filters/CSV
- * (item 9-10). Room/Zone/SPOC are derived from the team's room, per the
- * room-based assignment model in RoomsZonesSection.
+ * "View by Members" — one row per member, filtered/searched at the member
+ * level (item 9-10), with a per-team "Manage Team" panel expandable below
+ * that team's last visible row. Venue/SPOC are derived from the team's
+ * room, per the room-based assignment model in RoomsZonesSection.
  */
 export function TeamsByMembersView({
   teams,
@@ -70,11 +62,11 @@ export function TeamsByMembersView({
   const [savingMember, setSavingMember] = useState(false);
   const [memberError, setMemberError] = useState<string | null>(null);
 
-  const [filters, setFilters] = useState<TeamFilters>(EMPTY_TEAM_FILTERS);
+  const [filters, setFilters] = useState<MemberFilters>(EMPTY_MEMBER_FILTERS);
   const [sortById, setSortById] = useState(false);
 
   function handleViewAll() {
-    setFilters(EMPTY_TEAM_FILTERS);
+    setFilters(EMPTY_MEMBER_FILTERS);
     setSortById(true);
   }
 
@@ -83,31 +75,40 @@ export function TeamsByMembersView({
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
-  const filteredTeams = useMemo(() => {
-    const result = filterTeams(teams, membersByTeam, exitRequests, rooms, zones, filters);
-    if (sortById) {
-      result.sort((a, b) => teamIdSortKey(a.team_id) - teamIdSortKey(b.team_id));
-    }
-    return result;
-  }, [teams, membersByTeam, exitRequests, rooms, zones, filters, sortById]);
+  const allRows: MemberRow[] = useMemo(
+    () => teams.flatMap((team) => (membersByTeam[team.id] ?? []).map((member) => ({ member, team }))),
+    [teams, membersByTeam],
+  );
 
-  function teamToRows(team: TeamRow): DownloadRow[] {
-    const members = membersByTeam[team.id] ?? [];
-    const lead = members.find((m) => m.is_lead);
-    const room = roomOf(team);
-    return members.map((m) => ({
-      "Member Name": m.name,
-      "Reg./Roll No.": m.reg_no,
-      "Year of Study": m.year_of_study,
-      "Team Name": team.team_name,
-      "Team Lead": lead?.name ?? "—",
-      SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
-      "Room Number": room?.name ?? "Unassigned",
-    }));
-  }
+  const filteredRows = useMemo(() => filterMembers(allRows, filters), [allRows, filters]);
+
+  const groups = useMemo(() => {
+    const map = new Map<string, MemberRow[]>();
+    for (const row of filteredRows) {
+      const list = map.get(row.team.id) ?? [];
+      list.push(row);
+      map.set(row.team.id, list);
+    }
+    const entries = Array.from(map.values());
+    if (sortById) {
+      entries.sort((a, b) => teamIdSortKey(a[0].team.team_id) - teamIdSortKey(b[0].team.team_id));
+    }
+    return entries;
+  }, [filteredRows, sortById]);
 
   function handleDownloadAllMembers() {
-    downloadCsv("all-members", filteredTeams.flatMap(teamToRows));
+    downloadCsv(
+      "all-members",
+      filteredRows.map(({ member, team }) => ({
+        "Member Name": member.name,
+        "Reg./Roll No.": member.reg_no,
+        "Year of Study": member.year_of_study,
+        "Team Name": team.team_name,
+        "Team Lead": (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.name ?? "—",
+        SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
+        "Room Number": roomOf(team)?.name ?? "Unassigned",
+      })),
+    );
   }
 
   async function handleDeleteMember(profileId: string, name: string) {
@@ -175,12 +176,12 @@ export function TeamsByMembersView({
     <div className="flex flex-col gap-4">
       {error && <p className="font-heading text-sm text-danger">{error}</p>}
 
-      <TeamFilterBar
+      <MembersFilterBar
         filters={filters}
         onChange={setFilters}
+        rows={allRows}
         rooms={rooms}
-        zones={zones}
-        problemStatements={problemStatements}
+        staffAccounts={staffAccounts}
         sortById={sortById}
         onToggleSort={handleViewAll}
         extraActions={
@@ -194,21 +195,28 @@ export function TeamsByMembersView({
         }
       />
 
-      {filteredTeams.length === 0 ? (
+      {groups.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface p-8 text-center">
-          <p className="font-heading text-sm text-ink-muted">No teams match the current filters.</p>
+          <p className="font-heading text-sm text-ink-muted">No members match the current filters.</p>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="w-full text-left font-heading text-sm">
             <thead>
               <tr className="border-b border-border text-xs text-ink-muted uppercase">
-                <th className="px-4 py-3">#</th>
-                <th className="px-4 py-3">Member</th>
-                <th className="px-4 py-3">Reg./Roll No.</th>
+                <th className="px-4 py-3">Campus</th>
+                <th className="px-4 py-3">User ID</th>
+                <th className="px-4 py-3">Team Name</th>
+                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Position</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Reg Number</th>
+                <th className="px-4 py-3">Phone No</th>
                 <th className="px-4 py-3">Year</th>
-                <th className="px-4 py-3">Team</th>
-                <th className="px-4 py-3">Room</th>
+                <th className="px-4 py-3">School</th>
+                <th className="px-4 py-3">Branch</th>
+                <th className="px-4 py-3">Stay</th>
+                <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">NOC</th>
                 <th className="px-4 py-3">Status</th>
@@ -216,16 +224,17 @@ export function TeamsByMembersView({
               </tr>
             </thead>
             <tbody>
-              {filteredTeams.map((team, teamIndex) => {
-                const members = membersByTeam[team.id] ?? [];
+              {groups.map((groupRows) => {
+                const team = groupRows[0].team;
                 const room = roomOf(team);
                 const zone = zoneOf(room);
                 const ps = psOf(team);
                 const isManaging = managingTeamId === team.id;
+                const teamMembers = membersByTeam[team.id] ?? [];
 
                 return (
                   <Fragment key={team.id}>
-                    {members.map((m, memberIndex) => {
+                    {groupRows.map(({ member: m }, rowIndex) => {
                       const noc = localNocs.find((n) => n.profile_id === m.id);
                       const exitRequest = exitRequests.find((r) => r.profile_id === m.id);
                       const isEditingThis = editingMemberId === m.id;
@@ -233,20 +242,20 @@ export function TeamsByMembersView({
                       return (
                         <Fragment key={m.id}>
                           <tr className="border-b border-border align-top last:border-0">
-                            <td className="px-4 py-3 text-ink-faint">{teamIndex + 1}</td>
-                            <td className="px-4 py-3">
-                              <p className="text-ink">
-                                {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
-                              </p>
-                              <p className="mt-0.5 text-xs text-ink-muted">
-                                {m.user_id} · {m.gitam_email}
-                              </p>
-                            </td>
-                            <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
-                            <td className="px-4 py-3 text-ink-muted">{m.year_of_study}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.campus}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
                             <td className="px-4 py-3 text-ink-muted">
                               {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
                             </td>
+                            <td className="px-4 py-3 text-ink">{m.name}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.gitam_email}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.phone}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.year_of_study}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.school}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.branch}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.stay}</td>
                             <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-ink-muted">
@@ -286,7 +295,7 @@ export function TeamsByMembersView({
                                     Remove
                                   </button>
                                 )}
-                                {memberIndex === 0 && (
+                                {rowIndex === groupRows.length - 1 && (
                                   <button
                                     type="button"
                                     onClick={() => setManagingTeamId(isManaging ? null : team.id)}
@@ -301,7 +310,7 @@ export function TeamsByMembersView({
 
                           {scope === "admin" && isEditingThis && memberForm && (
                             <tr className="border-b border-border bg-void/40">
-                              <td colSpan={10} className="px-4 py-3">
+                              <td colSpan={COLUMN_COUNT} className="px-4 py-3">
                                 <MemberEditForm
                                   form={memberForm}
                                   onChange={setMemberForm}
@@ -319,14 +328,14 @@ export function TeamsByMembersView({
 
                     {isManaging && (
                       <tr className="border-b border-border bg-void/40">
-                        <td colSpan={10} className="px-4 py-4">
+                        <td colSpan={COLUMN_COUNT} className="px-4 py-4">
                           <TeamManagePanel
                             team={team}
-                            members={members}
+                            members={teamMembers}
                             room={room}
                             zone={zone}
                             ps={ps}
-                            exitedCount={members.filter((m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved").length}
+                            exitedCount={teamMembers.filter((m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved").length}
                             spocName={spocName(team.spoc_profile_id)}
                             scope={scope}
                             onTeamRenamed={onTeamRenamed}
