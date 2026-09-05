@@ -17,6 +17,8 @@ import { useTabFade } from "@/hooks/useTabFade";
 
 type View = "manage" | "by-zone";
 
+const UNASSIGN = "__unassign__";
+
 /**
  * Rooms module (ideasprint_changes.pdf "Room assignment" doubt + item 11):
  * Super Admin adds rooms, groups them into zones with a zone manager, and
@@ -26,6 +28,13 @@ type View = "manage" | "by-zone";
  * what TeamsListSection then reads back as "Assigned SPOC". A team's own
  * dashboard (ProfileSection) reads the same room_id/spoc_profile_id back —
  * a server component, so the very next load shows the assignment.
+ *
+ * Team→room assignment has exactly one control: the checkbox + bulk-assign
+ * bar below the table. It replaced an earlier version with three separate
+ * ways to do the same thing (a multi-select in the create-room form, a
+ * per-row select, and this bar) — that was the actual source of confusion,
+ * not the SPOC/zone fields, which keep their normal "set at creation, edit
+ * later" pattern.
  */
 export function RoomsZonesSection({
   rooms,
@@ -53,7 +62,6 @@ export function RoomsZonesSection({
   const [roomName, setRoomName] = useState("");
   const [roomZoneId, setRoomZoneId] = useState("");
   const [roomSpocId, setRoomSpocId] = useState("");
-  const [roomTeamIds, setRoomTeamIds] = useState<string[]>([]);
   const [creatingRoom, setCreatingRoom] = useState(false);
   const [view, setView] = useState<View>("manage");
   const fadeRef = useTabFade(view);
@@ -81,11 +89,12 @@ export function RoomsZonesSection({
     setBulkAssignBusy(true);
     setError(null);
     try {
-      const spoc = roomById(bulkRoomId)?.spoc_profile_id ?? null;
+      const targetRoomId = bulkRoomId === UNASSIGN ? null : bulkRoomId;
+      const spoc = targetRoomId ? (roomById(targetRoomId)?.spoc_profile_id ?? null) : null;
       const teamIds = Array.from(selectedTeamIds);
-      await Promise.all(teamIds.map((teamId) => assignTeamToRoom(teamId, bulkRoomId)));
+      await Promise.all(teamIds.map((teamId) => assignTeamToRoom(teamId, targetRoomId)));
       setLocalTeams((prev) =>
-        prev.map((t) => (selectedTeamIds.has(t.id) ? { ...t, room_id: bulkRoomId, spoc_profile_id: spoc } : t)),
+        prev.map((t) => (selectedTeamIds.has(t.id) ? { ...t, room_id: targetRoomId, spoc_profile_id: spoc } : t)),
       );
       setSelectedTeamIds(new Set());
       setBulkRoomId("");
@@ -126,7 +135,6 @@ export function RoomsZonesSection({
       const id = await createRoom(roomName.trim(), zoneId);
 
       if (spocId) await assignSpocToRoom(id, spocId);
-      if (roomTeamIds.length > 0) await Promise.all(roomTeamIds.map((teamId) => assignTeamToRoom(teamId, id)));
 
       setLocalRooms((prev) => [
         ...prev,
@@ -139,15 +147,9 @@ export function RoomsZonesSection({
           updated_at: new Date().toISOString(),
         },
       ]);
-      if (roomTeamIds.length > 0) {
-        setLocalTeams((prev) =>
-          prev.map((t) => (roomTeamIds.includes(t.id) ? { ...t, room_id: id, spoc_profile_id: spocId } : t)),
-        );
-      }
       setRoomName("");
       setRoomZoneId("");
       setRoomSpocId("");
-      setRoomTeamIds([]);
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
@@ -196,22 +198,6 @@ export function RoomsZonesSection({
       // The server cascades this room's SPOC onto every team already in it —
       // mirror that locally so the "Add Teams" table below reflects it immediately.
       setLocalTeams((prev) => prev.map((t) => (t.room_id === roomId ? { ...t, spoc_profile_id: value } : t)));
-    } catch (err) {
-      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function handleAssignTeamRoom(teamId: string, roomId: string) {
-    const key = `team-room:${teamId}`;
-    setBusy(key);
-    setError(null);
-    try {
-      const value = roomId || null;
-      await assignTeamToRoom(teamId, value);
-      const spoc = value ? roomById(value)?.spoc_profile_id ?? null : null;
-      setLocalTeams((prev) => prev.map((t) => (t.id === teamId ? { ...t, room_id: value, spoc_profile_id: spoc } : t)));
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
@@ -315,26 +301,9 @@ export function RoomsZonesSection({
                 ))}
               </select>
             </div>
-
-            <div>
-              <label className="font-heading text-xs text-ink-muted">
-                Assign Teams (Ctrl/Cmd-click to select multiple)
-              </label>
-              <select
-                multiple
-                size={Math.min(6, Math.max(3, localTeams.length))}
-                value={roomTeamIds}
-                onChange={(e) => setRoomTeamIds(Array.from(e.target.selectedOptions, (o) => o.value))}
-                className="mt-1.5 w-full rounded-lg border border-border bg-void px-3 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
-              >
-                {localTeams.map((team) => (
-                  <option key={team.id} value={team.id}>
-                    {team.team_name} · {team.team_id}
-                    {team.room_id ? ` (currently: ${roomById(team.room_id)?.name ?? "—"})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <p className="font-heading text-xs text-ink-faint">
+              Assign teams to this room afterwards, below in &ldquo;Add Teams Into Rooms&rdquo;.
+            </p>
 
             <button
               type="submit"
@@ -390,18 +359,20 @@ export function RoomsZonesSection({
             <div className="rounded-xl border border-border bg-surface p-6">
               <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Add Teams Into Rooms</span>
               <p className="mt-2 font-heading text-xs text-ink-muted">
-                Assigning a team to a room immediately gives it that room&rsquo;s SPOC — SPOCs are never assigned to
-                a team directly.
+                Check one or more teams below, pick a room, and assign — this is the only place team-to-room
+                assignment happens. A team immediately inherits that room&rsquo;s SPOC; SPOCs are never assigned to a
+                team directly.
               </p>
 
               <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
-                <span className="font-heading text-xs text-ink-muted">Bulk assign selected teams to:</span>
+                <span className="font-heading text-xs text-ink-muted">Assign selected teams to:</span>
                 <select
                   value={bulkRoomId}
                   onChange={(e) => setBulkRoomId(e.target.value)}
                   className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-xs text-ink outline-none focus:border-gold"
                 >
                   <option value="">Choose a room…</option>
+                  <option value={UNASSIGN}>No room (unassign)</option>
                   {localRooms.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
@@ -414,7 +385,7 @@ export function RoomsZonesSection({
                   onClick={handleBulkAssignRoom}
                   className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
                 >
-                  {bulkAssignBusy ? "Assigning…" : "Assign Selected"}
+                  {bulkAssignBusy ? "Working…" : bulkRoomId === UNASSIGN ? "Unassign Selected" : "Assign Selected"}
                 </button>
                 <button
                   type="button"
@@ -435,7 +406,6 @@ export function RoomsZonesSection({
                       <th className="px-4 py-3">Team Name</th>
                       <th className="px-4 py-3">Venue</th>
                       <th className="px-4 py-3">SPOC</th>
-                      <th className="px-4 py-3">Assign Room</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -458,21 +428,6 @@ export function RoomsZonesSection({
                           </td>
                           <td className="px-4 py-3 text-ink-muted">{venue}</td>
                           <td className="px-4 py-3 text-ink-muted">{staffById(team.spoc_profile_id) ?? "Unassigned"}</td>
-                          <td className="px-4 py-3">
-                            <select
-                              value={team.room_id ?? ""}
-                              disabled={busy === `team-room:${team.id}`}
-                              onChange={(e) => handleAssignTeamRoom(team.id, e.target.value)}
-                              className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-xs text-ink outline-none focus:border-gold"
-                            >
-                              <option value="">No room</option>
-                              {localRooms.map((r) => (
-                                <option key={r.id} value={r.id}>
-                                  {r.name}
-                                </option>
-                              ))}
-                            </select>
-                          </td>
                         </tr>
                       );
                     })}
