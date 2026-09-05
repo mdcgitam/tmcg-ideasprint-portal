@@ -45,7 +45,7 @@ export function InstructionsSection({ tncUrl }: { tncUrl: string | null }) {
           </div>
           <div>
             <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statements</span>
-            <p className="mt-3 font-heading text-2xl text-ink">Released on the hackathon day</p>
+            <p className="mt-3 font-heading text-2xl text-ink">Will be Released on the hackathon day</p>
           </div>
         </Reveal>
 

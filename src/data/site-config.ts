@@ -55,14 +55,14 @@ export const timeline: TimelineItem[] = [
   {
     id: "round-1",
     stage: "round-1",
-    label: "Phase 1 – Round 1",
+    label: "Campus Level – Round 1",
     duration: "100 Minutes",
     detail: "Naukri Assessment — mandatory for every registered participant.",
   },
   {
     id: "round-2",
     stage: "round-2",
-    label: "Phase 1 – Round 2",
+    label: "Campus Level – Round 2",
     duration: "18 Hours",
     detail: "Build Hackathon — mandatory for every registered participant.",
   },

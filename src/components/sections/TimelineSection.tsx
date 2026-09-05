@@ -34,7 +34,7 @@ function formatEventDateRange(startIso: string, endIso: string) {
 
 function toStep(item: (typeof timeline)[number]): Step {
   if (!item.duration) {
-    return { id: item.id, kicker: "Phase 2", big: item.label.toUpperCase(), detail: item.detail };
+    return { id: item.id, kicker: "University Level", big: item.label.toUpperCase(), detail: item.detail };
   }
   const [value, ...unitParts] = item.duration.split(" ");
   return { id: item.id, kicker: item.label, big: value, unit: unitParts.join(" ").toUpperCase(), detail: item.detail };
@@ -48,9 +48,10 @@ const steps: Step[] = timeline.map(toStep);
  * repeat the Domains pattern) — Round 1 → Round 2 → Grand Finale joined by a
  * line that draws in as the section scrolls through view. No pinning, no
  * scroll-jacking — just a smooth, lightly-scrubbed reveal. Also carries the
- * date/reporting-time/venue for both phases (moved here from Instructions) —
- * Phase 1's is fixed (eventConfig), Phase 2's (Grand Finale) is admin-set via
- * Configuration and may still be unconfirmed, hence the nullable props.
+ * date/reporting-time/venue for both levels (moved here from Instructions) —
+ * Campus Level's is fixed (eventConfig), University Level's (Grand Finale) is
+ * admin-set via Configuration and may still be unconfirmed, hence the
+ * nullable props.
  */
 export function TimelineSection({
   grandFinaleDate,
@@ -126,7 +127,7 @@ export function TimelineSection({
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-border bg-void/60 px-5 py-4">
-            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Phase 1 — Campus Round</span>
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Campus Level — Campus Round</span>
             <p className="mt-2 font-heading text-sm text-ink-muted">
               {formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)} · Reporting{" "}
               {eventConfig.reportingTime}
@@ -134,7 +135,7 @@ export function TimelineSection({
             <p className="mt-1 font-heading text-sm text-ink-muted">{eventConfig.venue}</p>
           </div>
           <div className="rounded-xl border border-border bg-void/60 px-5 py-4">
-            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Phase 2 — Grand Finale</span>
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">University Level — Grand Finale</span>
             <p className="mt-2 font-heading text-sm text-ink-muted">{grandFinaleDate ?? "Date to be announced"}</p>
             <p className="mt-1 font-heading text-sm text-ink-muted">{grandFinaleVenue ?? "Venue to be announced"}</p>
           </div>

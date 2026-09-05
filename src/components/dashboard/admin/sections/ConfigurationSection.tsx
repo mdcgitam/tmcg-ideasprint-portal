@@ -21,9 +21,9 @@ const KNOWN_KEYS = [
   { key: "problem_statement.selection_end", label: "Selection Window End", placeholder: "2026-09-25T21:30:00+05:30" },
 ] as const;
 
-// Homepage Journey section (Phase 2 card) shows "to be announced" for either
-// of these until set — the Grand Finale's date/venue genuinely isn't
-// confirmed pre-launch.
+// Homepage Journey section (University Level card) shows "to be announced"
+// for either of these until set — the Grand Finale's date/venue genuinely
+// isn't confirmed pre-launch.
 const GRAND_FINALE_KEYS = [
   { key: "grand_finale.date", label: "Grand Finale Date", placeholder: "e.g. December 2026" },
   { key: "grand_finale.venue", label: "Grand Finale Venue", placeholder: "e.g. GITAM Bengaluru" },
@@ -179,7 +179,7 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
               <div className="flex flex-col gap-4">{simpleFields(KNOWN_KEYS)}</div>
             </div>
             <div>
-              <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">Grand Finale (Phase 2)</p>
+              <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">Grand Finale (University Level)</p>
               <div className="flex flex-col gap-4">{simpleFields(GRAND_FINALE_KEYS)}</div>
             </div>
             <div>
