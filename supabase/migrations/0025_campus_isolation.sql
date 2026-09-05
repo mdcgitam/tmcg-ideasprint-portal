@@ -37,3 +37,29 @@ update public.campus_counters
 insert into public.campus_counters (campus_code, next_user_seq)
 values ('BLR', 1000), ('HYD', 1000)
 on conflict (campus_code) do nothing;
+
+-- ── Campus RLS helpers ──────────────────────────────────────────────────
+create or replace function public.current_campus()
+returns public.campus
+language sql stable security definer set search_path = public as $$
+  select campus from public.profiles where auth_user_id = auth.uid();
+$$;
+
+-- For the storage.objects policies, which key off a path segment and can't JOIN.
+create or replace function public.is_same_campus_team(p_team_id uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.teams
+    where id = p_team_id and campus = public.current_campus()
+  );
+$$;
+
+create or replace function public.is_same_campus_profile(p_profile_id uuid)
+returns boolean
+language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.profiles
+    where id = p_profile_id and campus = public.current_campus()
+  );
+$$;
