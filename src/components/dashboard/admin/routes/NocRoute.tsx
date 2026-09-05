@@ -4,18 +4,8 @@ import { NocSection } from "@/components/dashboard/admin/sections/NocSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function NocRoute({ profile }: { profile: ProfileRow }) {
-  const {
-    teams,
-    membersByTeam,
-    nocs,
-    attendance,
-    attendanceSessions,
-    rooms,
-    zones,
-    staffAccounts,
-    problemStatements,
-    exitRequests,
-  } = await fetchAdminDashboardData(profile);
+  const { teams, membersByTeam, nocs, rooms, zones, staffAccounts, problemStatements, exitRequests } =
+    await fetchAdminDashboardData(profile);
   const scope = profile.role === "Super Admin" ? "admin" : "spoc";
 
   return (
@@ -24,8 +14,6 @@ export async function NocRoute({ profile }: { profile: ProfileRow }) {
         teams={teams}
         membersByTeam={membersByTeam}
         nocs={nocs}
-        attendance={attendance}
-        attendanceSessions={attendanceSessions}
         rooms={rooms}
         zones={zones}
         staffAccounts={staffAccounts}

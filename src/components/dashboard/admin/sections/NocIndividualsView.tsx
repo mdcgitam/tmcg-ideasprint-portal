@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import type { AttendanceRow, AttendanceSessionRow, NocRow, ProfileRow, RoomRow, TeamRow } from "@/types/database";
+import { useMemo, useRef, useState } from "react";
+import type { NocRow, ProfileRow, RoomRow, TeamRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import {
   deleteNoc,
@@ -25,8 +25,6 @@ export function NocIndividualsView({
   teams,
   membersByTeam,
   nocs,
-  attendance,
-  attendanceSessions,
   rooms,
   staffAccounts,
   scope,
@@ -34,8 +32,6 @@ export function NocIndividualsView({
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   nocs: NocRow[];
-  attendance: AttendanceRow[];
-  attendanceSessions: AttendanceSessionRow[];
   rooms: RoomRow[];
   staffAccounts: ProfileRow[];
   scope: "spoc" | "admin";
@@ -49,18 +45,13 @@ export function NocIndividualsView({
   const [rowDeadlines, setRowDeadlines] = useState<Record<string, string>>({});
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
-  const [uploadFiles, setUploadFiles] = useState<Record<string, File | null>>({});
+  const uploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const [campusFilter, setCampusFilter] = useState("");
-  const [attendanceFilter, setAttendanceFilter] = useState("");
-  const [venueFilter, setVenueFilter] = useState("");
-  const [spocFilter, setSpocFilter] = useState("");
   const [fileStatusFilter, setFileStatusFilter] = useState("");
   const [search, setSearch] = useState("");
 
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
-  const latestSession = attendanceSessions[attendanceSessions.length - 1] ?? null;
 
   function toDatetimeLocal(iso: string | null | undefined): string {
     if (!iso) return "";
@@ -70,38 +61,24 @@ export function NocIndividualsView({
   }
 
   const nocOf = (profileId: string) => localNocs.find((n) => n.profile_id === profileId);
-  const memberAttendance = (profileId: string): "Present" | "Absent" | null => {
-    if (!latestSession) return null;
-    const record = attendance.find((a) => a.session_id === latestSession.id && a.profile_id === profileId);
-    return record ? (record.status as "Present" | "Absent") : "Absent";
-  };
 
   const allRows: Row[] = useMemo(
     () => teams.flatMap((team) => (membersByTeam[team.id] ?? []).map((member) => ({ member, team }))),
     [teams, membersByTeam],
   );
 
-  const campusOptions = useMemo(
-    () => Array.from(new Set(allRows.map((r) => r.member.campus).filter(Boolean))) as string[],
-    [allRows],
-  );
-
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return allRows.filter(({ member, team }) => {
       if (q) {
-        const haystack = `${member.name} ${member.reg_no} ${team.team_name}`.toLowerCase();
+        const haystack = `${member.user_id} ${member.name} ${team.team_name} ${member.reg_no} ${member.phone}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
-      if (campusFilter && member.campus !== campusFilter) return false;
-      if (attendanceFilter && memberAttendance(member.id) !== attendanceFilter) return false;
-      if (venueFilter && team.room_id !== venueFilter) return false;
-      if (spocFilter && team.spoc_profile_id !== spocFilter) return false;
       if (fileStatusFilter && (nocOf(member.id)?.status ?? "Not Uploaded") !== fileStatusFilter) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allRows, search, campusFilter, attendanceFilter, venueFilter, spocFilter, fileStatusFilter, localNocs, attendance]);
+  }, [allRows, search, fileStatusFilter, localNocs]);
 
   function toggleSelected(profileId: string) {
     setSelected((prev) => {
@@ -155,9 +132,15 @@ export function NocIndividualsView({
     }
   }
 
-  async function handleAdminUpload(profileId: string) {
-    const file = uploadFiles[profileId];
-    if (!file) return;
+  async function handleAdminUpload(profileId: string, file: File) {
+    if (file.type !== "application/pdf") {
+      setRowErrors((prev) => ({ ...prev, [profileId]: "Only PDF files are allowed." }));
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setRowErrors((prev) => ({ ...prev, [profileId]: "File exceeds the 2MB limit." }));
+      return;
+    }
     setRowBusy(profileId);
     setRowErrors((prev) => ({ ...prev, [profileId]: "" }));
     try {
@@ -169,7 +152,6 @@ export function NocIndividualsView({
           ? prev.map((n) => (n.profile_id === profileId ? { ...n, status: "Uploaded", file_path: path } : n))
           : [...prev, { profile_id: profileId, status: "Uploaded", file_path: path, deadline: null } as NocRow];
       });
-      setUploadFiles((prev) => ({ ...prev, [profileId]: null }));
     } catch (err) {
       setRowErrors((prev) => ({
         ...prev,
@@ -218,7 +200,6 @@ export function NocIndividualsView({
         "Reg No": member.reg_no,
         Email: member.gitam_email,
         Phone: member.phone,
-        Attendance: memberAttendance(member.id) ?? "No sessions yet",
         Venue: roomOf(team)?.name ?? "Unassigned",
         SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
         "File Status": nocOf(member.id)?.status ?? "Not Uploaded",
@@ -267,27 +248,6 @@ export function NocIndividualsView({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
-        <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} />
-        <FilterSelect
-          label="Attendance"
-          value={attendanceFilter}
-          onChange={setAttendanceFilter}
-          options={["Present", "Absent"]}
-        />
-        <FilterSelect
-          label="Venue"
-          value={venueFilter}
-          onChange={setVenueFilter}
-          options={rooms.map((r) => r.name)}
-          valueOptions={rooms.map((r) => r.id)}
-        />
-        <FilterSelect
-          label="SPOC"
-          value={spocFilter}
-          onChange={setSpocFilter}
-          options={staffAccounts.map((s) => s.name)}
-          valueOptions={staffAccounts.map((s) => s.id)}
-        />
         <FilterSelect
           label="File Status"
           value={fileStatusFilter}
@@ -297,7 +257,7 @@ export function NocIndividualsView({
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Name / reg no / team…"
+          placeholder="Member ID / name / team name / reg no / phone…"
           className="min-w-[180px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
       </div>
@@ -320,7 +280,6 @@ export function NocIndividualsView({
                 <th className="px-4 py-3">Reg No</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Phone</th>
-                <th className="px-4 py-3">Attendance</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">File Status</th>
@@ -352,7 +311,6 @@ export function NocIndividualsView({
                     <td className="px-4 py-3 text-ink-muted">{member.reg_no}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.gitam_email}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.phone}</td>
-                    <td className="px-4 py-3 text-ink-muted">{memberAttendance(member.id) ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                     <td className="px-4 py-3">
@@ -381,20 +339,25 @@ export function NocIndividualsView({
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                           <input
+                            ref={(el) => {
+                              uploadInputRefs.current[member.id] = el;
+                            }}
                             type="file"
                             accept="application/pdf"
-                            onChange={(e) =>
-                              setUploadFiles((prev) => ({ ...prev, [member.id]: e.target.files?.[0] ?? null }))
-                            }
-                            className="w-40 font-heading text-xs text-ink-muted"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleAdminUpload(member.id, file);
+                              e.target.value = "";
+                            }}
                           />
                           <button
                             type="button"
-                            disabled={busy || !uploadFiles[member.id]}
-                            onClick={() => handleAdminUpload(member.id)}
+                            disabled={busy}
+                            onClick={() => uploadInputRefs.current[member.id]?.click()}
                             className="w-fit rounded-full bg-gold px-3 py-1 font-heading text-[11px] font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
                           >
-                            {busy ? "Uploading…" : "Upload"}
+                            {busy ? "Uploading…" : uploaded ? "Replace" : "Upload"}
                           </button>
                         </div>
                       </td>

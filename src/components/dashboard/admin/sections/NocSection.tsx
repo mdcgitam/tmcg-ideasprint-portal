@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 import type {
-  AttendanceRow,
-  AttendanceSessionRow,
   ExitRequestRow,
   NocRow,
   ProblemStatementRow,
@@ -25,8 +23,6 @@ export function NocSection({
   teams,
   membersByTeam,
   nocs,
-  attendance,
-  attendanceSessions,
   rooms,
   zones,
   staffAccounts,
@@ -37,8 +33,6 @@ export function NocSection({
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   nocs: NocRow[];
-  attendance: AttendanceRow[];
-  attendanceSessions: AttendanceSessionRow[];
   rooms: RoomRow[];
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
@@ -77,8 +71,6 @@ export function NocSection({
             teams={localTeams}
             membersByTeam={membersByTeam}
             nocs={nocs}
-            attendance={attendance}
-            attendanceSessions={attendanceSessions}
             rooms={rooms}
             zones={zones}
             staffAccounts={staffAccounts}
@@ -93,8 +85,6 @@ export function NocSection({
             teams={localTeams}
             membersByTeam={membersByTeam}
             nocs={nocs}
-            attendance={attendance}
-            attendanceSessions={attendanceSessions}
             rooms={rooms}
             staffAccounts={staffAccounts}
             scope={scope}

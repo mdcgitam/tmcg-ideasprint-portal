@@ -265,12 +265,33 @@ export function TeamsByMembersView({
                               <NocStatus
                                 profileId={m.id}
                                 noc={noc}
+                                canUpload={scope === "admin"}
                                 onDeleted={() =>
                                   setLocalNocs((prev) =>
                                     prev.map((n) =>
                                       n.profile_id === m.id ? { ...n, status: "Not Uploaded", file_path: null } : n,
                                     ),
                                   )
+                                }
+                                onUploaded={(filePath) =>
+                                  setLocalNocs((prev) => {
+                                    const exists = prev.find((n) => n.profile_id === m.id);
+                                    return exists
+                                      ? prev.map((n) => (n.profile_id === m.id ? { ...n, status: "Uploaded", file_path: filePath } : n))
+                                      : [
+                                          ...prev,
+                                          {
+                                            id: crypto.randomUUID(),
+                                            profile_id: m.id,
+                                            file_path: filePath,
+                                            status: "Uploaded",
+                                            uploaded_by: null,
+                                            uploaded_at: new Date().toISOString(),
+                                            updated_at: new Date().toISOString(),
+                                            deadline: null,
+                                          },
+                                        ];
+                                  })
                                 }
                               />
                             </td>

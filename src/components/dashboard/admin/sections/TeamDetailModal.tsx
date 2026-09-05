@@ -214,12 +214,35 @@ export function TeamDetailModal({
                       <NocStatus
                         profileId={selectedMember.id}
                         noc={localNocs.find((n) => n.profile_id === selectedMember.id)}
+                        canUpload={scope === "admin"}
                         onDeleted={() =>
                           setLocalNocs((prev) =>
                             prev.map((n) =>
                               n.profile_id === selectedMember.id ? { ...n, status: "Not Uploaded", file_path: null } : n,
                             ),
                           )
+                        }
+                        onUploaded={(filePath) =>
+                          setLocalNocs((prev) => {
+                            const exists = prev.find((n) => n.profile_id === selectedMember.id);
+                            return exists
+                              ? prev.map((n) =>
+                                  n.profile_id === selectedMember.id ? { ...n, status: "Uploaded", file_path: filePath } : n,
+                                )
+                              : [
+                                  ...prev,
+                                  {
+                                    id: crypto.randomUUID(),
+                                    profile_id: selectedMember.id,
+                                    file_path: filePath,
+                                    status: "Uploaded",
+                                    uploaded_by: null,
+                                    uploaded_at: new Date().toISOString(),
+                                    updated_at: new Date().toISOString(),
+                                    deadline: null,
+                                  },
+                                ];
+                          })
                         }
                       />
                     </div>
