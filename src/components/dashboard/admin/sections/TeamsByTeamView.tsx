@@ -11,6 +11,7 @@ import type {
   ZoneRow,
 } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
+import { downloadCsv } from "@/lib/csv";
 import { TeamDetailModal } from "./TeamDetailModal";
 import { TeamFilterBar, filterTeams, EMPTY_TEAM_FILTERS, type TeamFilters } from "./TeamFilterBar";
 
@@ -53,6 +54,31 @@ export function TeamsByTeamView({
     [teams, membersByTeam, filters],
   );
 
+  function handleExportCsv() {
+    downloadCsv(
+      "teams",
+      filteredTeams.map((team) => {
+        const members = membersByTeam[team.id] ?? [];
+        const lead = members.find((m) => m.is_lead);
+        const exitedCount = members.filter(
+          (m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved",
+        ).length;
+        return {
+          "Team ID": team.team_id,
+          Campus: lead?.campus ?? "—",
+          "Team Name": team.team_name,
+          "Team Lead": lead?.name ?? "—",
+          "Lead Phone": lead?.phone ?? "—",
+          School: lead?.school ?? "—",
+          Size: String(members.length),
+          Venue: roomOf(team)?.name ?? "Unassigned",
+          SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
+          Status: exitedCount > 0 ? `${exitedCount} Exited` : "Active",
+        };
+      }),
+    );
+  }
+
   if (teams.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-surface p-8 text-center">
@@ -74,6 +100,15 @@ export function TeamsByTeamView({
         membersByTeam={membersByTeam}
         rooms={rooms}
         staffAccounts={staffAccounts}
+        extraActions={
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+          >
+            Export CSV
+          </button>
+        }
       />
 
       {filteredTeams.length === 0 ? (
@@ -84,7 +119,7 @@ export function TeamsByTeamView({
         <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="w-full text-left font-heading text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-ink-muted uppercase">
+              <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                 <th className="px-4 py-3">Team ID</th>
                 <th className="px-4 py-3">Campus</th>
                 <th className="px-4 py-3">Team Name</th>

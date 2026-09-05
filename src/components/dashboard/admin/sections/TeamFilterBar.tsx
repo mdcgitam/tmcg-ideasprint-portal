@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 import type { RoomRow, TeamRow, ProfileRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { FilterSelect } from "./TeamFormFields";
@@ -49,6 +49,7 @@ export function TeamFilterBar({
   membersByTeam,
   rooms,
   staffAccounts,
+  extraActions,
 }: {
   filters: TeamFilters;
   onChange: (next: TeamFilters) => void;
@@ -56,6 +57,7 @@ export function TeamFilterBar({
   membersByTeam: Record<string, TeamMemberProfile[]>;
   rooms: RoomRow[];
   staffAccounts: ProfileRow[];
+  extraActions?: ReactNode;
 }) {
   function set<K extends keyof TeamFilters>(key: K, value: string) {
     onChange({ ...filters, [key]: value });
@@ -82,6 +84,7 @@ export function TeamFilterBar({
           placeholder="Search by team name, team lead name, or team lead phone…"
           className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
+        {extraActions}
       </div>
       <div className="flex flex-wrap gap-2">
         <FilterSelect label="Campus" value={filters.campus} onChange={(v) => set("campus", v)} options={campusOptions} />

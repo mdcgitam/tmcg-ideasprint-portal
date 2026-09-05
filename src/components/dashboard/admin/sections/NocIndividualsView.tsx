@@ -312,7 +312,7 @@ export function NocIndividualsView({
         <div className="overflow-x-auto rounded-xl border border-border bg-surface">
           <table className="w-full text-left font-heading text-sm">
             <thead>
-              <tr className="border-b border-border text-xs text-ink-muted uppercase">
+              <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                 <th className="px-4 py-3" />
                 <th className="px-4 py-3">Campus</th>
                 <th className="px-4 py-3">Team Name</th>
