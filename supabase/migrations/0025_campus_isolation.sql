@@ -352,3 +352,163 @@ using (
   bucket_id = 'ppt-uploads'
   and (public.is_led_team((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_team((storage.foldername(name))[1]::uuid)))
 );
+
+-- ══════════════════════════════════════════════════════════════════════════
+-- Task 5: Campus-setting RPCs — register_team / create_staff_profile /
+-- create_room / create_zone stamp the campus onto every row they create.
+-- Bodies below are the current definitions (register_team=0006,
+-- create_staff_profile=0004, create_room/create_zone=0006) with ONLY the
+-- campus-stamp change; every revoke/grant is unchanged.
+-- ══════════════════════════════════════════════════════════════════════════
+
+-- register_team (source 0006): add v_campus local, validate it, replace the
+-- two 'VSP' literals, and stamp teams.campus on the insert.
+create or replace function public.register_team(p_payload jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare
+  v_team_name text := p_payload->'team'->>'teamName';
+  v_member_count int := (p_payload->'team'->>'memberCount')::int;
+  v_campus text := p_payload->'team'->>'campus';
+  v_members jsonb := p_payload->'members';
+  v_team_id uuid;
+  v_team_code text;
+  v_member jsonb;
+  v_idx int := 0;
+  v_profile_id uuid;
+  v_user_id text;
+  v_user_ids text[] := '{}';
+  v_lead_profile_id uuid;
+begin
+  if v_campus is null or v_campus not in ('VSP', 'BLR', 'HYD') then
+    raise exception 'INVALID_CAMPUS';
+  end if;
+
+  if exists (select 1 from public.teams where team_name = v_team_name) then
+    raise exception 'DUPLICATE_TEAM_NAME';
+  end if;
+
+  for v_member in select * from jsonb_array_elements(v_members) loop
+    if exists (select 1 from public.profiles where gitam_email = lower(v_member->>'gitamEmail')) then
+      raise exception 'DUPLICATE_EMAIL:%', v_member->>'gitamEmail';
+    end if;
+    if exists (select 1 from public.profiles where reg_no = v_member->>'regNo') then
+      raise exception 'DUPLICATE_REGNO:%', v_member->>'regNo';
+    end if;
+    if exists (select 1 from public.profiles where phone = v_member->>'phone') then
+      raise exception 'DUPLICATE_PHONE:%', v_member->>'phone';
+    end if;
+  end loop;
+
+  v_team_code := public.next_team_id();
+
+  insert into public.teams (team_id, team_name, member_count, status, campus)
+  values (v_team_code, v_team_name, v_member_count, 'Registered', v_campus::public.campus)
+  returning id into v_team_id;
+
+  for v_member in select * from jsonb_array_elements(v_members) loop
+    v_user_id := public.next_user_id(v_campus);
+
+    insert into public.profiles (
+      user_id, campus, role, name, gitam_email, phone, reg_no,
+      year_of_study, school, department, branch, gender, stay
+    ) values (
+      v_user_id, v_campus::public.campus,
+      case when v_idx = 0 then 'Team Lead' else 'Member' end::public.user_role,
+      v_member->>'name', lower(v_member->>'gitamEmail'), v_member->>'phone', v_member->>'regNo',
+      v_member->>'yearOfStudy', v_member->>'school', v_member->>'department',
+      v_member->>'branch', v_member->>'gender', v_member->>'stay'
+    ) returning id into v_profile_id;
+
+    insert into public.team_members (team_id, profile_id, is_lead)
+    values (v_team_id, v_profile_id, v_idx = 0);
+
+    if v_idx = 0 then v_lead_profile_id := v_profile_id; end if;
+
+    v_user_ids := array_append(v_user_ids, v_user_id);
+    v_idx := v_idx + 1;
+  end loop;
+
+  update public.teams set team_lead_profile_id = v_lead_profile_id where id = v_team_id;
+
+  return jsonb_build_object('team_id', v_team_code, 'user_ids', v_user_ids);
+
+exception
+  when unique_violation then
+    raise exception 'DUPLICATE_ENTRY: %', sqlerrm;
+end;
+$$;
+
+revoke all on function public.register_team(jsonb) from public, anon, authenticated;
+grant execute on function public.register_team(jsonb) to service_role;
+
+-- create_staff_profile (source 0004): 'VSP' replaced by public.current_campus().
+create or replace function public.create_staff_profile(p_name text, p_email text, p_role text)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  v_id uuid;
+  v_user_id text;
+  v_campus public.campus := public.current_campus();
+begin
+  if public.current_role() <> 'Super Admin' then raise exception 'NOT_ALLOWED'; end if;
+  if p_role not in ('SPOC', 'Super Admin') then raise exception 'INVALID_ROLE'; end if;
+  if exists (select 1 from public.profiles where gitam_email = lower(p_email)) then
+    raise exception 'DUPLICATE_EMAIL:%', p_email;
+  end if;
+
+  v_user_id := public.next_user_id(v_campus::text);
+
+  insert into public.profiles (user_id, campus, role, name, gitam_email)
+  values (v_user_id, v_campus, p_role::public.user_role, p_name, lower(p_email))
+  returning id into v_id;
+
+  insert into public.audit_logs (actor_profile_id, action, entity_type, entity_id, new_value)
+  values (public.current_profile_id(), 'Staff Account Created', 'profile', v_id,
+          jsonb_build_object('role', p_role, 'email', p_email, 'campus', v_campus));
+
+  return v_id;
+end;
+$$;
+
+revoke all on function public.create_staff_profile(text, text, text) from public, anon;
+grant execute on function public.create_staff_profile(text, text, text) to authenticated;
+
+-- create_room / create_zone (source 0006): add campus to the insert.
+create or replace function public.create_room(p_name text, p_zone_id uuid)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_id uuid;
+begin
+  if public.current_role() <> 'Super Admin' then raise exception 'NOT_ALLOWED'; end if;
+
+  insert into public.rooms (name, zone_id, campus)
+  values (p_name, p_zone_id, public.current_campus()) returning id into v_id;
+
+  insert into public.audit_logs (actor_profile_id, action, entity_type, entity_id, new_value)
+  values (public.current_profile_id(), 'Room Created', 'room', v_id, jsonb_build_object('name', p_name));
+
+  return v_id;
+exception
+  when unique_violation then raise exception 'DUPLICATE_ROOM_NAME';
+end;
+$$;
+revoke all on function public.create_room(text, uuid) from public, anon;
+grant execute on function public.create_room(text, uuid) to authenticated;
+
+create or replace function public.create_zone(p_name text, p_manager_profile_id uuid)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare v_id uuid;
+begin
+  if public.current_role() <> 'Super Admin' then raise exception 'NOT_ALLOWED'; end if;
+
+  insert into public.zones (name, zone_manager_profile_id, campus)
+  values (p_name, p_manager_profile_id, public.current_campus()) returning id into v_id;
+
+  insert into public.audit_logs (actor_profile_id, action, entity_type, entity_id, new_value)
+  values (public.current_profile_id(), 'Zone Created', 'zone', v_id, jsonb_build_object('name', p_name));
+
+  return v_id;
+exception
+  when unique_violation then raise exception 'DUPLICATE_ZONE_NAME';
+end;
+$$;
+revoke all on function public.create_zone(text, uuid) from public, anon;
+grant execute on function public.create_zone(text, uuid) to authenticated;
