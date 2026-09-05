@@ -11,7 +11,7 @@
 -- upload a presentation (0018) — so the presentation deadline check has no
 -- such exemption.
 
-alter table public.presentations add column deadline timestamptz;
+alter table public.presentations add column if not exists deadline timestamptz;
 
 create or replace function public.record_noc_metadata(p_profile_id uuid, p_file_path text)
 returns void
