@@ -2,6 +2,8 @@
 -- The SQL Editor bypasses RLS, so true isolation is verified by logging in as
 -- each campus Super Admin in the app. This script only sanity-checks the seed
 -- data and that the campus columns/counters exist.
+-- NOTE: the first participant User ID for a campus is x…1000 UNLESS campus Super
+-- Admins were seeded first — each seed_campus_super_admin call consumes one id.
 
 select 'seeded super admins' as check,
        campus, count(*) as n

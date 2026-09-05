@@ -5,7 +5,10 @@
 -- when called from a policy.
 
 -- ── Enum ────────────────────────────────────────────────────────────────
-create type public.campus as enum ('VSP', 'BLR', 'HYD');
+do $$ begin
+  create type public.campus as enum ('VSP', 'BLR', 'HYD');
+exception when duplicate_object then null;
+end $$;
 
 -- ── Columns ─────────────────────────────────────────────────────────────
 -- profiles.campus already exists as text default 'VSP'; every row is 'VSP'.
@@ -15,9 +18,9 @@ alter table public.profiles
   alter column campus set default 'VSP',
   alter column campus set not null;
 
-alter table public.teams  add column campus public.campus not null default 'VSP';
-alter table public.rooms  add column campus public.campus not null default 'VSP';
-alter table public.zones  add column campus public.campus not null default 'VSP';
+alter table public.teams  add column if not exists campus public.campus not null default 'VSP';
+alter table public.rooms  add column if not exists campus public.campus not null default 'VSP';
+alter table public.zones  add column if not exists campus public.campus not null default 'VSP';
 
 create index if not exists teams_campus_idx   on public.teams (campus);
 create index if not exists profiles_campus_idx on public.profiles (campus);
@@ -26,13 +29,20 @@ create index if not exists zones_campus_idx   on public.zones (campus);
 
 -- ── User ID counters ────────────────────────────────────────────────────
 -- Reset VSP to 1000 ONLY if no VSP User IDs have been issued yet (Spec D6).
-update public.campus_counters
-   set next_user_seq = 1000
- where campus_code = 'VSP'
-   and not exists (
-     select 1 from public.profiles
-     where campus = 'VSP' and user_id ~ '^VSP[0-9]+$'
-   );
+do $$
+declare v_n int;
+begin
+  update public.campus_counters set next_user_seq = 1000
+   where campus_code = 'VSP'
+     and not exists (
+       select 1 from public.profiles
+       where campus = 'VSP' and user_id ~ '^VSP[0-9]+$'
+     );
+  get diagnostics v_n = row_count;
+  if v_n = 0 then
+    raise notice 'campus_isolation 0025: VSP counter NOT reset — VSP User IDs already issued. Left as-is.';
+  end if;
+end $$;
 
 insert into public.campus_counters (campus_code, next_user_seq)
 values ('BLR', 1000), ('HYD', 1000)
@@ -1426,10 +1436,13 @@ end;
 $$;
 revoke all on function public.seed_campus_super_admin(public.campus, text) from public, anon, authenticated;
 
--- ⚠️ Replace the three placeholder emails before applying this migration.
-select public.seed_campus_super_admin('VSP', 'REPLACE_VSP_ADMIN_EMAIL');
-select public.seed_campus_super_admin('BLR', 'REPLACE_BLR_ADMIN_EMAIL');
-select public.seed_campus_super_admin('HYD', 'REPLACE_HYD_ADMIN_EMAIL');
+-- Campus Super Admins are NOT seeded by this migration. After applying 0025,
+-- the operator runs (with the real addresses, once each) in the SQL Editor:
+--   select public.seed_campus_super_admin('VSP', 'real-vsp-admin@gitam.in');
+--   select public.seed_campus_super_admin('BLR', 'real-blr-admin@gitam.in');
+--   select public.seed_campus_super_admin('HYD', 'real-hyd-admin@gitam.in');
+-- Each call consumes one User ID for that campus (e.g. VSP1000), so seed
+-- before opening registration if you want participants to start at x1000.
 
 -- ── Storage policy campus gaps (controller ruling, Batch A review) ──
 -- Two storage policies with an unscoped Super-Admin branch that Task 4 did
@@ -1476,3 +1489,147 @@ using (
   bucket_id = 'exit-requests'
   and (public.is_led_profile((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid)))
 );
+
+-- ── I2: exit_forms_insert_storage campus gap (final review) ──
+drop policy if exists exit_forms_insert_storage on storage.objects;
+create policy exit_forms_insert_storage on storage.objects for insert to authenticated
+with check (
+  bucket_id = 'exit-forms'
+  and (public.is_led_team((storage.foldername(name))[1]::uuid)
+       or (public.current_role() = 'Super Admin'
+           and public.is_same_campus_team((storage.foldername(name))[1]::uuid)))
+);
+
+-- ── I3: per-campus scoping of admin notification recipients (final review) ──
+-- Each function below is recreated verbatim from its latest source migration;
+-- the ONLY change is that the Super-Admin arm of the notification recipient
+-- query now also requires the same campus as the team.
+
+-- submit_team_edit_request — source 0002_team_dashboard.sql (team var: p_team_id).
+create or replace function public.submit_team_edit_request(
+  p_team_id uuid,
+  p_current_snapshot jsonb,
+  p_requested_changes jsonb
+)
+returns uuid
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_request_id uuid;
+begin
+  if not public.is_led_team(p_team_id) then
+    raise exception 'NOT_TEAM_LEAD';
+  end if;
+
+  if exists (select 1 from public.approval_requests where team_id = p_team_id and status = 'Pending') then
+    raise exception 'REQUEST_ALREADY_PENDING';
+  end if;
+
+  insert into public.approval_requests (team_id, current_snapshot, requested_changes, requested_by, status)
+  values (p_team_id, p_current_snapshot, p_requested_changes, public.current_profile_id(), 'Pending')
+  returning id into v_request_id;
+
+  -- SPEC §23: team status auto-updates; resolve_approval_request (0003)
+  -- reverts this back to 'Registered' once the request is resolved either way.
+  update public.teams set status = 'Pending Approval', updated_at = now() where id = p_team_id;
+
+  insert into public.audit_logs (actor_profile_id, action, entity_type, entity_id, previous_value, new_value)
+  values (public.current_profile_id(), 'Team Edit Requested', 'team', p_team_id, p_current_snapshot, p_requested_changes);
+
+  insert into public.notifications (recipient_profile_id, type, title, message)
+  select id, 'TeamEditRequested', 'New team edit request', 'A team edit request needs review.'
+  from public.profiles
+  where (role = 'Super Admin' and campus = (select campus from public.teams where id = p_team_id))
+     or id = (select spoc_profile_id from public.teams where id = p_team_id);
+
+  return v_request_id;
+exception
+  when unique_violation then
+    raise exception 'REQUEST_ALREADY_PENDING';
+end;
+$$;
+
+revoke all on function public.submit_team_edit_request(uuid, jsonb, jsonb) from public, anon;
+grant execute on function public.submit_team_edit_request(uuid, jsonb, jsonb) to authenticated;
+
+-- record_exit_form — source 0002_team_dashboard.sql (team var: p_team_id).
+create or replace function public.record_exit_form(p_team_id uuid, p_file_path text)
+returns void
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if not public.is_led_team(p_team_id) then
+    raise exception 'NOT_TEAM_LEAD';
+  end if;
+
+  insert into public.exit_forms (team_id, file_path, status, uploaded_by, uploaded_at)
+  values (p_team_id, p_file_path, 'Submitted', public.current_profile_id(), now())
+  on conflict (team_id) do update
+    set file_path = excluded.file_path, status = 'Submitted',
+        uploaded_by = excluded.uploaded_by, uploaded_at = excluded.uploaded_at;
+
+  insert into public.notifications (recipient_profile_id, type, title, message)
+  select id, 'ExitFormUploaded', 'Exit form uploaded', 'A team exit form was uploaded.'
+  from public.profiles
+  where (role = 'Super Admin' and campus = (select campus from public.teams where id = p_team_id))
+     or id = (select spoc_profile_id from public.teams where id = p_team_id);
+end;
+$$;
+
+revoke all on function public.record_exit_form(uuid, text) from public, anon;
+grant execute on function public.record_exit_form(uuid, text) to authenticated;
+
+-- request_member_exit — source 0012_member_exit_requests.sql (team var: v_team_id).
+create or replace function public.request_member_exit(p_profile_id uuid, p_file_path text, p_reason text)
+returns void language plpgsql security definer set search_path = public as $$
+declare v_team_id uuid;
+begin
+  if not public.is_own_or_led_profile(p_profile_id) then raise exception 'NOT_ALLOWED'; end if;
+
+  select team_id into v_team_id from public.team_members where profile_id = p_profile_id;
+  if v_team_id is null then raise exception 'PARTICIPANT_NOT_FOUND'; end if;
+
+  insert into public.exit_requests (profile_id, team_id, file_path, status, reason, requested_at, reviewed_by, reviewed_at)
+  values (p_profile_id, v_team_id, p_file_path, 'Requested', p_reason, now(), null, null)
+  on conflict (profile_id) do update
+    set team_id = excluded.team_id, file_path = excluded.file_path, status = 'Requested',
+        reason = excluded.reason, requested_at = now(), reviewed_by = null, reviewed_at = null;
+
+  insert into public.notifications (recipient_profile_id, type, title, message)
+  select id, 'MemberExitRequested', 'Exit request submitted', 'A team member has requested to exit the event.'
+  from public.profiles
+  where (role = 'Super Admin' and campus = (select campus from public.teams where id = v_team_id))
+     or id = (select spoc_profile_id from public.teams where id = v_team_id);
+end;
+$$;
+revoke all on function public.request_member_exit(uuid, text, text) from public, anon;
+grant execute on function public.request_member_exit(uuid, text, text) to authenticated;
+
+-- record_presentation — source 0019_enforce_noc_ppt_deadlines.sql (team var: p_team_id).
+create or replace function public.record_presentation(p_team_id uuid, p_file_path text)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  v_deadline timestamptz;
+begin
+  if not public.is_led_team(p_team_id) then raise exception 'NOT_TEAM_LEAD'; end if;
+
+  select deadline into v_deadline from public.presentations where team_id = p_team_id;
+  if v_deadline is not null and now() > v_deadline then
+    raise exception 'DEADLINE_PASSED';
+  end if;
+
+  insert into public.presentations (team_id, file_path, status, uploaded_by, uploaded_at)
+  values (p_team_id, p_file_path, 'Uploaded', public.current_profile_id(), now())
+  on conflict (team_id) do update
+    set file_path = excluded.file_path, status = 'Uploaded',
+        uploaded_by = excluded.uploaded_by, uploaded_at = excluded.uploaded_at;
+
+  insert into public.notifications (recipient_profile_id, type, title, message)
+  select id, 'PresentationUploaded', 'Presentation uploaded', 'A team presentation (PPT) was uploaded.'
+  from public.profiles
+  where (role = 'Super Admin' and campus = (select campus from public.teams where id = p_team_id))
+     or id = (select spoc_profile_id from public.teams where id = p_team_id);
+end;
+$$;
+revoke all on function public.record_presentation(uuid, text) from public, anon;
+grant execute on function public.record_presentation(uuid, text) to authenticated;
