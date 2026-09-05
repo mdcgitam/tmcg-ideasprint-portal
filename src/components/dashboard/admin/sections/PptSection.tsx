@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type {
   AttendanceRow,
   AttendanceSessionRow,
@@ -19,10 +19,18 @@ import {
   getSignedUrl,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
-import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
-import { useTabFade } from "@/hooks/useTabFade";
+import { FilterSelect } from "./TeamFormFields";
 
-type View = "all" | "missing";
+interface PptFilters {
+  search: string;
+  campus: string;
+  teamSize: string;
+  room: string;
+  spoc: string;
+  status: string; // "" | "Uploaded" | "Not Uploaded"
+}
+
+const EMPTY_PPT_FILTERS: PptFilters = { search: "", campus: "", teamSize: "", room: "", spoc: "", status: "" };
 
 function toDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -56,8 +64,7 @@ export function PptSection({
   scope: "spoc" | "admin";
 }) {
   const [localPresentations, setLocalPresentations] = useState(presentations);
-  const [view, setView] = useState<View>("all");
-  const fadeRef = useTabFade(view);
+  const [filters, setFilters] = useState<PptFilters>(EMPTY_PPT_FILTERS);
 
   const [deadlineDrafts, setDeadlineDrafts] = useState<Record<string, string>>({});
   const [deadlineBusy, setDeadlineBusy] = useState<string | null>(null);
@@ -147,6 +154,38 @@ export function PptSection({
     }
   }
 
+  const campusOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          teams
+            .map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)
+            .filter((c): c is string => Boolean(c)),
+        ),
+      ),
+    [teams, membersByTeam],
+  );
+
+  const visibleTeams = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
+    return teams.filter((team) => {
+      const members = membersByTeam[team.id] ?? [];
+      const lead = members.find((m) => m.is_lead);
+      const status = localPresentations.find((p) => p.team_id === team.id)?.status ?? "Not Uploaded";
+
+      if (q) {
+        const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (filters.campus && lead?.campus !== filters.campus) return false;
+      if (filters.teamSize && String(team.member_count) !== filters.teamSize) return false;
+      if (filters.room && team.room_id !== filters.room) return false;
+      if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
+      if (filters.status && status !== filters.status) return false;
+      return true;
+    });
+  }, [teams, membersByTeam, filters, localPresentations]);
+
   if (teams.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-surface p-8 text-center">
@@ -157,32 +196,54 @@ export function PptSection({
     );
   }
 
-  const visibleTeams =
-    view === "all"
-      ? teams
-      : teams.filter((t) => localPresentations.find((p) => p.team_id === t.id)?.status !== "Uploaded");
-
   return (
     <div className="flex flex-col gap-4">
       <p className="font-heading text-xs text-ink-muted">
         PPT files must be a PDF under 16MB. Only the Team Lead can upload.
       </p>
 
-      <ViewToggle
-        value={view}
-        onChange={setView}
-        options={[
-          { value: "all", label: "All Teams" },
-          { value: "missing", label: "Missing Only" },
-        ]}
-      />
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
+        <FilterSelect label="Campus" value={filters.campus} onChange={(v) => setFilters((f) => ({ ...f, campus: v }))} options={campusOptions} />
+        <FilterSelect
+          label="Team Size"
+          value={filters.teamSize}
+          onChange={(v) => setFilters((f) => ({ ...f, teamSize: v }))}
+          options={["3", "4"]}
+        />
+        <FilterSelect
+          label="Venue"
+          value={filters.room}
+          onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
+          options={rooms.map((r) => r.name)}
+          valueOptions={rooms.map((r) => r.id)}
+        />
+        <FilterSelect
+          label="SPOC"
+          value={filters.spoc}
+          onChange={(v) => setFilters((f) => ({ ...f, spoc: v }))}
+          options={staffAccounts.map((s) => s.name)}
+          valueOptions={staffAccounts.map((s) => s.id)}
+        />
+        <FilterSelect
+          label="PPT Status"
+          value={filters.status}
+          onChange={(v) => setFilters((f) => ({ ...f, status: v }))}
+          options={["Uploaded", "Not Uploaded"]}
+        />
+        <input
+          value={filters.search}
+          onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+          placeholder="Team name / team lead / lead phone…"
+          className="min-w-[180px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+        />
+      </div>
 
       <p className="font-heading text-xs text-ink-muted">Showing {visibleTeams.length} teams</p>
 
-      <div ref={fadeRef}>
+      <div>
         {visibleTeams.length === 0 ? (
           <div className="rounded-xl border border-border bg-surface p-8 text-center">
-            <p className="font-heading text-sm text-ink-muted">Every team&rsquo;s presentation is uploaded.</p>
+            <p className="font-heading text-sm text-ink-muted">No teams match the current filters.</p>
           </div>
         ) : (
           <div className="overflow-x-auto rounded-xl border border-border">
@@ -192,6 +253,7 @@ export function PptSection({
                   <th className="px-4 py-3">Campus</th>
                   <th className="px-4 py-3">Team Name</th>
                   <th className="px-4 py-3">Team Lead</th>
+                  <th className="px-4 py-3">Team Lead Phone</th>
                   <th className="px-4 py-3">Team Size</th>
                   <th className="px-4 py-3">Attendance</th>
                   <th className="px-4 py-3">Venue</th>
@@ -226,6 +288,7 @@ export function PptSection({
                         {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
                       </td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
                       <td className="px-4 py-3 text-ink-muted">{teamAttendance(team) ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{venue}</td>
