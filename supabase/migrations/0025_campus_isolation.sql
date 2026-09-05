@@ -246,3 +246,109 @@ using (campus = public.current_campus());
 drop policy if exists rooms_select on public.rooms;
 create policy rooms_select on public.rooms for select to authenticated
 using (campus = public.current_campus());
+
+-- ── Storage-object policies: scope the Super-Admin branch to current_campus() ──
+-- First path segment `(storage.foldername(name))[1]::uuid` is a PROFILE id in
+-- the noc-uploads bucket (use is_same_campus_profile) and a TEAM id in
+-- exit-forms / ppt-uploads (use is_same_campus_team). Bodies copied verbatim
+-- from their source migrations; only the bare
+-- `public.current_role() = 'Super Admin'` clause changes. The *_insert storage
+-- policies have no Super-Admin branch and are left untouched.
+
+-- noc-uploads bucket (source 0002; noc_uploads_update/_delete bodies confirmed
+-- unchanged by 0005's ALTER POLICY).
+drop policy if exists noc_uploads_select on storage.objects;
+create policy noc_uploads_select on storage.objects for select to authenticated
+using (
+  bucket_id = 'noc-uploads'
+  and (
+    public.is_own_or_led_profile((storage.foldername(name))[1]::uuid)
+    or public.is_assigned_spoc_of_profile((storage.foldername(name))[1]::uuid)
+    or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid))
+  )
+);
+
+drop policy if exists noc_uploads_update on storage.objects;
+create policy noc_uploads_update on storage.objects for update to authenticated
+using (
+  bucket_id = 'noc-uploads'
+  and (
+    public.is_led_profile((storage.foldername(name))[1]::uuid)
+    or public.is_assigned_spoc_of_profile((storage.foldername(name))[1]::uuid)
+    or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid))
+  )
+)
+with check (
+  bucket_id = 'noc-uploads'
+  and (
+    public.is_led_profile((storage.foldername(name))[1]::uuid)
+    or public.is_assigned_spoc_of_profile((storage.foldername(name))[1]::uuid)
+    or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid))
+  )
+);
+
+drop policy if exists noc_uploads_delete on storage.objects;
+create policy noc_uploads_delete on storage.objects for delete to authenticated
+using (
+  bucket_id = 'noc-uploads'
+  and (
+    public.is_led_profile((storage.foldername(name))[1]::uuid)
+    or public.is_assigned_spoc_of_profile((storage.foldername(name))[1]::uuid)
+    or (public.current_role() = 'Super Admin' and public.is_same_campus_profile((storage.foldername(name))[1]::uuid))
+  )
+);
+
+-- exit-forms bucket (source 0002).
+drop policy if exists exit_forms_select_storage on storage.objects;
+create policy exit_forms_select_storage on storage.objects for select to authenticated
+using (
+  bucket_id = 'exit-forms'
+  and (
+    public.is_own_team((storage.foldername(name))[1]::uuid)
+    or public.is_assigned_spoc_of_team((storage.foldername(name))[1]::uuid)
+    or (public.current_role() = 'Super Admin' and public.is_same_campus_team((storage.foldername(name))[1]::uuid))
+  )
+);
+
+drop policy if exists exit_forms_update_storage on storage.objects;
+create policy exit_forms_update_storage on storage.objects for update to authenticated
+using (
+  bucket_id = 'exit-forms'
+  and (public.is_led_team((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_team((storage.foldername(name))[1]::uuid)))
+)
+with check (
+  bucket_id = 'exit-forms'
+  and (public.is_led_team((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_team((storage.foldername(name))[1]::uuid)))
+);
+
+drop policy if exists exit_forms_delete_storage on storage.objects;
+create policy exit_forms_delete_storage on storage.objects for delete to authenticated
+using (
+  bucket_id = 'exit-forms'
+  and (public.is_led_team((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_team((storage.foldername(name))[1]::uuid)))
+);
+
+-- ppt-uploads bucket (source 0009).
+-- NOTE: ppt_uploads_update is NOT recreated here. Migration 0018
+-- (0018_ppt_pdf_only_16mb_lead_only.sql) deliberately dropped its Super-Admin
+-- branch ("close the storage-level Super Admin insert/update loophole"), so its
+-- current body has no `public.current_role() = 'Super Admin'` clause to scope —
+-- same situation as the *_insert policies. Recreating it from 0009 would
+-- reintroduce the loophole 0018 closed, so it is left as 0018 defined it.
+drop policy if exists ppt_uploads_select on storage.objects;
+create policy ppt_uploads_select on storage.objects for select to authenticated
+using (
+  bucket_id = 'ppt-uploads'
+  and (
+    public.is_own_team((storage.foldername(name))[1]::uuid)
+    or public.is_assigned_spoc_of_team((storage.foldername(name))[1]::uuid)
+    or (public.current_role() = 'Super Admin' and public.is_same_campus_team((storage.foldername(name))[1]::uuid))
+  )
+);
+
+drop policy if exists ppt_uploads_delete on storage.objects;
+create policy ppt_uploads_delete on storage.objects for delete to authenticated
+using (
+  bucket_id = 'ppt-uploads'
+  and (public.is_led_team((storage.foldername(name))[1]::uuid) or (public.current_role() = 'Super Admin' and public.is_same_campus_team((storage.foldername(name))[1]::uuid)))
+);
