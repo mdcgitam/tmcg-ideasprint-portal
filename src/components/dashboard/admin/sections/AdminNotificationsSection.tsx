@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { NotificationRow, RoomRow } from "@/types/database";
 import {
   markNotificationRead,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/dashboard/admin-actions";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
+import { createClient } from "@/lib/supabase/client";
 
 type View = "all" | "by-status";
 
@@ -19,17 +20,52 @@ const ROLE_OPTIONS: { value: BroadcastRoleAudience; label: string }[] = [
   { value: "SPOC", label: "SPOCs" },
 ];
 
-/** SPEC §70-72/§75 — SPOC and Super Admin both get notified on new registrations, pending approvals, NOC/Exit Form uploads, etc. Super Admin can additionally broadcast a notification to everyone, a single role, or by venue (every team assigned to a room). */
+/**
+ * SPEC §70-72/§75 — SPOC and Super Admin both get notified on new
+ * registrations, pending approvals, NOC/Exit Form uploads, etc. Super Admin
+ * can additionally broadcast a notification to everyone, a single role, or
+ * by venue (every team assigned to a room). Live-updates via Supabase
+ * Realtime so a new broadcast or notice shows up without a page refresh.
+ */
 export function AdminNotificationsSection({
+  profileId,
   notifications,
   scope,
   rooms,
 }: {
+  profileId: string;
   notifications: NotificationRow[];
   scope: "spoc" | "admin";
   rooms: RoomRow[];
 }) {
   const [local, setLocal] = useState(notifications);
+
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`notifications:${profileId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "notifications", filter: `recipient_profile_id=eq.${profileId}` },
+        (payload) => {
+          const row = payload.new as NotificationRow;
+          setLocal((prev) => (prev.some((n) => n.id === row.id) ? prev : [row, ...prev]));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "notifications", filter: `recipient_profile_id=eq.${profileId}` },
+        (payload) => {
+          const row = payload.new as NotificationRow;
+          setLocal((prev) => prev.map((n) => (n.id === row.id ? row : n)));
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [profileId]);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [view, setView] = useState<View>("all");
   const fadeRef = useTabFade(view);

@@ -135,7 +135,9 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
               isLead={isLead}
             />
           )}
-          {tab === "Notifications" && <NotificationsSection notifications={props.notifications} />}
+          {tab === "Notifications" && (
+            <NotificationsSection profileId={props.profile.id} notifications={props.notifications} />
+          )}
         </div>
       </div>
     </main>

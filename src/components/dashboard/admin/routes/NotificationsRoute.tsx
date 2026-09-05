@@ -9,7 +9,7 @@ export async function NotificationsRoute({ profile }: { profile: ProfileRow }) {
 
   return (
     <SectionPageShell title="Notifications" scope={scope}>
-      <AdminNotificationsSection notifications={notifications} scope={scope} rooms={rooms} />
+      <AdminNotificationsSection profileId={profile.id} notifications={notifications} scope={scope} rooms={rooms} />
     </SectionPageShell>
   );
 }

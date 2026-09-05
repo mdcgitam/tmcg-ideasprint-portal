@@ -4,7 +4,17 @@ import { PptSection } from "@/components/dashboard/admin/sections/PptSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function PptRoute({ profile }: { profile: ProfileRow }) {
-  const { teams, membersByTeam, presentations, rooms, zones, staffAccounts } = await fetchAdminDashboardData(profile);
+  const {
+    teams,
+    membersByTeam,
+    presentations,
+    rooms,
+    zones,
+    staffAccounts,
+    attendance,
+    attendanceSessions,
+    problemStatements,
+  } = await fetchAdminDashboardData(profile);
   const scope = profile.role === "Super Admin" ? "admin" : "spoc";
 
   return (
@@ -16,6 +26,9 @@ export async function PptRoute({ profile }: { profile: ProfileRow }) {
         rooms={rooms}
         zones={zones}
         staffAccounts={staffAccounts}
+        attendance={attendance}
+        attendanceSessions={attendanceSessions}
+        problemStatements={problemStatements}
         scope={scope}
       />
     </SectionPageShell>
