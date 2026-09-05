@@ -13,7 +13,6 @@ export function TeamManagePanel({
   room,
   zone,
   ps,
-  exitedCount,
   spocName,
   scope,
   onTeamRenamed,
@@ -24,7 +23,6 @@ export function TeamManagePanel({
   room: RoomRow | null;
   zone: ZoneRow | null;
   ps: ProblemStatementRow | null;
-  exitedCount: number;
   spocName: string | null;
   scope: "spoc" | "admin";
   onTeamRenamed: (teamId: string, name: string) => void;
@@ -156,10 +154,6 @@ export function TeamManagePanel({
           {teamNameError && <p className="w-full font-heading text-xs text-danger">{teamNameError}</p>}
         </div>
       )}
-
-      <p className="font-heading text-xs text-ink-muted">
-        Status: {team.status} · {exitedCount > 0 ? `${exitedCount} of ${members.length} Exited` : "All Active"}
-      </p>
 
       <p className="font-heading text-xs text-ink-muted">
         Room: {room?.name ?? "Unassigned"} {zone && `· Zone: ${zone.name}`} · SPOC: {spocName ?? "Unassigned"}

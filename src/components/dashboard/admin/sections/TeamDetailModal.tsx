@@ -139,7 +139,6 @@ export function TeamDetailModal({
             room={room}
             zone={zone}
             ps={ps}
-            exitedCount={members.filter((m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved").length}
             spocName={spocName}
             scope={scope}
             onTeamRenamed={onTeamRenamed}

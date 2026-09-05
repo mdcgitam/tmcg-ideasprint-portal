@@ -335,7 +335,6 @@ export function TeamsByMembersView({
                             room={room}
                             zone={zone}
                             ps={ps}
-                            exitedCount={teamMembers.filter((m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved").length}
                             spocName={spocName(team.spoc_profile_id)}
                             scope={scope}
                             onTeamRenamed={onTeamRenamed}
