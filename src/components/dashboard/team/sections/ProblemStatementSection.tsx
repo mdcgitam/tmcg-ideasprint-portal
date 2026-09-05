@@ -35,10 +35,16 @@ export function ProblemStatementSection({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const trimmed = psNumber.trim();
+    const n = Number(trimmed);
+    if (!trimmed || !Number.isInteger(n) || n < 1 || n > 50) {
+      setMessage({ kind: "error", text: "Enter a number between 1 and 50, exactly as listed on the sheet." });
+      return;
+    }
     setSubmitting(true);
     setMessage(null);
     try {
-      const result = await selectProblemStatement(team.id, psNumber.trim());
+      const result = await selectProblemStatement(team.id, String(n));
       setSelected({ number: result.number, title: result.title });
       setMessage({ kind: "success", text: "Problem statement selected." });
       setPsNumber("");
@@ -60,7 +66,7 @@ export function ProblemStatementSection({
             </a>
           </p>
         ) : (
-          <p className="mt-3 font-heading text-sm text-ink-muted">The problem statement list hasn't been shared yet.</p>
+          <p className="mt-3 font-heading text-sm text-ink-muted">The problem statement list hasn&rsquo;t been shared yet.</p>
         )}
       </div>
 
@@ -71,7 +77,7 @@ export function ProblemStatementSection({
             #{selected.number} — {selected.title}
           </p>
         ) : (
-          <p className="mt-3 font-heading text-sm text-ink-muted">Your team hasn't selected a problem statement yet.</p>
+          <p className="mt-3 font-heading text-sm text-ink-muted">Your team hasn&rsquo;t selected a problem statement yet.</p>
         )}
       </div>
 
@@ -79,14 +85,17 @@ export function ProblemStatementSection({
         <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Select / Change</span>
           <p className="mt-2 font-heading text-xs text-ink-muted">
-            Enter the problem statement number exactly as listed — you can change this any number of times until the
-            selection window closes.
+            Pick a problem statement from the sheet above and enter its number (1–50) — you can change this any
+            number of times until the selection window closes.
           </p>
           <div className="mt-4 flex gap-3">
             <input
+              type="number"
+              min={1}
+              max={50}
               value={psNumber}
               onChange={(e) => setPsNumber(e.target.value)}
-              placeholder="e.g. PS-014"
+              placeholder="1–50"
               required
               className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
             />

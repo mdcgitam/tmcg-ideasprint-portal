@@ -8,6 +8,7 @@ import type {
   ExitRequestRow,
   PresentationRow,
   ProblemStatementRow,
+  ProblemStatementExtensionRow,
   ApprovalRequestRow,
   ConfigurationRow,
   NotificationRow,
@@ -29,6 +30,7 @@ export interface AdminDashboardData {
   exitRequests: ExitRequestRow[];
   presentations: PresentationRow[];
   problemStatements: ProblemStatementRow[];
+  problemStatementExtensions: ProblemStatementExtensionRow[];
   config: Record<string, unknown>;
   spocs: ProfileRow[];
   staffAccounts: ProfileRow[];
@@ -65,6 +67,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
     { data: exitRequests },
     { data: presentations },
     { data: problemStatements },
+    { data: problemStatementExtensions },
     { data: configRows },
     { data: spocs },
     { data: staffAccounts },
@@ -81,6 +84,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
     supabase.from("exit_requests").select("*"),
     supabase.from("presentations").select("*"),
     supabase.from("problem_statements").select("*").order("number"),
+    supabase.from("problem_statement_extensions").select("*"),
     supabase.from("configuration").select("*"),
     supabase.from("profiles").select("*").eq("role", "SPOC"),
     supabase.from("profiles").select("*").in("role", ["SPOC", "Super Admin"]).order("created_at", { ascending: false }),
@@ -115,6 +119,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
   let scopedNocs = (nocs ?? []) as NocRow[];
   let scopedExitRequests = (exitRequests ?? []) as ExitRequestRow[];
   let scopedPresentations = (presentations ?? []) as PresentationRow[];
+  let scopedPsExtensions = (problemStatementExtensions ?? []) as ProblemStatementExtensionRow[];
 
   if (profile.role !== "Super Admin") {
     scopedTeams = scopedTeams.filter((t) => t.spoc_profile_id === profile.id);
@@ -128,6 +133,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
     scopedExitRequests = scopedExitRequests.filter((e) => teamIds.has(e.team_id));
     scopedPresentations = scopedPresentations.filter((p) => teamIds.has(p.team_id));
     scopedNocs = scopedNocs.filter((n) => memberIds.has(n.profile_id));
+    scopedPsExtensions = scopedPsExtensions.filter((e) => teamIds.has(e.team_id));
   }
 
   return {
@@ -140,6 +146,7 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
     exitRequests: scopedExitRequests,
     presentations: scopedPresentations,
     problemStatements: (problemStatements ?? []) as ProblemStatementRow[],
+    problemStatementExtensions: scopedPsExtensions,
     config,
     spocs: (spocs ?? []) as ProfileRow[],
     staffAccounts: (staffAccounts ?? []) as ProfileRow[],

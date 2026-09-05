@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import { DashboardActionError } from "@/lib/dashboard/team-actions";
+import { DashboardActionError, type SelectedProblemStatement } from "@/lib/dashboard/team-actions";
 
 /** Same pattern as src/lib/dashboard/team-actions.ts — called directly from the browser with the caller's own session. */
 export { DashboardActionError };
@@ -30,6 +30,7 @@ function friendlyError(raw: string): string {
   }
   if (raw.includes("INVALID_AUDIENCE")) return "Choose an audience to notify.";
   if (raw.includes("INVALID_BROADCAST")) return "Title and message can't be empty.";
+  if (raw.includes("INVALID_PS_NUMBER")) return "That problem statement number wasn't found or isn't live yet.";
   return "Something went wrong. Please try again.";
 }
 
@@ -67,6 +68,14 @@ export function extendProblemStatementDeadline(teamId: string, extendedUntil: st
     p_team_id: teamId,
     p_extended_until: extendedUntil,
     p_reason: reason,
+  });
+}
+
+/** Bypasses the Team-Lead-only + selection-window checks in select_problem_statement — for an admin/SPOC correcting a team's pick directly. */
+export function adminSetProblemStatement(teamId: string, psNumber: string) {
+  return callRpc<SelectedProblemStatement>("admin_set_problem_statement", {
+    p_team_id: teamId,
+    p_ps_number: psNumber,
   });
 }
 

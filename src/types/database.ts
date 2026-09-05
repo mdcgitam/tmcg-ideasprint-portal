@@ -103,6 +103,16 @@ export interface ProblemStatementSelectionRow {
   is_initial: boolean;
 }
 
+export interface ProblemStatementExtensionRow {
+  id: string;
+  team_id: string;
+  extended_until: string;
+  duration_minutes: number | null;
+  reason: string | null;
+  granted_by: string;
+  granted_at: string;
+}
+
 export interface AttendanceSessionRow {
   id: string;
   name: string;
