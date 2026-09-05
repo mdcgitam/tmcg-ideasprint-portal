@@ -177,6 +177,8 @@ export function PptSection({
         ]}
       />
 
+      <p className="font-heading text-xs text-ink-muted">Showing {visibleTeams.length} teams</p>
+
       <div ref={fadeRef}>
         {visibleTeams.length === 0 ? (
           <div className="rounded-xl border border-border bg-surface p-8 text-center">

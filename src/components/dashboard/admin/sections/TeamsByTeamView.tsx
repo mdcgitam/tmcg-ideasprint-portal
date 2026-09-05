@@ -111,6 +111,8 @@ export function TeamsByTeamView({
         }
       />
 
+      <p className="font-heading text-xs text-ink-muted">Showing {filteredTeams.length} teams</p>
+
       {filteredTeams.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface p-8 text-center">
           <p className="font-heading text-sm text-ink-muted">No teams match the current filters.</p>

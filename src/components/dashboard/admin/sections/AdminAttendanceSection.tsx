@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AttendanceRow, AttendanceSessionRow, ProfileRow, RoomRow, TeamRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { recordAttendance, createAttendanceSession, DashboardActionError } from "@/lib/dashboard/admin-actions";
@@ -9,7 +10,7 @@ import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { FilterSelect, YEAR_OPTIONS } from "@/components/dashboard/admin/sections/TeamFormFields";
 import { useTabFade } from "@/hooks/useTabFade";
 
-type View = "by-member" | "by-team";
+type View = "teams" | "members";
 type Status = "Present" | "Absent" | "Not Marked";
 
 interface TeamFilters {
@@ -79,8 +80,9 @@ export function AdminAttendanceSection({
   const [creating, setCreating] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<View>("by-team");
+  const [view, setView] = useState<View>("teams");
   const fadeRef = useTabFade(view);
+  const [expandedTeamIds, setExpandedTeamIds] = useState<Set<string>>(new Set());
 
   const [teamFilters, setTeamFilters] = useState<TeamFilters>(EMPTY_TEAM_FILTERS);
   const [memberFilters, setMemberFilters] = useState<MemberFilters>(EMPTY_MEMBER_FILTERS);
@@ -88,6 +90,15 @@ export function AdminAttendanceSection({
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
   const latestSession = localSessions[localSessions.length - 1] ?? null;
+
+  function toggleExpanded(teamId: string) {
+    setExpandedTeamIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) next.delete(teamId);
+      else next.add(teamId);
+      return next;
+    });
+  }
 
   async function handleCreateSession(e: React.FormEvent) {
     e.preventDefault();
@@ -184,7 +195,7 @@ export function AdminAttendanceSection({
         : "border-border text-ink-faint";
   }
 
-  // ── View by Team ──────────────────────────────────────────────────────
+  // ── Teams tab ────────────────────────────────────────────────────────
 
   const teamCampusOptions = useMemo(
     () => uniqueValues(teams.map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)),
@@ -231,7 +242,7 @@ export function AdminAttendanceSection({
     );
   }
 
-  // ── View by Member ───────────────────────────────────────────────────
+  // ── Members tab ──────────────────────────────────────────────────────
 
   const allMembers = useMemo(() => teams.flatMap((t) => membersByTeam[t.id] ?? []), [teams, membersByTeam]);
   const memberSchoolOptions = useMemo(() => uniqueValues(allMembers.map((m) => m.school)), [allMembers]);
@@ -268,26 +279,32 @@ export function AdminAttendanceSection({
   function handleExportMembers() {
     downloadCsv(
       "attendance-by-member",
-      filteredMembers.map(({ member: m, team }) => ({
-        Campus: m.campus,
-        "Team ID": team.team_id,
-        "Team Name": team.team_name,
-        "Team Size": String(team.member_count),
-        "Member ID": m.user_id,
-        Name: m.name,
-        Position: m.is_lead ? "Team Lead" : "Member",
-        "Reg No": m.reg_no,
-        "Phone No": m.phone,
-        Year: m.year_of_study,
-        School: m.school,
-        Branch: m.branch,
-        Stay: m.stay,
-        Venue: roomOf(team)?.name ?? "Unassigned",
-        SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
-        Attendance: memberStatus(m.id, latestSession),
-      })),
+      filteredMembers.flatMap(({ member: m, team }) =>
+        localSessions.map((s) => ({
+          Campus: m.campus,
+          "Team ID": team.team_id,
+          "Team Name": team.team_name,
+          "Team Size": String(team.member_count),
+          "Member ID": m.user_id,
+          Name: m.name,
+          Position: m.is_lead ? "Team Lead" : "Member",
+          "Reg No": m.reg_no,
+          "Phone No": m.phone,
+          Year: m.year_of_study,
+          School: m.school,
+          Branch: m.branch,
+          Stay: m.stay,
+          Venue: roomOf(team)?.name ?? "Unassigned",
+          SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
+          Session: s.name,
+          Attendance: memberStatus(m.id, s),
+        })),
+      ),
     );
   }
+
+  const TEAM_FIXED_COLS = 7; // chevron, Campus, Team Name, Team Lead Name, Team Lead Phone, SPOC, Venue
+  const MEMBER_FIXED_COLS = 15; // Campus..SPOC (everything except the per-session Attendance columns)
 
   return (
     <div className="flex flex-col gap-6">
@@ -323,13 +340,13 @@ export function AdminAttendanceSection({
             value={view}
             onChange={setView}
             options={[
-              { value: "by-team", label: "View by Team" },
-              { value: "by-member", label: "View by Member" },
+              { value: "teams", label: "Teams" },
+              { value: "members", label: "Members" },
             ]}
           />
 
           <div ref={fadeRef}>
-            {view === "by-team" ? (
+            {view === "teams" ? (
               <div className="flex flex-col gap-4">
                 <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
                   <div className="flex flex-wrap items-center gap-3">
@@ -383,10 +400,13 @@ export function AdminAttendanceSection({
                   </div>
                 </div>
 
+                <p className="font-heading text-xs text-ink-muted">Showing {filteredTeams.length} teams</p>
+
                 <div className="overflow-x-auto rounded-xl border border-border bg-surface">
                   <table className="w-full text-left font-heading text-sm">
                     <thead>
                       <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+                        <th className="px-2 py-3" />
                         <th className="px-4 py-3">Campus</th>
                         <th className="px-4 py-3">Team Name</th>
                         <th className="px-4 py-3">Team Lead Name</th>
@@ -395,9 +415,7 @@ export function AdminAttendanceSection({
                         <th className="px-4 py-3">Venue</th>
                         {localSessions.map((s) => (
                           <th key={s.id} className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span>Attendance Status ({s.name})</span>
-                            </div>
+                            Attendance Status ({s.name})
                           </th>
                         ))}
                       </tr>
@@ -405,55 +423,107 @@ export function AdminAttendanceSection({
                     <tbody>
                       {filteredTeams.length === 0 ? (
                         <tr>
-                          <td colSpan={6 + localSessions.length} className="px-4 py-8 text-center text-ink-muted">
+                          <td colSpan={TEAM_FIXED_COLS + localSessions.length} className="px-4 py-8 text-center text-ink-muted">
                             No teams match the current filters.
                           </td>
                         </tr>
                       ) : (
                         filteredTeams.map((team) => {
                           const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
+                          const members = membersByTeam[team.id] ?? [];
+                          const expanded = expandedTeamIds.has(team.id);
                           return (
-                            <tr key={team.id} className="border-b border-border align-top last:border-0">
-                              <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>
-                              <td className="px-4 py-3 text-ink">{team.team_name}</td>
-                              <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
-                              <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                              <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
-                              <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
-                              {localSessions.map((s) => {
-                                const status = teamStatus(team, s);
-                                const busy = busyKey === `team:${team.id}:${s.id}`;
-                                return (
-                                  <td key={s.id} className="px-4 py-3">
-                                    <div className="flex flex-col items-start gap-1.5">
-                                      <span
-                                        className={`inline-block rounded-full border px-3 py-1 text-xs ${statusClassName(status)}`}
+                            <Fragment key={team.id}>
+                              <tr className="border-b border-border align-top last:border-0">
+                                <td className="px-2 py-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleExpanded(team.id)}
+                                    aria-label={expanded ? "Collapse members" : "Expand members"}
+                                    className="text-ink-muted transition-colors hover:text-gold"
+                                  >
+                                    {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
+                                  </button>
+                                </td>
+                                <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>
+                                <td className="px-4 py-3 text-ink">{team.team_name}</td>
+                                <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
+                                <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
+                                <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
+                                <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
+                                {localSessions.map((s) => {
+                                  const status = teamStatus(team, s);
+                                  const busy = busyKey === `team:${team.id}:${s.id}`;
+                                  return (
+                                    <td key={s.id} className="px-4 py-3">
+                                      <select
+                                        value={status === "Not Marked" ? "" : status}
+                                        disabled={busy}
+                                        onChange={(e) => handleMarkTeam(team.id, s.id, e.target.value as "Present" | "Absent")}
+                                        className={`rounded-full border px-3 py-1.5 text-xs outline-none disabled:opacity-60 ${statusClassName(status)}`}
                                       >
-                                        {status}
-                                      </span>
-                                      <div className="flex gap-1.5">
-                                        <button
-                                          type="button"
-                                          disabled={busy}
-                                          onClick={() => handleMarkTeam(team.id, s.id, "Present")}
-                                          className="rounded-full border border-gitam/40 px-2 py-0.5 text-[10px] font-medium text-gitam normal-case transition-colors hover:bg-gitam/10 disabled:opacity-60"
-                                        >
-                                          All Present
-                                        </button>
-                                        <button
-                                          type="button"
-                                          disabled={busy}
-                                          onClick={() => handleMarkTeam(team.id, s.id, "Absent")}
-                                          className="rounded-full border border-danger/40 px-2 py-0.5 text-[10px] font-medium text-danger normal-case transition-colors hover:bg-danger/10 disabled:opacity-60"
-                                        >
-                                          All Absent
-                                        </button>
-                                      </div>
+                                        <option value="" disabled>
+                                          Not Marked
+                                        </option>
+                                        <option value="Present">Present</option>
+                                        <option value="Absent">Absent</option>
+                                      </select>
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                              {expanded && (
+                                <tr className="border-b border-border bg-void/40">
+                                  <td colSpan={TEAM_FIXED_COLS + localSessions.length} className="px-4 py-4">
+                                    <div className="overflow-x-auto rounded-lg border border-border">
+                                      <table className="w-full text-left font-heading text-sm">
+                                        <thead>
+                                          <tr className="border-b border-border text-xs text-ink-muted uppercase">
+                                            <th className="px-4 py-2">Name</th>
+                                            <th className="px-4 py-2">Email</th>
+                                            <th className="px-4 py-2">Position</th>
+                                            <th className="px-4 py-2">Phone No</th>
+                                            {localSessions.map((s) => (
+                                              <th key={s.id} className="px-4 py-2">
+                                                {s.name}
+                                              </th>
+                                            ))}
+                                          </tr>
+                                        </thead>
+                                        <tbody>
+                                          {members.map((m) => (
+                                            <tr key={m.id} className="border-b border-border last:border-0">
+                                              <td className="px-4 py-2 text-ink">
+                                                {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
+                                              </td>
+                                              <td className="px-4 py-2 text-ink-muted">{m.gitam_email}</td>
+                                              <td className="px-4 py-2 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
+                                              <td className="px-4 py-2 text-ink-muted">{m.phone}</td>
+                                              {localSessions.map((s) => {
+                                                const mStatus = memberStatus(m.id, s);
+                                                const mBusy = busyKey === `member:${s.id}:${m.id}`;
+                                                return (
+                                                  <td key={s.id} className="px-4 py-2">
+                                                    <button
+                                                      type="button"
+                                                      disabled={mBusy}
+                                                      onClick={() => handleToggleMember(s.id, m.id, team.id, mStatus)}
+                                                      className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-60 ${statusClassName(mStatus)}`}
+                                                    >
+                                                      {mStatus}
+                                                    </button>
+                                                  </td>
+                                                );
+                                              })}
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
                                     </div>
                                   </td>
-                                );
-                              })}
-                            </tr>
+                                </tr>
+                              )}
+                            </Fragment>
                           );
                         })
                       )}
@@ -540,6 +610,8 @@ export function AdminAttendanceSection({
                   </div>
                 </div>
 
+                <p className="font-heading text-xs text-ink-muted">Showing {filteredMembers.length} members</p>
+
                 <div className="overflow-x-auto rounded-xl border border-border bg-surface">
                   <table className="w-full text-left font-heading text-sm">
                     <thead>
@@ -559,57 +631,56 @@ export function AdminAttendanceSection({
                         <th className="px-4 py-3">Stay</th>
                         <th className="px-4 py-3">Venue</th>
                         <th className="px-4 py-3">SPOC</th>
-                        <th className="px-4 py-3">Attendance</th>
+                        {localSessions.map((s) => (
+                          <th key={s.id} className="px-4 py-3">
+                            {s.name}
+                          </th>
+                        ))}
                       </tr>
                     </thead>
                     <tbody>
                       {filteredMembers.length === 0 ? (
                         <tr>
-                          <td colSpan={16} className="px-4 py-8 text-center text-ink-muted">
+                          <td colSpan={MEMBER_FIXED_COLS + localSessions.length} className="px-4 py-8 text-center text-ink-muted">
                             No members match the current filters.
                           </td>
                         </tr>
                       ) : (
-                        filteredMembers.map(({ member: m, team }) => {
-                          const status = memberStatus(m.id, latestSession);
-                          const key = latestSession ? `member:${latestSession.id}:${m.id}` : "";
-                          const busy = busyKey === key;
-                          return (
-                            <tr key={m.id} className="border-b border-border align-top last:border-0">
-                              <td className="px-4 py-3 text-ink-muted">{m.campus}</td>
-                              <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
-                              <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
-                              <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
-                              <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
-                              <td className="px-4 py-3 text-ink">{m.name}</td>
-                              <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
-                              <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
-                              <td className="px-4 py-3 text-ink-muted">{m.phone}</td>
-                              <td className="px-4 py-3 text-ink-muted">{m.year_of_study}</td>
-                              <td className="px-4 py-3 text-ink-muted">{m.school}</td>
-                              <td className="px-4 py-3 text-ink-muted">{m.branch}</td>
-                              <td className="px-4 py-3 text-ink-muted">{m.stay}</td>
-                              <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
-                              <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
-                              <td className="px-4 py-3">
-                                {latestSession ? (
+                        filteredMembers.map(({ member: m, team }) => (
+                          <tr key={m.id} className="border-b border-border align-top last:border-0">
+                            <td className="px-4 py-3 text-ink-muted">{m.campus}</td>
+                            <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
+                            <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
+                            <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
+                            <td className="px-4 py-3 text-ink">{m.name}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.phone}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.year_of_study}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.school}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.branch}</td>
+                            <td className="px-4 py-3 text-ink-muted">{m.stay}</td>
+                            <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
+                            <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
+                            {localSessions.map((s) => {
+                              const status = memberStatus(m.id, s);
+                              const busy = busyKey === `member:${s.id}:${m.id}`;
+                              return (
+                                <td key={s.id} className="px-4 py-3">
                                   <button
                                     type="button"
                                     disabled={busy}
-                                    onClick={() => handleToggleMember(latestSession.id, m.id, team.id, status)}
+                                    onClick={() => handleToggleMember(s.id, m.id, team.id, status)}
                                     className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-60 ${statusClassName(status)}`}
                                   >
                                     {status}
                                   </button>
-                                ) : (
-                                  <span className={`inline-block rounded-full border px-3 py-1 text-xs ${statusClassName(status)}`}>
-                                    {status}
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))
                       )}
                     </tbody>
                   </table>
