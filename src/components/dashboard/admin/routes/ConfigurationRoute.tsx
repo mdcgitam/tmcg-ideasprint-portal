@@ -7,7 +7,7 @@ export async function ConfigurationRoute({ profile }: { profile: ProfileRow }) {
   const { config } = await fetchAdminDashboardData(profile);
 
   return (
-    <SectionPageShell title="Configuration" scope="admin">
+    <SectionPageShell title="Configuration" scope="admin" campus={profile.campus}>
       <ConfigurationSection config={config} />
     </SectionPageShell>
   );

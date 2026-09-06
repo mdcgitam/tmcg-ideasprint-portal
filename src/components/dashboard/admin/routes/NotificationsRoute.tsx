@@ -10,7 +10,7 @@ export async function NotificationsRoute({ profile }: { profile: ProfileRow }) {
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
 
   return (
-    <SectionPageShell title="Notifications" scope={scope}>
+    <SectionPageShell title="Notifications" scope={scope} campus={profile.campus}>
       <AdminNotificationsSection
         profileId={profile.id}
         role={profile.role}

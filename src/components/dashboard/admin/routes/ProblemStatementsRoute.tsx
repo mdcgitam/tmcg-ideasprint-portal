@@ -9,7 +9,7 @@ export async function ProblemStatementsRoute({ profile }: { profile: ProfileRow 
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
 
   return (
-    <SectionPageShell title="Problem Statements" scope="admin">
+    <SectionPageShell title="Problem Statements" scope="admin" campus={profile.campus}>
       <ProblemStatementsAdminSection
         singleCampus={singleCampus}
         problemStatements={problemStatements}

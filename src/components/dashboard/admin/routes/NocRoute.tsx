@@ -15,7 +15,7 @@ export async function NocRoute({ profile, roomId }: { profile: ProfileRow; roomI
   ) : undefined;
 
   return (
-    <SectionPageShell title="NOC" scope={scope} headerExtra={venueTabs}>
+    <SectionPageShell title="NOC" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
       <NocSection
         singleCampus={singleCampus}
         hideVenue={isZoneManager}

@@ -23,7 +23,7 @@ export async function PptRoute({ profile, roomId }: { profile: ProfileRow; roomI
   ) : undefined;
 
   return (
-    <SectionPageShell title="PPT" scope={scope} headerExtra={venueTabs}>
+    <SectionPageShell title="PPT" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
       <PptSection
         singleCampus={singleCampus}
         hideVenue={isZoneManager}

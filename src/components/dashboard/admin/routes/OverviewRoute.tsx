@@ -16,7 +16,7 @@ export async function OverviewRoute({ profile, roomId }: { profile: ProfileRow; 
     ) : undefined;
 
   return (
-    <SectionPageShell title="Overview" scope={scope} headerExtra={venueTabs}>
+    <SectionPageShell title="Overview" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
       <OverviewSection
         scope={scope}
         teams={teams}

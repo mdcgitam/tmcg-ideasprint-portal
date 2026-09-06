@@ -15,7 +15,7 @@ export async function TeamsRoute({ profile, roomId }: { profile: ProfileRow; roo
   ) : undefined;
 
   return (
-    <SectionPageShell title="Profile" scope={scope} headerExtra={venueTabs}>
+    <SectionPageShell title="Profile" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
       <TeamsPage
         teams={teams}
         membersByTeam={membersByTeam}

@@ -15,7 +15,7 @@ export async function AttendanceRoute({ profile, roomId }: { profile: ProfileRow
   ) : undefined;
 
   return (
-    <SectionPageShell title="Attendance" scope={scope} headerExtra={venueTabs}>
+    <SectionPageShell title="Attendance" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
       <AdminAttendanceSection
         singleCampus={singleCampus}
         hideVenue={isZoneManager}

@@ -16,7 +16,7 @@ export async function ApprovalsRoute({ profile, roomId }: { profile: ProfileRow;
     ) : undefined;
 
   return (
-    <SectionPageShell title="Approvals" scope={scope} headerExtra={venueTabs}>
+    <SectionPageShell title="Approvals" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
       <ApprovalsSection
         pendingApprovals={pendingApprovals}
         exitRequests={exitRequests}

@@ -8,7 +8,7 @@ export async function StaffAccountsRoute({ profile }: { profile: ProfileRow }) {
   const isSuperAdmin = profile.role === "Super Admin";
 
   return (
-    <SectionPageShell title="Staff Accounts" scope="admin">
+    <SectionPageShell title="Staff Accounts" scope="admin" campus={profile.campus}>
       <StaffAccountsSection
         campus={profile.campus}
         canManageCampusAdmins={isSuperAdmin}
