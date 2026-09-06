@@ -71,7 +71,7 @@ export function NocIndividualsView({
   );
 
   const campusOptions = useMemo(
-    () => Array.from(new Set(allRows.map(({ member }) => member.campus).filter((c): c is string => Boolean(c)))),
+    () => Array.from(new Set(allRows.map(({ member }) => member.campus).filter((c): c is NonNullable<typeof c> => Boolean(c)))),
     [allRows],
   );
 
