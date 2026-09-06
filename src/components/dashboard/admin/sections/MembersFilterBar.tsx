@@ -1,7 +1,8 @@
 import { type ReactNode, useMemo } from "react";
-import type { ProfileRow, RoomRow, TeamRow } from "@/types/database";
+import type { ExitRequestRow, ProfileRow, RoomRow, TeamRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { FilterSelect, YEAR_OPTIONS } from "./TeamFormFields";
+import { MEMBER_STATUS_OPTIONS, exitStatusLabel } from "./ExitStatusBadge";
 
 export interface MemberRow {
   member: TeamMemberProfile;
@@ -23,6 +24,7 @@ export interface MemberFilters {
   stay: string;
   room: string;
   spoc: string;
+  status: string;
 }
 
 export const EMPTY_MEMBER_FILTERS: MemberFilters = {
@@ -40,19 +42,21 @@ export const EMPTY_MEMBER_FILTERS: MemberFilters = {
   stay: "",
   room: "",
   spoc: "",
+  status: "",
 };
 
-/** "View by Members"' filter set — one row per member. Search matches User ID, Name, Email, Reg No, Phone No. */
-export function filterMembers(rows: MemberRow[], filters: MemberFilters): MemberRow[] {
+/** "View by Participants"' filter set — one row per member. Search matches User ID, Team Name, Participant Name, Reg No, Email, Phone No. */
+export function filterMembers(rows: MemberRow[], filters: MemberFilters, exitRequests: ExitRequestRow[]): MemberRow[] {
   const q = filters.search.trim().toLowerCase();
   return rows.filter(({ member, team }) => {
     if (q) {
-      const haystack = `${member.user_id} ${member.name} ${member.gitam_email} ${member.reg_no} ${member.phone}`.toLowerCase();
+      const haystack =
+        `${member.user_id} ${team.team_name} ${member.name} ${member.reg_no} ${member.gitam_email} ${member.phone}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     if (filters.campus && member.campus !== filters.campus) return false;
-    if (filters.position && (filters.position === "lead") !== member.is_lead) return false;
     if (filters.teamSize && String(team.member_count) !== filters.teamSize) return false;
+    if (filters.position && (filters.position === "lead") !== member.is_lead) return false;
     if (filters.graduation && member.graduation !== filters.graduation) return false;
     if (filters.program && member.program !== filters.program) return false;
     if (filters.year && member.year_of_study !== filters.year) return false;
@@ -63,6 +67,7 @@ export function filterMembers(rows: MemberRow[], filters: MemberFilters): Member
     if (filters.stay && member.stay !== filters.stay) return false;
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
+    if (filters.status && exitStatusLabel(exitRequests.find((r) => r.profile_id === member.id)) !== filters.status) return false;
     return true;
   });
 }
@@ -109,13 +114,14 @@ export function MembersFilterBar({
         <input
           value={filters.search}
           onChange={(e) => set("search", e.target.value)}
-          placeholder="Search by user ID, name, email, reg no, or phone…"
+          placeholder="Search by user ID, team name, participant name, reg no, email, or phone…"
           className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
         {extraActions}
       </div>
       <div className="flex flex-wrap gap-2">
         <FilterSelect label="Campus" value={filters.campus} onChange={(v) => set("campus", v)} options={campusOptions} />
+        <FilterSelect label="Team Size" value={filters.teamSize} onChange={(v) => set("teamSize", v)} options={["3", "4"]} />
         <FilterSelect
           label="Position"
           value={filters.position}
@@ -123,7 +129,6 @@ export function MembersFilterBar({
           options={["Team Lead", "Member"]}
           valueOptions={["lead", "member"]}
         />
-        <FilterSelect label="Team Size" value={filters.teamSize} onChange={(v) => set("teamSize", v)} options={["3", "4"]} />
         <FilterSelect label="Graduation" value={filters.graduation} onChange={(v) => set("graduation", v)} options={graduationOptions} />
         <FilterSelect label="Program" value={filters.program} onChange={(v) => set("program", v)} options={programOptions} />
         <FilterSelect label="Year" value={filters.year} onChange={(v) => set("year", v)} options={YEAR_OPTIONS} />
@@ -146,6 +151,7 @@ export function MembersFilterBar({
           options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
           valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
         />
+        <FilterSelect label="Status" value={filters.status} onChange={(v) => set("status", v)} options={[...MEMBER_STATUS_OPTIONS]} />
         {onToggleSort && (
           <button
             type="button"

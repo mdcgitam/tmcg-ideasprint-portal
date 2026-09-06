@@ -227,7 +227,7 @@ export function AdminAttendanceSection({
         return localSessions.map((s) => ({
           Campus: lead?.campus ?? "—",
           "Team Name": team.team_name,
-          "Team Lead Name": lead?.name ?? "—",
+          "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
@@ -300,7 +300,7 @@ export function AdminAttendanceSection({
     );
   }
 
-  const TEAM_FIXED_COLS = 7; // chevron, Campus, Team Name, Team Lead Name, Team Lead Phone, SPOC, Venue
+  const TEAM_FIXED_COLS = 7; // chevron, Campus, Team Name, Team Lead, Lead Phone No, SPOC, Venue
   const MEMBER_FIXED_COLS = 9; // Campus, Team Name, Team Size, Member ID, Name, Position, Stay, Venue, SPOC
 
   return (

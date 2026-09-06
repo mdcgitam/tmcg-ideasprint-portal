@@ -14,8 +14,9 @@ import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { downloadCsv } from "@/lib/csv";
 import { TeamDetailModal } from "./TeamDetailModal";
 import { TeamFilterBar, filterTeams, EMPTY_TEAM_FILTERS, type TeamFilters } from "./TeamFilterBar";
+import { teamActiveStatus } from "./ExitStatusBadge";
 
-/** "View by Team" — one row per team, matching "View by Members"' table styling. Actions opens the full team detail view. */
+/** "View by Teams" — one row per team, matching "View by Participants"' table styling. Actions opens the full team detail view. */
 export function TeamsByTeamView({
   teams,
   membersByTeam,
@@ -50,8 +51,8 @@ export function TeamsByTeamView({
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
   const filteredTeams = useMemo(
-    () => filterTeams(teams, membersByTeam, filters),
-    [teams, membersByTeam, filters],
+    () => filterTeams(teams, membersByTeam, filters, exitRequests),
+    [teams, membersByTeam, filters, exitRequests],
   );
 
   function handleExportCsv() {
@@ -60,19 +61,16 @@ export function TeamsByTeamView({
       filteredTeams.map((team) => {
         const members = membersByTeam[team.id] ?? [];
         const lead = members.find((m) => m.is_lead);
-        const exitedCount = members.filter(
-          (m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved",
-        ).length;
         return {
           Campus: team.campus,
           "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
-          Size: String(members.length),
+          "Team Size": String(members.length),
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
-          Status: exitedCount > 0 ? `${exitedCount} Exited` : "Active",
+          Status: teamActiveStatus(members, exitRequests),
         };
       }),
     );
@@ -97,6 +95,7 @@ export function TeamsByTeamView({
         onChange={setFilters}
         teams={teams}
         membersByTeam={membersByTeam}
+        exitRequests={exitRequests}
         rooms={rooms}
         staffAccounts={staffAccounts}
         extraActions={
@@ -138,9 +137,6 @@ export function TeamsByTeamView({
                 const members = membersByTeam[team.id] ?? [];
                 const lead = members.find((m) => m.is_lead);
                 const room = roomOf(team);
-                const exitedCount = members.filter(
-                  (m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved",
-                ).length;
 
                 return (
                   <tr key={team.id} className="border-b border-border align-top last:border-0">
@@ -152,9 +148,7 @@ export function TeamsByTeamView({
                     <td className="px-4 py-3 text-ink-muted">{members.length}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
-                    <td className="px-4 py-3 text-ink-muted">
-                      {exitedCount > 0 ? `${exitedCount} Exited` : "Active"}
-                    </td>
+                    <td className="px-4 py-3 text-ink-muted">{teamActiveStatus(members, exitRequests)}</td>
                     <td className="px-4 py-3">
                       <button type="button" onClick={() => setOpenTeamId(team.id)} className="text-gold underline">
                         View

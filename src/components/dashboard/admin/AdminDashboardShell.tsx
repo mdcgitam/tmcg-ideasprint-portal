@@ -58,7 +58,7 @@ function countForSlug(slug: string, counts: DashboardCardCounts): number {
 
 const BASE_CARDS: CardDef[] = [
   { key: "Overview", slug: "overview", icon: LayoutDashboard },
-  { key: "Teams", slug: "teams", icon: Users },
+  { key: "Profile", slug: "teams", icon: Users },
   { key: "Approvals", slug: "approvals", icon: ClipboardCheck },
   { key: "Attendance", slug: "attendance", icon: CalendarCheck },
   { key: "Notifications", slug: "notifications", icon: Bell },

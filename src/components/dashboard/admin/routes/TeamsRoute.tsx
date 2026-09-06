@@ -9,7 +9,7 @@ export async function TeamsRoute({ profile }: { profile: ProfileRow }) {
   const scope = profile.role === "Super Admin" ? "admin" : "spoc";
 
   return (
-    <SectionPageShell title="Teams" scope={scope}>
+    <SectionPageShell title="Profile" scope={scope}>
       <TeamsPage
         teams={teams}
         membersByTeam={membersByTeam}

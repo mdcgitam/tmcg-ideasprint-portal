@@ -46,9 +46,9 @@ export function TeamManagePanel({
     downloadCsv(
       `${team.team_name}-roster`,
       members.map((m) => ({
-        "Member Name": m.name,
-        "Reg./Roll No.": m.reg_no,
-        "Year of Study": m.year_of_study,
+        "Participant Name": m.name,
+        "Reg No": m.reg_no,
+        Year: m.year_of_study,
         "Team Name": team.team_name,
         "Team Lead": lead?.name ?? "—",
         SPOC: spocName ?? "Unassigned",

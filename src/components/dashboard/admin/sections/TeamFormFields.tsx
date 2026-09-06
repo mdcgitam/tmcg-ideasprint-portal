@@ -37,7 +37,7 @@ export function MemberEditForm({
         <EditField label="Name" value={form.name} onChange={(v) => patch({ name: v })} />
         <EditField label="Email" value={form.gitam_email} onChange={(v) => patch({ gitam_email: v })} />
         <EditField label="Phone" value={form.phone} onChange={(v) => patch({ phone: v })} />
-        <EditField label="Reg./Roll No." value={form.reg_no} onChange={(v) => patch({ reg_no: v })} />
+        <EditField label="Reg No" value={form.reg_no} onChange={(v) => patch({ reg_no: v })} />
 
         <EditSelect
           label="Graduation"

@@ -16,10 +16,10 @@ function teamIdSortKey(teamId: string): number {
 }
 
 /**
- * "View by Members" — one row per member, filtered/searched at the member
- * level, with a View button that opens the full TeamDetailModal (same as
- * View by Team). Venue/SPOC are derived from the team's room, per the
- * room-based assignment model in RoomsZonesSection.
+ * "View by Participants" — one row per member, filtered/searched at the
+ * member level, with a View button that opens the full TeamDetailModal
+ * (same as View by Teams). Venue/SPOC are derived from the team's room, per
+ * the room-based assignment model in RoomsZonesSection.
  */
 export function TeamsByMembersView({
   teams,
@@ -65,7 +65,7 @@ export function TeamsByMembersView({
     [teams, membersByTeam],
   );
 
-  const filteredRows = useMemo(() => filterMembers(allRows, filters), [allRows, filters]);
+  const filteredRows = useMemo(() => filterMembers(allRows, filters, exitRequests), [allRows, filters, exitRequests]);
 
   const groups = useMemo(() => {
     const map = new Map<string, MemberRow[]>();
@@ -85,13 +85,14 @@ export function TeamsByMembersView({
     downloadCsv(
       "all-members",
       filteredRows.map(({ member, team }) => ({
-        "Member Name": member.name,
+        "Participant Name": member.name,
         Email: member.gitam_email,
-        "Reg./Roll No.": member.reg_no,
+        "Reg No": member.reg_no,
         Graduation: member.graduation ?? "",
         Program: member.program ?? "",
-        "Year of Study": member.year_of_study,
+        Year: member.year_of_study,
         "Team Name": team.team_name,
+        "Team Size": String(team.member_count),
         "Team Lead": (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.name ?? "—",
         SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
         "Room Number": roomOf(team)?.name ?? "Unassigned",
@@ -146,11 +147,12 @@ export function TeamsByMembersView({
                 <th className="px-4 py-3">Campus</th>
                 <th className="px-4 py-3">User ID</th>
                 <th className="px-4 py-3">Team Name</th>
+                <th className="px-4 py-3">Team Size</th>
                 <th className="px-4 py-3">Participant Name</th>
                 <th className="px-4 py-3">Position</th>
-                <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Reg No</th>
-                <th className="px-4 py-3">Phone No</th>
+                <th className="px-4 py-3">Email</th>
+                <th className="px-4 py-3">Phone</th>
                 <th className="px-4 py-3">Graduation</th>
                 <th className="px-4 py-3">Program</th>
                 <th className="px-4 py-3">Year</th>
@@ -182,10 +184,11 @@ export function TeamsByMembersView({
                           <td className="px-4 py-3 text-ink-muted">
                             {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
                           </td>
+                          <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
                           <td className="px-4 py-3 text-ink">{m.name}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
-                          <td className="px-4 py-3 text-ink-muted">{m.gitam_email}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
+                          <td className="px-4 py-3 text-ink-muted">{m.gitam_email}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.phone}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.graduation ?? "—"}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.program ?? "—"}</td>

@@ -1,7 +1,8 @@
 import { type ReactNode, useMemo } from "react";
-import type { RoomRow, TeamRow, ProfileRow } from "@/types/database";
+import type { ExitRequestRow, RoomRow, TeamRow, ProfileRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { FilterSelect } from "./TeamFormFields";
+import { TEAM_STATUS_OPTIONS, teamActiveStatus } from "./ExitStatusBadge";
 
 export interface TeamFilters {
   search: string;
@@ -9,6 +10,7 @@ export interface TeamFilters {
   teamSize: string;
   room: string;
   spoc: string;
+  status: string;
 }
 
 export const EMPTY_TEAM_FILTERS: TeamFilters = {
@@ -17,13 +19,15 @@ export const EMPTY_TEAM_FILTERS: TeamFilters = {
   teamSize: "",
   room: "",
   spoc: "",
+  status: "",
 };
 
-/** "View by Team"'s filter set — Campus / Team Size / Venue / SPOC, no zones/year/gender (item request: keep this view lean). Search matches Team Name, Team Lead Name, and Team Lead Phone only. */
+/** "View by Teams"' filter set — Campus / Team Size / Venue / SPOC / Status. Search matches Team Name, Team ID, Team Lead, and Lead Phone No only. */
 export function filterTeams(
   teams: TeamRow[],
   membersByTeam: Record<string, TeamMemberProfile[]>,
   filters: TeamFilters,
+  exitRequests: ExitRequestRow[],
 ): TeamRow[] {
   const q = filters.search.trim().toLowerCase();
   return teams.filter((team) => {
@@ -31,13 +35,14 @@ export function filterTeams(
     const lead = members.find((m) => m.is_lead);
 
     if (q) {
-      const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
+      const haystack = `${team.team_name} ${team.team_id} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     if (filters.campus && lead?.campus !== filters.campus) return false;
     if (filters.teamSize && String(team.member_count) !== filters.teamSize) return false;
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
+    if (filters.status && teamActiveStatus(members, exitRequests) !== filters.status) return false;
     return true;
   });
 }
@@ -55,6 +60,7 @@ export function TeamFilterBar({
   onChange: (next: TeamFilters) => void;
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
+  exitRequests: ExitRequestRow[];
   rooms: RoomRow[];
   staffAccounts: ProfileRow[];
   extraActions?: ReactNode;
@@ -81,7 +87,7 @@ export function TeamFilterBar({
         <input
           value={filters.search}
           onChange={(e) => set("search", e.target.value)}
-          placeholder="Search by team name, team lead name, or team lead phone…"
+          placeholder="Search by team name, team ID, team lead, or lead phone no…"
           className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
         {extraActions}
@@ -103,6 +109,7 @@ export function TeamFilterBar({
           options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
           valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
         />
+        <FilterSelect label="Status" value={filters.status} onChange={(v) => set("status", v)} options={[...TEAM_STATUS_OPTIONS]} />
       </div>
     </div>
   );

@@ -478,8 +478,8 @@ export function ProblemStatementsAdminSection({
                       <th className="px-4 py-3" />
                       <th className="px-4 py-3">Campus</th>
                       <th className="px-4 py-3">Team Name</th>
-                      <th className="px-4 py-3">Team Lead Name</th>
-                      <th className="px-4 py-3">Team Lead Phone</th>
+                      <th className="px-4 py-3">Team Lead</th>
+                      <th className="px-4 py-3">Lead Phone No</th>
                       <th className="px-4 py-3">Team Size</th>
                       <th className="px-4 py-3">Venue</th>
                       <th className="px-4 py-3">SPOC</th>
