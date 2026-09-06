@@ -64,12 +64,11 @@ export function TeamsByTeamView({
           (m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved",
         ).length;
         return {
-          "Team ID": team.team_id,
           Campus: lead?.campus ?? "—",
+          "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
           "Lead Phone": lead?.phone ?? "—",
-          School: lead?.school ?? "—",
           Size: String(members.length),
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
@@ -122,12 +121,11 @@ export function TeamsByTeamView({
           <table className="w-full text-left font-heading text-sm">
             <thead>
               <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                <th className="px-4 py-3">Team ID</th>
                 <th className="px-4 py-3">Campus</th>
+                <th className="px-4 py-3">Team ID</th>
                 <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Team Lead</th>
                 <th className="px-4 py-3">Lead Phone</th>
-                <th className="px-4 py-3">School</th>
                 <th className="px-4 py-3">Size</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
@@ -146,12 +144,11 @@ export function TeamsByTeamView({
 
                 return (
                   <tr key={team.id} className="border-b border-border align-top last:border-0">
-                    <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                     <td className="px-4 py-3 text-ink">{team.team_name}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-muted">{lead?.school ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{members.length}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
