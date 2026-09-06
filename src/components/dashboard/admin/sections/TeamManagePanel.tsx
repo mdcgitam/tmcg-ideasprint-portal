@@ -157,7 +157,7 @@ export function TeamManagePanel({
 
       <p className="font-heading text-xs text-ink-muted">
         Room: {room?.name ?? "Unassigned"} {zone && `· Zone: ${zone.name}`} · SPOC: {spocName ?? "Unassigned"}
-        {scope === "admin" && <span className="text-ink-faint"> — change this from Rooms & Zones</span>}
+        {scope === "admin" && <span className="text-ink-faint"> — change this from Zones and Venues</span>}
       </p>
 
       {ps && (

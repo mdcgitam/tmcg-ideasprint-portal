@@ -7,7 +7,7 @@ export async function RoomsZonesRoute({ profile }: { profile: ProfileRow }) {
   const { teams, membersByTeam, rooms, zones, spocs, staffAccounts } = await fetchAdminDashboardData(profile);
 
   return (
-    <SectionPageShell title="Rooms & Zones" scope="admin">
+    <SectionPageShell title="Zones and Venues" scope="admin">
       <RoomsZonesSection
         campus={profile.campus}
         teams={teams}

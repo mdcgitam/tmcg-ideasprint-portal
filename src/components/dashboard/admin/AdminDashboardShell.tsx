@@ -75,7 +75,7 @@ const BASE_CARDS: CardDef[] = [
   { key: "PPT", slug: "ppt", icon: Presentation },
 ];
 const ADMIN_ONLY_CARDS: CardDef[] = [
-  { key: "Rooms & Zones", slug: "rooms-zones", icon: DoorOpen },
+  { key: "Zones and Venues", slug: "rooms-zones", icon: DoorOpen },
   { key: "Problem Statements", slug: "problem-statements", icon: FileQuestion },
   { key: "Configuration", slug: "configuration", icon: Settings },
   { key: "Staff Accounts", slug: "staff-accounts", icon: UserCog },
