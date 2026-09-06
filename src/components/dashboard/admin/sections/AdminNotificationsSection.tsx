@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { NotificationRow, RoomRow } from "@/types/database";
+import { useEffect, useMemo, useState } from "react";
+import type { NotificationRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
 import {
   markNotificationRead,
   broadcastNotification,
   DashboardActionError,
-  type BroadcastRoleAudience,
+  type BroadcastRoleFilter,
+  type BroadcastScope,
 } from "@/lib/dashboard/admin-actions";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -14,29 +15,50 @@ import { createClient } from "@/lib/supabase/client";
 
 type View = "all" | "by-status";
 
-const ROLE_OPTIONS: { value: BroadcastRoleAudience; label: string }[] = [
-  { value: "Member", label: "Members" },
-  { value: "Team Lead", label: "Leads" },
-  { value: "SPOC", label: "SPOCs" },
-];
-
 /**
- * SPEC §70-72/§75 — SPOC and Super Admin both get notified on new
- * registrations, pending approvals, NOC/Exit Form uploads, etc. Super Admin
- * can additionally broadcast a notification to everyone, a single role, or
- * by venue (every team assigned to a room). Live-updates via Supabase
- * Realtime so a new broadcast or notice shows up without a page refresh.
+ * Who each role may notify (server-enforced in broadcast_notification):
+ *   Super Admin  -> Campus Admin / SPOC / Zone Manager / Team Lead / Member (any campus)
+ *   Campus Admin -> SPOC / Zone Manager / Team Lead / Member (own campus)
+ *   Zone Manager -> SPOC in their zone + Team Leads / Members of their zone
+ *   SPOC         -> Team Leads / Members in their room(s) only
+ *   Team Lead / Member -> receive only, no compose form.
  */
+const SENDER_CONFIG: Partial<
+  Record<UserRole, { roles: BroadcastRoleFilter[]; scopes: BroadcastScope[] }>
+> = {
+  "Super Admin": {
+    roles: ["", "Campus Admin", "SPOC", "Zone Manager", "Team Lead", "Member"],
+    scopes: ["all", "zone", "venue"],
+  },
+  "Campus Admin": {
+    roles: ["", "SPOC", "Zone Manager", "Team Lead", "Member"],
+    scopes: ["all", "zone", "venue"],
+  },
+  "Zone Manager": { roles: ["", "SPOC", "Team Lead", "Member"], scopes: ["all", "zone", "venue"] },
+  SPOC: { roles: ["", "Team Lead", "Member"], scopes: ["venue"] },
+};
+
+const ROLE_LABEL: Record<BroadcastRoleFilter, string> = {
+  "": "Anyone",
+  "Campus Admin": "Campus Admins",
+  SPOC: "SPOCs",
+  "Zone Manager": "Zone Managers",
+  "Team Lead": "Team Leads",
+  Member: "Members",
+};
+
 export function AdminNotificationsSection({
   profileId,
+  role,
   notifications,
-  scope,
   rooms,
+  zones,
 }: {
   profileId: string;
+  role: UserRole;
   notifications: NotificationRow[];
-  scope: "spoc" | "admin";
   rooms: RoomRow[];
+  zones: ZoneRow[];
 }) {
   const [local, setLocal] = useState(notifications);
 
@@ -66,38 +88,48 @@ export function AdminNotificationsSection({
       supabase.removeChannel(channel);
     };
   }, [profileId]);
+
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [view, setView] = useState<View>("all");
   const fadeRef = useTabFade(view);
 
-  const [audienceType, setAudienceType] = useState<"all" | "role" | "venue">("all");
-  const [roleAudience, setRoleAudience] = useState<BroadcastRoleAudience>("Member");
-  const [venueId, setVenueId] = useState("");
+  const config = SENDER_CONFIG[role];
+  // A SPOC only ever sends to their own venues.
+  const composeRooms = useMemo(
+    () => (role === "SPOC" ? rooms.filter((r) => r.spoc_profile_id === profileId) : rooms),
+    [role, rooms, profileId],
+  );
+
+  const [roleFilter, setRoleFilter] = useState<BroadcastRoleFilter>("");
+  const [sendScope, setSendScope] = useState<BroadcastScope>(config?.scopes[0] ?? "all");
+  const [scopeValue, setScopeValue] = useState("");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
   const [sendSuccess, setSendSuccess] = useState<string | null>(null);
 
+  const scopeLabel = (s: BroadcastScope) =>
+    s === "zone" ? "By Zone" : s === "venue" ? "By Venue" : role === "SPOC" ? "All my venues" : role === "Zone Manager" ? "My whole zone" : "Everyone";
+
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
-    const audienceValue = audienceType === "role" ? roleAudience : audienceType === "venue" ? venueId : "";
-    if (audienceType === "venue" && !venueId) {
-      setSendError("Choose a venue to notify.");
+    if ((sendScope === "zone" || sendScope === "venue") && !scopeValue) {
+      setSendError(`Pick a ${sendScope === "zone" ? "zone" : "venue"} to notify.`);
       return;
     }
     setSending(true);
     setSendError(null);
     setSendSuccess(null);
     try {
-      const count = await broadcastNotification(title.trim(), message.trim(), audienceType, audienceValue);
-      const audienceLabel =
-        audienceType === "all"
-          ? "people (whole community)"
-          : audienceType === "role"
-            ? (ROLE_OPTIONS.find((o) => o.value === roleAudience)?.label ?? roleAudience).toLowerCase()
-            : `team${count === 1 ? "" : "s"} at ${rooms.find((r) => r.id === venueId)?.name ?? "that venue"}`;
-      setSendSuccess(`Sent to ${count} ${audienceLabel}.`);
+      const count = await broadcastNotification(
+        title.trim(),
+        message.trim(),
+        sendScope,
+        sendScope === "all" ? "" : scopeValue,
+        roleFilter,
+      );
+      setSendSuccess(`Sent to ${count} ${count === 1 ? "person" : "people"}.`);
       setTitle("");
       setMessage("");
     } catch (err) {
@@ -143,83 +175,70 @@ export function AdminNotificationsSection({
 
   const unread = local.filter((n) => !n.read);
   const read = local.filter((n) => n.read);
+  const inputClass =
+    "rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold";
+  const chip = (active: boolean) =>
+    `rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
+      active ? "border-gold bg-gold/10 text-gold" : "border-border text-ink-muted hover:border-gold hover:text-gold"
+    }`;
 
   return (
     <div className="flex flex-col gap-6">
-      {scope === "admin" && (
+      {config && (
         <form onSubmit={handleSend} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Send Notification</span>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setAudienceType("all")}
-              className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
-                audienceType === "all"
-                  ? "border-gold bg-gold/10 text-gold"
-                  : "border-border text-ink-muted hover:border-gold hover:text-gold"
-              }`}
-            >
-              All
-            </button>
-            <button
-              type="button"
-              onClick={() => setAudienceType("role")}
-              className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
-                audienceType === "role"
-                  ? "border-gold bg-gold/10 text-gold"
-                  : "border-border text-ink-muted hover:border-gold hover:text-gold"
-              }`}
-            >
-              By Role
-            </button>
-            <button
-              type="button"
-              onClick={() => setAudienceType("venue")}
-              className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
-                audienceType === "venue"
-                  ? "border-gold bg-gold/10 text-gold"
-                  : "border-border text-ink-muted hover:border-gold hover:text-gold"
-              }`}
-            >
-              By Venue
-            </button>
-          </div>
-
-          {audienceType === "role" ? (
+          {/* Who */}
+          <div className="flex flex-col gap-1.5">
+            <span className="font-heading text-xs text-ink-muted">Send to</span>
             <div className="flex flex-wrap gap-2">
-              {ROLE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => setRoleAudience(opt.value)}
-                  className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
-                    roleAudience === opt.value
-                      ? "border-gold bg-gold/10 text-gold"
-                      : "border-border text-ink-muted hover:border-gold hover:text-gold"
-                  }`}
-                >
-                  {opt.label}
+              {config.roles.map((r) => (
+                <button key={r || "any"} type="button" onClick={() => setRoleFilter(r)} className={chip(roleFilter === r)}>
+                  {ROLE_LABEL[r]}
                 </button>
               ))}
             </div>
-          ) : audienceType === "venue" ? (
-            <select
-              value={venueId}
-              onChange={(e) => setVenueId(e.target.value)}
-              className="w-fit rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
-            >
+          </div>
+
+          {/* Where */}
+          <div className="flex flex-col gap-1.5">
+            <span className="font-heading text-xs text-ink-muted">Scope</span>
+            <div className="flex flex-wrap gap-2">
+              {config.scopes.map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => {
+                    setSendScope(s);
+                    setScopeValue("");
+                  }}
+                  className={chip(sendScope === s)}
+                >
+                  {scopeLabel(s)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {sendScope === "zone" && (
+            <select value={scopeValue} onChange={(e) => setScopeValue(e.target.value)} className={`w-fit ${inputClass}`}>
+              <option value="">Select a zone…</option>
+              {zones.map((z) => (
+                <option key={z.id} value={z.id}>
+                  {z.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {sendScope === "venue" && (
+            <select value={scopeValue} onChange={(e) => setScopeValue(e.target.value)} className={`w-fit ${inputClass}`}>
               <option value="">Select a venue…</option>
-              {rooms.map((r) => (
+              {composeRooms.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
                 </option>
               ))}
             </select>
-          ) : (
-            <p className="font-heading text-xs text-ink-muted">
-              Reaches every Member, Team Lead, and SPOC — the whole community.
-            </p>
           )}
 
           <input
@@ -227,7 +246,7 @@ export function AdminNotificationsSection({
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Title"
             required
-            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+            className={inputClass}
           />
           <textarea
             value={message}
@@ -235,7 +254,7 @@ export function AdminNotificationsSection({
             placeholder="Message"
             rows={3}
             required
-            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+            className={inputClass}
           />
           <div className="flex items-center gap-3">
             <button

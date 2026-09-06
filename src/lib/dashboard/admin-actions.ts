@@ -129,20 +129,32 @@ export function markNotificationRead(notificationId: string) {
   return callRpc<null>("mark_notification_read", { p_notification_id: notificationId });
 }
 
-export type BroadcastRoleAudience = "Member" | "Team Lead" | "SPOC";
+/** Roles a broadcast can be narrowed to. "" = anyone the sender may reach. */
+export type BroadcastRoleFilter = "" | "Campus Admin" | "SPOC" | "Zone Manager" | "Team Lead" | "Member";
+export type BroadcastScope = "all" | "zone" | "venue";
 
-/** Pushes a notification to every profile in the chosen audience (everyone, a single role, or every member of every team assigned to a room). Returns the recipient count. */
+/**
+ * Sends a notification. The server enforces the sender's reach:
+ *   Super Admin  -> Campus Admin / SPOC / Zone Manager / Team Lead / Member (any campus)
+ *   Campus Admin -> SPOC / Zone Manager / Team Lead / Member (own campus)
+ *   Zone Manager -> SPOC in their zone + Team Leads / Members of their zone
+ *   SPOC         -> Team Leads / Members in their room(s) only
+ * `scope` narrows by area ("all" | a zone | a venue); `roleFilter` narrows by role.
+ * Returns the recipient count.
+ */
 export function broadcastNotification(
   title: string,
   message: string,
-  audienceType: "all" | "role" | "venue",
-  audienceValue: string,
+  scope: BroadcastScope,
+  scopeValue: string,
+  roleFilter: BroadcastRoleFilter = "",
 ) {
   return callRpc<number>("broadcast_notification", {
     p_title: title,
     p_message: message,
-    p_audience_type: audienceType,
-    p_audience_value: audienceValue,
+    p_scope: scope,
+    p_scope_value: scopeValue,
+    p_role_filter: roleFilter,
   });
 }
 
