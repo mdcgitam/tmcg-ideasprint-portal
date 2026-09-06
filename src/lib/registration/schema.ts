@@ -79,7 +79,8 @@ export const memberSchema = z
 export type MemberFormValues = z.infer<typeof memberSchema>;
 
 export const teamDetailsSchema = z.object({
-  campus: z.enum(["VSP", "BLR", "HYD"], { error: "Select a campus" }),
+  // No default campus — the Team Lead must actively pick one ("" fails this).
+  campus: z.string().refine((v) => CAMPUS_OPTIONS.some((c) => c.code === v), "Select a campus"),
   teamName: z.string().trim().min(3, "Team name must be at least 3 characters"),
   memberCount: z.union([z.literal(MIN_TEAM_SIZE), z.literal(MAX_TEAM_SIZE)]),
 });

@@ -34,7 +34,7 @@ export function RegistrationStepper() {
     mode: "onSubmit",
     defaultValues: {
       guidelinesAcknowledged: false,
-      team: { teamName: "", campus: "VSP", memberCount: MIN_TEAM_SIZE },
+      team: { teamName: "", campus: "", memberCount: MIN_TEAM_SIZE },
       members: Array.from({ length: MIN_TEAM_SIZE }, emptyMember),
     },
   });

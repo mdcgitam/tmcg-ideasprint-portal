@@ -31,8 +31,12 @@ export function TeamDetailsStep() {
           id="team-campus"
           aria-invalid={!!errors.team?.campus}
           className={fieldInputClass}
+          defaultValue=""
           {...register("team.campus")}
         >
+          <option value="" disabled>
+            Select Campus
+          </option>
           {CAMPUS_OPTIONS.map((c) => (
             <option key={c.code} value={c.code}>{c.label}</option>
           ))}
