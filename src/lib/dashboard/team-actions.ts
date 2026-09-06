@@ -93,11 +93,22 @@ export function extendPresentationDeadline(teamId: string, deadlineIso: string) 
 
 // ── Storage (file bytes never touch our Next.js server — straight to Supabase) ──
 
+/**
+ * Supabase Storage rejects object keys with characters outside a limited set
+ * (en-dashes, other Unicode, most punctuation → 400 "Invalid key"). The
+ * original filename is cosmetic — keep a readable ASCII slug and always end
+ * in .pdf.
+ */
+function pdfKey(prefix: string, name: string): string {
+  const base = name.replace(/\.pdf$/i, "").replace(/[^A-Za-z0-9._-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  return `${prefix}/${Date.now()}-${(base || "file").slice(0, 80)}.pdf`;
+}
+
 export async function uploadNocFile(profileId: string, file: File): Promise<string> {
   const supabase = createClient();
-  const path = `${profileId}/${Date.now()}-${file.name}`;
+  const path = pdfKey(profileId, file.name);
   const { error } = await supabase.storage.from("noc-uploads").upload(path, file, { upsert: true, contentType: "application/pdf" });
-  if (error) throw new DashboardActionError("Couldn't upload the file — please try again.");
+  if (error) { console.error("storage upload failed:", error); throw new DashboardActionError(error.message || "Couldn't upload the file — please try again."); }
   return path;
 }
 
@@ -109,9 +120,9 @@ export async function deleteNocFile(path: string): Promise<void> {
 
 export async function uploadExitRequestFile(profileId: string, file: File): Promise<string> {
   const supabase = createClient();
-  const path = `${profileId}/${Date.now()}-${file.name}`;
+  const path = pdfKey(profileId, file.name);
   const { error } = await supabase.storage.from("exit-requests").upload(path, file, { upsert: true, contentType: "application/pdf" });
-  if (error) throw new DashboardActionError("Couldn't upload the file — please try again.");
+  if (error) { console.error("storage upload failed:", error); throw new DashboardActionError(error.message || "Couldn't upload the file — please try again."); }
   return path;
 }
 
@@ -123,9 +134,9 @@ export async function deleteExitRequestFile(path: string): Promise<void> {
 
 export async function uploadPresentationFile(teamId: string, file: File): Promise<string> {
   const supabase = createClient();
-  const path = `${teamId}/${Date.now()}-${file.name}`;
+  const path = pdfKey(teamId, file.name);
   const { error } = await supabase.storage.from("ppt-uploads").upload(path, file, { upsert: true, contentType: "application/pdf" });
-  if (error) throw new DashboardActionError("Couldn't upload the file — please try again.");
+  if (error) { console.error("storage upload failed:", error); throw new DashboardActionError(error.message || "Couldn't upload the file — please try again."); }
   return path;
 }
 
