@@ -86,7 +86,8 @@ expected_functions(name, expected_arg_count) as (
     ('current_campus', 0),
     ('is_same_campus_team', 1),
     ('is_same_campus_profile', 1),
-    ('seed_campus_super_admin', 2)
+    ('seed_campus_super_admin', 2),
+    ('add_team_member', 13)
 ),
 function_check as (
   select 'function'::text as category,

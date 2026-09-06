@@ -10,7 +10,8 @@ function friendlyError(raw: string): string {
   if (raw.includes("ALREADY_RESOLVED")) return "This request was already resolved.";
   if (raw.includes("REQUEST_NOT_FOUND")) return "That request couldn't be found.";
   if (raw.includes("TEAM_MIN_SIZE"))
-    return "A team can't drop below 3 members — every remaining member must also submit an exit form before this can be approved.";
+    return "A team can't go below 3 members. To exit a 3-member team, every member must submit an exit form together.";
+  if (raw.includes("TEAM_MAX_SIZE")) return "This team already has 4 members — you can't add another.";
   if (raw.includes("MEMBER_EXITED")) return "That member has exited the event — they're no longer marked for attendance.";
   if (raw.includes("TEAM_INACTIVE")) return "This team is inactive (fewer than 3 active members) and isn't part of attendance.";
   if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant couldn't be found.";
@@ -244,6 +245,25 @@ export interface UpdateMemberInput {
   branch: string;
   gender: string;
   stay: string;
+}
+
+/** Adds a Member (never a Team Lead) to a team. Rejected once the team has 4 members. Campus Admin / Super Admin only. */
+export function addTeamMember(teamId: string, input: UpdateMemberInput) {
+  return callRpc<string>("add_team_member", {
+    p_team_id: teamId,
+    p_name: input.name,
+    p_gitam_email: input.gitam_email,
+    p_phone: input.phone,
+    p_reg_no: input.reg_no,
+    p_graduation: input.graduation,
+    p_program: input.program,
+    p_year_of_study: input.year_of_study,
+    p_school: input.school,
+    p_department: input.department,
+    p_branch: input.branch,
+    p_gender: input.gender,
+    p_stay: input.stay,
+  });
 }
 
 export function updateMember(profileId: string, input: UpdateMemberInput) {

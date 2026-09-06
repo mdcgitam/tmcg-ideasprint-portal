@@ -4,11 +4,32 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ExitRequestRow, NocRow, ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
-import { deleteMember, updateMember, DashboardActionError, type UpdateMemberInput } from "@/lib/dashboard/admin-actions";
+import {
+  addTeamMember,
+  deleteMember,
+  updateMember,
+  DashboardActionError,
+  type UpdateMemberInput,
+} from "@/lib/dashboard/admin-actions";
 import { TeamManagePanel } from "./TeamManagePanel";
 import { NocStatus } from "./NocStatus";
 import { ExitStatusBadge } from "./ExitStatusBadge";
 import { MemberEditForm } from "./TeamFormFields";
+
+const EMPTY_MEMBER_FORM: UpdateMemberInput = {
+  name: "",
+  gitam_email: "",
+  phone: "",
+  reg_no: "",
+  graduation: "",
+  program: "",
+  year_of_study: "",
+  school: "",
+  department: "",
+  branch: "",
+  gender: "",
+  stay: "",
+};
 
 /**
  * Full team detail view opened when a team card is clicked in "View by
@@ -58,6 +79,12 @@ export function TeamDetailModal({
   const [memberError, setMemberError] = useState<string | null>(null);
   const [busyProfileId, setBusyProfileId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [addingMember, setAddingMember] = useState(false);
+  const [addForm, setAddForm] = useState<UpdateMemberInput>(EMPTY_MEMBER_FORM);
+  const [savingAdd, setSavingAdd] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
+
+  const activeCount = members.filter((m) => m.is_active).length;
 
   const selectedMember = members.find((m) => m.id === selectedMemberId) ?? null;
 
@@ -110,6 +137,24 @@ export function TeamDetailModal({
     } catch (err) {
       setDeleteError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
       setBusyProfileId(null);
+    }
+  }
+
+  function startAddMember() {
+    setAddForm(EMPTY_MEMBER_FORM);
+    setAddError(null);
+    setAddingMember(true);
+  }
+
+  async function handleAddMember() {
+    setSavingAdd(true);
+    setAddError(null);
+    try {
+      await addTeamMember(team.id, addForm);
+      window.location.reload();
+    } catch (err) {
+      setAddError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+      setSavingAdd(false);
     }
   }
 
@@ -178,6 +223,34 @@ export function TeamDetailModal({
                   <p className="mt-0.5 font-heading text-xs text-ink-muted">{m.gitam_email}</p>
                 </button>
               ))}
+
+              {scope === "admin" && (
+                <div className="mt-1">
+                  {addingMember ? (
+                    <MemberEditForm
+                      form={addForm}
+                      onChange={setAddForm}
+                      onSave={handleAddMember}
+                      onCancel={() => setAddingMember(false)}
+                      saving={savingAdd}
+                      error={addError}
+                      saveLabel="Add Member"
+                    />
+                  ) : members.length >= 4 ? (
+                    <p className="rounded-xl border border-border px-3 py-2 font-heading text-xs text-ink-faint">
+                      Team is full (4 members).
+                    </p>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={startAddMember}
+                      className="w-full rounded-xl border border-dashed border-gold/50 px-3 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+                    >
+                      + Add Member
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="rounded-xl border border-border p-4">
@@ -207,9 +280,16 @@ export function TeamDetailModal({
                       {scope === "admin" && !selectedMember.is_lead && (
                         <button
                           type="button"
-                          disabled={busyProfileId === selectedMember.id}
+                          disabled={
+                            busyProfileId === selectedMember.id || (selectedMember.is_active && activeCount <= 3)
+                          }
                           onClick={() => handleDeleteMember(selectedMember.id, selectedMember.name)}
-                          className="text-danger underline disabled:opacity-60"
+                          title={
+                            selectedMember.is_active && activeCount <= 3
+                              ? "A team can't go below 3 members"
+                              : undefined
+                          }
+                          className="text-danger underline disabled:opacity-40"
                         >
                           Remove
                         </button>

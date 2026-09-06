@@ -21,6 +21,7 @@ export function MemberEditForm({
   onCancel,
   saving,
   error,
+  saveLabel = "Save Changes",
 }: {
   form: UpdateMemberInput;
   onChange: (form: UpdateMemberInput) => void;
@@ -28,6 +29,7 @@ export function MemberEditForm({
   onCancel: () => void;
   saving: boolean;
   error: string | null;
+  saveLabel?: string;
 }) {
   const patch = (p: Partial<UpdateMemberInput>) => onChange({ ...form, ...p });
 
@@ -108,7 +110,7 @@ export function MemberEditForm({
           onClick={onSave}
           className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save Changes"}
+          {saving ? "Saving…" : saveLabel}
         </button>
         <button
           type="button"
