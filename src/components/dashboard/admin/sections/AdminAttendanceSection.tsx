@@ -7,7 +7,7 @@ import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { recordAttendance, createAttendanceSession, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
-import { FilterSelect, YEAR_OPTIONS } from "@/components/dashboard/admin/sections/TeamFormFields";
+import { FilterSelect } from "@/components/dashboard/admin/sections/TeamFormFields";
 import { useTabFade } from "@/hooks/useTabFade";
 
 type View = "teams" | "members";
@@ -28,26 +28,22 @@ interface MemberFilters {
   search: string;
   campus: string;
   teamSize: string;
-  year: string;
-  school: string;
   stay: string;
   room: string;
   spoc: string;
-  status: string;
   position: string; // "" | "lead" | "member"
+  sessionStatus: Record<string, string>; // session_id -> "" | "Present" | "Absent"
 }
 
 const EMPTY_MEMBER_FILTERS: MemberFilters = {
   search: "",
   campus: "",
   teamSize: "",
-  year: "",
-  school: "",
   stay: "",
   room: "",
   spoc: "",
-  status: "",
   position: "",
+  sessionStatus: {},
 };
 
 function uniqueValues(values: (string | undefined | null)[]): string[] {
@@ -210,7 +206,7 @@ export function AdminAttendanceSection({
       const status = teamStatus(team, latestSession);
 
       if (q) {
-        const haystack = `${team.team_name} ${lead?.name ?? ""} ${status} ${roomOf(team)?.name ?? ""} ${spocName(team.spoc_profile_id) ?? ""}`.toLowerCase();
+        const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       if (teamFilters.campus && lead?.campus !== teamFilters.campus) return false;
@@ -245,7 +241,6 @@ export function AdminAttendanceSection({
   // ── Members tab ──────────────────────────────────────────────────────
 
   const allMembers = useMemo(() => teams.flatMap((t) => membersByTeam[t.id] ?? []), [teams, membersByTeam]);
-  const memberSchoolOptions = useMemo(() => uniqueValues(allMembers.map((m) => m.school)), [allMembers]);
   const memberStayOptions = useMemo(() => uniqueValues(allMembers.map((m) => m.stay)), [allMembers]);
   const memberCampusOptions = useMemo(() => uniqueValues(allMembers.map((m) => m.campus)), [allMembers]);
 
@@ -255,26 +250,28 @@ export function AdminAttendanceSection({
       const members = membersByTeam[team.id] ?? [];
       return members
         .filter((m) => {
-          const status = memberStatus(m.id, latestSession);
           if (q) {
-            const haystack = `${m.name} ${m.user_id} ${m.gitam_email} ${team.team_name} ${m.reg_no} ${spocName(team.spoc_profile_id) ?? ""}`.toLowerCase();
+            const haystack = `${team.team_name} ${m.name}`.toLowerCase();
             if (!haystack.includes(q)) return false;
           }
           if (memberFilters.campus && m.campus !== memberFilters.campus) return false;
           if (memberFilters.teamSize && String(team.member_count) !== memberFilters.teamSize) return false;
-          if (memberFilters.year && m.year_of_study !== memberFilters.year) return false;
-          if (memberFilters.school && m.school !== memberFilters.school) return false;
           if (memberFilters.stay && m.stay !== memberFilters.stay) return false;
           if (memberFilters.room && team.room_id !== memberFilters.room) return false;
           if (memberFilters.spoc && team.spoc_profile_id !== memberFilters.spoc) return false;
-          if (memberFilters.status && status !== memberFilters.status) return false;
           if (memberFilters.position && (memberFilters.position === "lead") !== m.is_lead) return false;
+          for (const [sessionId, status] of Object.entries(memberFilters.sessionStatus)) {
+            if (status) {
+              const session = localSessions.find((s) => s.id === sessionId);
+              if (session && memberStatus(m.id, session) !== status) return false;
+            }
+          }
           return true;
         })
         .map((member) => ({ member, team }));
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, memberFilters, localAttendance, latestSession]);
+  }, [teams, membersByTeam, memberFilters, localAttendance, localSessions]);
 
   function handleExportMembers() {
     downloadCsv(
@@ -304,7 +301,7 @@ export function AdminAttendanceSection({
   }
 
   const TEAM_FIXED_COLS = 7; // chevron, Campus, Team Name, Team Lead Name, Team Lead Phone, SPOC, Venue
-  const MEMBER_FIXED_COLS = 15; // Campus..SPOC (everything except the per-session Attendance columns)
+  const MEMBER_FIXED_COLS = 9; // Campus, Team Name, Team Size, Member ID, Name, Position, Stay, Venue, SPOC
 
   return (
     <div className="flex flex-col gap-6">
@@ -353,7 +350,7 @@ export function AdminAttendanceSection({
                     <input
                       value={teamFilters.search}
                       onChange={(e) => setTeamFilters((f) => ({ ...f, search: e.target.value }))}
-                      placeholder="Search by team name, team lead, status, venue, or SPOC…"
+                      placeholder="Search by team name, team lead, or lead phone…"
                       className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
                     />
                     <button
@@ -538,7 +535,7 @@ export function AdminAttendanceSection({
                     <input
                       value={memberFilters.search}
                       onChange={(e) => setMemberFilters((f) => ({ ...f, search: e.target.value }))}
-                      placeholder="Search by name, ID, email, team name, reg number, or SPOC…"
+                      placeholder="Search by team name or member name…"
                       className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
                     />
                     <button
@@ -563,16 +560,11 @@ export function AdminAttendanceSection({
                       options={["3", "4"]}
                     />
                     <FilterSelect
-                      label="Year"
-                      value={memberFilters.year}
-                      onChange={(v) => setMemberFilters((f) => ({ ...f, year: v }))}
-                      options={YEAR_OPTIONS}
-                    />
-                    <FilterSelect
-                      label="School"
-                      value={memberFilters.school}
-                      onChange={(v) => setMemberFilters((f) => ({ ...f, school: v }))}
-                      options={memberSchoolOptions}
+                      label="Position"
+                      value={memberFilters.position}
+                      onChange={(v) => setMemberFilters((f) => ({ ...f, position: v }))}
+                      options={["Team Lead", "Member"]}
+                      valueOptions={["lead", "member"]}
                     />
                     <FilterSelect
                       label="Stay"
@@ -594,19 +586,20 @@ export function AdminAttendanceSection({
                       options={spocs.map((s) => s.name)}
                       valueOptions={spocs.map((s) => s.id)}
                     />
-                    <FilterSelect
-                      label="Attendance"
-                      value={memberFilters.status}
-                      onChange={(v) => setMemberFilters((f) => ({ ...f, status: v }))}
-                      options={["Present", "Absent", "Not Marked"]}
-                    />
-                    <FilterSelect
-                      label="Position"
-                      value={memberFilters.position}
-                      onChange={(v) => setMemberFilters((f) => ({ ...f, position: v }))}
-                      options={["Team Lead", "Member"]}
-                      valueOptions={["lead", "member"]}
-                    />
+                    {localSessions.map((s) => (
+                      <FilterSelect
+                        key={s.id}
+                        label={s.name}
+                        value={memberFilters.sessionStatus[s.id] ?? ""}
+                        onChange={(v) =>
+                          setMemberFilters((f) => ({
+                            ...f,
+                            sessionStatus: { ...f.sessionStatus, [s.id]: v },
+                          }))
+                        }
+                        options={["Present", "Absent"]}
+                      />
+                    ))}
                   </div>
                 </div>
 
@@ -617,17 +610,11 @@ export function AdminAttendanceSection({
                     <thead>
                       <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                         <th className="px-4 py-3">Campus</th>
-                        <th className="px-4 py-3">Team ID</th>
                         <th className="px-4 py-3">Team Name</th>
                         <th className="px-4 py-3">Team Size</th>
                         <th className="px-4 py-3">Member ID</th>
                         <th className="px-4 py-3">Name</th>
                         <th className="px-4 py-3">Position</th>
-                        <th className="px-4 py-3">Reg No</th>
-                        <th className="px-4 py-3">Phone No</th>
-                        <th className="px-4 py-3">Year</th>
-                        <th className="px-4 py-3">School</th>
-                        <th className="px-4 py-3">Branch</th>
                         <th className="px-4 py-3">Stay</th>
                         <th className="px-4 py-3">Venue</th>
                         <th className="px-4 py-3">SPOC</th>
@@ -649,17 +636,11 @@ export function AdminAttendanceSection({
                         filteredMembers.map(({ member: m, team }) => (
                           <tr key={m.id} className="border-b border-border align-top last:border-0">
                             <td className="px-4 py-3 text-ink-muted">{m.campus}</td>
-                            <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                             <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
                             <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
                             <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
                             <td className="px-4 py-3 text-ink">{m.name}</td>
                             <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
-                            <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
-                            <td className="px-4 py-3 text-ink-muted">{m.phone}</td>
-                            <td className="px-4 py-3 text-ink-muted">{m.year_of_study}</td>
-                            <td className="px-4 py-3 text-ink-muted">{m.school}</td>
-                            <td className="px-4 py-3 text-ink-muted">{m.branch}</td>
                             <td className="px-4 py-3 text-ink-muted">{m.stay}</td>
                             <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>

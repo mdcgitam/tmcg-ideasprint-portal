@@ -47,6 +47,9 @@ export function NocIndividualsView({
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const uploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  const [campusFilter, setCampusFilter] = useState("");
+  const [venueFilter, setVenueFilter] = useState("");
+  const [spocFilter, setSpocFilter] = useState("");
   const [fileStatusFilter, setFileStatusFilter] = useState("");
   const [search, setSearch] = useState("");
 
@@ -67,18 +70,26 @@ export function NocIndividualsView({
     [teams, membersByTeam],
   );
 
+  const campusOptions = useMemo(
+    () => Array.from(new Set(allRows.map(({ member }) => member.campus).filter((c): c is string => Boolean(c)))),
+    [allRows],
+  );
+
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return allRows.filter(({ member, team }) => {
       if (q) {
-        const haystack = `${member.user_id} ${member.name} ${team.team_name} ${member.reg_no} ${member.phone}`.toLowerCase();
+        const haystack = `${team.team_name} ${member.reg_no} ${member.gitam_email} ${member.phone}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
+      if (campusFilter && member.campus !== campusFilter) return false;
+      if (venueFilter && team.room_id !== venueFilter) return false;
+      if (spocFilter && team.spoc_profile_id !== spocFilter) return false;
       if (fileStatusFilter && (nocOf(member.id)?.status ?? "Not Uploaded") !== fileStatusFilter) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allRows, search, fileStatusFilter, localNocs]);
+  }, [allRows, search, campusFilter, venueFilter, spocFilter, fileStatusFilter, localNocs]);
 
   function toggleSelected(profileId: string) {
     setSelected((prev) => {
@@ -247,19 +258,36 @@ export function NocIndividualsView({
         {bulkError && <p className="font-heading text-xs text-danger">{bulkError}</p>}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
-        <FilterSelect
-          label="File Status"
-          value={fileStatusFilter}
-          onChange={setFileStatusFilter}
-          options={["Uploaded", "Not Uploaded"]}
-        />
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Member ID / name / team name / reg no / phone…"
-          className="min-w-[180px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+          placeholder="Search by team name, reg no, email, or phone…"
+          className="min-w-[180px] w-full rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
+        <div className="flex flex-wrap items-center gap-2">
+          <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} />
+          <FilterSelect
+            label="Venue"
+            value={venueFilter}
+            onChange={setVenueFilter}
+            options={rooms.map((r) => r.name)}
+            valueOptions={rooms.map((r) => r.id)}
+          />
+          <FilterSelect
+            label="SPOC"
+            value={spocFilter}
+            onChange={setSpocFilter}
+            options={staffAccounts.map((s) => s.name)}
+            valueOptions={staffAccounts.map((s) => s.id)}
+          />
+          <FilterSelect
+            label="File Status"
+            value={fileStatusFilter}
+            onChange={setFileStatusFilter}
+            options={["Uploaded", "Not Uploaded"]}
+          />
+        </div>
       </div>
 
       <p className="font-heading text-xs text-ink-muted">Showing {filteredRows.length} individuals</p>
@@ -277,6 +305,7 @@ export function NocIndividualsView({
                 <th className="px-4 py-3">Campus</th>
                 <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Position</th>
                 <th className="px-4 py-3">Reg No</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Phone</th>
@@ -305,9 +334,8 @@ export function NocIndividualsView({
                     </td>
                     <td className="px-4 py-3 text-ink-muted">{member.campus ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
-                    <td className="px-4 py-3 text-ink">
-                      {member.name} {member.is_lead && <span className="text-xs text-gold">(Lead)</span>}
-                    </td>
+                    <td className="px-4 py-3 text-ink">{member.name}</td>
+                    <td className="px-4 py-3 text-ink-muted">{member.is_lead ? "Team Lead" : "Member"}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.reg_no}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.gitam_email}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.phone}</td>

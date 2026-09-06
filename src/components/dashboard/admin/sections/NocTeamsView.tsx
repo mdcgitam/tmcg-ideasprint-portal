@@ -294,13 +294,14 @@ export function NocTeamsView({
                 <th className="px-4 py-3">Campus</th>
                 <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Team Lead</th>
+                <th className="px-4 py-3">Lead Phone</th>
                 <th className="px-4 py-3">Team Size</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">No. of Uploads</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Deadline</th>
                 <th className="px-4 py-3">Open</th>
+                <th className="px-4 py-3">Deadline</th>
               </tr>
             </thead>
             <tbody>
@@ -325,6 +326,7 @@ export function NocTeamsView({
                       {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
                     </td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
                     <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
@@ -333,6 +335,11 @@ export function NocTeamsView({
                     </td>
                     <td className="px-4 py-3">
                       <span className={complete ? "text-gitam" : "text-gold"}>{complete ? "Completed" : "Pending"}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <button type="button" onClick={() => setOpenTeamId(team.id)} className="text-gold underline">
+                        Open
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
@@ -356,11 +363,6 @@ export function NocTeamsView({
                         </button>
                         {rowError && <span className="font-heading text-[11px] text-danger">{rowError}</span>}
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button type="button" onClick={() => setOpenTeamId(team.id)} className="text-gold underline">
-                        Open
-                      </button>
                     </td>
                   </tr>
                 );

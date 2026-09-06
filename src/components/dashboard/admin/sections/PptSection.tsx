@@ -1,9 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type {
-  AttendanceRow,
-  AttendanceSessionRow,
   PresentationRow,
   ProblemStatementRow,
   ProfileRow,
@@ -17,6 +15,8 @@ import {
   deletePresentationFile,
   extendPresentationDeadline,
   getSignedUrl,
+  uploadPresentationFile,
+  recordPresentation,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
 import { FilterSelect } from "./TeamFormFields";
@@ -47,8 +47,6 @@ export function PptSection({
   rooms,
   zones,
   staffAccounts,
-  attendance,
-  attendanceSessions,
   problemStatements,
   scope,
 }: {
@@ -58,8 +56,6 @@ export function PptSection({
   rooms: RoomRow[];
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
-  attendance: AttendanceRow[];
-  attendanceSessions: AttendanceSessionRow[];
   problemStatements: ProblemStatementRow[];
   scope: "spoc" | "admin";
 }) {
@@ -72,21 +68,52 @@ export function PptSection({
 
   const [rowBusy, setRowBusy] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+  const uploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
-  const latestSession = attendanceSessions[attendanceSessions.length - 1] ?? null;
 
-  function teamAttendance(team: TeamRow): "Present" | "Absent" | null {
-    if (!latestSession) return null;
-    const members = membersByTeam[team.id] ?? [];
-    if (members.length === 0) return null;
-    const presentCount = members.filter(
-      (m) => attendance.find((a) => a.session_id === latestSession.id && a.profile_id === m.id)?.status === "Present",
-    ).length;
-    return presentCount === members.length ? "Present" : presentCount === 0 ? "Absent" : "Present";
+  async function handleAdminUpload(teamId: string, file: File) {
+    if (file.type !== "application/pdf") {
+      setRowErrors((prev) => ({ ...prev, [teamId]: "Only PDF files are allowed." }));
+      return;
+    }
+    if (file.size > 16 * 1024 * 1024) {
+      setRowErrors((prev) => ({ ...prev, [teamId]: "File exceeds the 16MB limit." }));
+      return;
+    }
+    setRowBusy(teamId);
+    setRowErrors((prev) => ({ ...prev, [teamId]: "" }));
+    try {
+      const path = await uploadPresentationFile(teamId, file);
+      await recordPresentation(teamId, path);
+      setLocalPresentations((prev) => {
+        const exists = prev.find((p) => p.team_id === teamId);
+        return exists
+          ? prev.map((p) => (p.team_id === teamId ? { ...p, status: "Uploaded", file_path: path } : p))
+          : [
+              ...prev,
+              {
+                id: crypto.randomUUID(),
+                team_id: teamId,
+                file_path: path,
+                status: "Uploaded",
+                uploaded_by: null,
+                uploaded_at: new Date().toISOString(),
+                deadline: null,
+              } as PresentationRow,
+            ];
+      });
+    } catch (err) {
+      setRowErrors((prev) => ({
+        ...prev,
+        [teamId]: err instanceof DashboardActionError ? err.message : "Something went wrong.",
+      }));
+    } finally {
+      setRowBusy(null);
+    }
   }
 
   async function handleExtendDeadline(teamId: string) {
@@ -255,12 +282,12 @@ export function PptSection({
                   <th className="px-4 py-3">Team Lead</th>
                   <th className="px-4 py-3">Team Lead Phone</th>
                   <th className="px-4 py-3">Team Size</th>
-                  <th className="px-4 py-3">Attendance</th>
                   <th className="px-4 py-3">Venue</th>
                   <th className="px-4 py-3">SPOC</th>
                   <th className="px-4 py-3">PS Code</th>
                   <th className="px-4 py-3">PPT Status</th>
                   <th className="px-4 py-3">PPT Link</th>
+                  {scope === "admin" && <th className="px-4 py-3">Admin Upload</th>}
                   <th className="px-4 py-3">Deadline</th>
                 </tr>
               </thead>
@@ -290,7 +317,6 @@ export function PptSection({
                       <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
-                      <td className="px-4 py-3 text-ink-muted">{teamAttendance(team) ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{venue}</td>
                       <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{ps?.number ?? "—"}</td>
@@ -325,6 +351,33 @@ export function PptSection({
                           {rowError && <span className="w-full font-heading text-[11px] text-danger">{rowError}</span>}
                         </div>
                       </td>
+                      {scope === "admin" && (
+                        <td className="px-4 py-3">
+                          <div className="flex flex-col gap-1">
+                            <input
+                              ref={(el) => {
+                                uploadInputRefs.current[team.id] = el;
+                              }}
+                              type="file"
+                              accept="application/pdf"
+                              className="hidden"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleAdminUpload(team.id, file);
+                                e.target.value = "";
+                              }}
+                            />
+                            <button
+                              type="button"
+                              disabled={rowBusyHere}
+                              onClick={() => uploadInputRefs.current[team.id]?.click()}
+                              className="w-fit rounded-full bg-gold px-3 py-1 font-heading text-[11px] font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                            >
+                              {rowBusyHere ? "Uploading…" : uploaded ? "Replace" : "Upload"}
+                            </button>
+                          </div>
+                        </td>
+                      )}
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                           <span className={`font-heading text-[11px] ${expired ? "text-danger" : "text-ink-muted"}`}>
