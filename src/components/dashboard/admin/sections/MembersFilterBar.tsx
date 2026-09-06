@@ -85,6 +85,8 @@ export function MembersFilterBar({
   extraActions,
   sortById,
   onToggleSort,
+  singleCampus = false,
+  hideVenue = false,
 }: {
   filters: MemberFilters;
   onChange: (next: MemberFilters) => void;
@@ -94,6 +96,8 @@ export function MembersFilterBar({
   extraActions?: ReactNode;
   sortById?: boolean;
   onToggleSort?: () => void;
+  singleCampus?: boolean;
+  hideVenue?: boolean;
 }) {
   function set<K extends keyof MemberFilters>(key: K, value: string) {
     onChange({ ...filters, [key]: value });
@@ -120,7 +124,9 @@ export function MembersFilterBar({
         {extraActions}
       </div>
       <div className="flex flex-wrap gap-2">
-        <FilterSelect label="Campus" value={filters.campus} onChange={(v) => set("campus", v)} options={campusOptions} />
+        {!singleCampus && (
+          <FilterSelect label="Campus" value={filters.campus} onChange={(v) => set("campus", v)} options={campusOptions} />
+        )}
         <FilterSelect label="Team Size" value={filters.teamSize} onChange={(v) => set("teamSize", v)} options={["3", "4"]} />
         <FilterSelect
           label="Position"
@@ -137,13 +143,15 @@ export function MembersFilterBar({
         <FilterSelect label="Branch" value={filters.branch} onChange={(v) => set("branch", v)} options={branchOptions} />
         <FilterSelect label="Gender" value={filters.gender} onChange={(v) => set("gender", v)} options={genderOptions} />
         <FilterSelect label="Stay" value={filters.stay} onChange={(v) => set("stay", v)} options={stayOptions} />
-        <FilterSelect
-          label="Venue"
-          value={filters.room}
-          onChange={(v) => set("room", v)}
-          options={rooms.map((r) => r.name)}
-          valueOptions={rooms.map((r) => r.id)}
-        />
+        {!hideVenue && (
+          <FilterSelect
+            label="Venue"
+            value={filters.room}
+            onChange={(v) => set("room", v)}
+            options={rooms.map((r) => r.name)}
+            valueOptions={rooms.map((r) => r.id)}
+          />
+        )}
         <FilterSelect
           label="SPOC"
           value={filters.spoc}

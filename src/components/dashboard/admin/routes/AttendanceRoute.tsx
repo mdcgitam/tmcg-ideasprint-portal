@@ -8,14 +8,17 @@ export async function AttendanceRoute({ profile, roomId }: { profile: ProfileRow
   const { teams, membersByTeam, attendanceSessions, attendance, staffAccounts, spocs, rooms } =
     await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
-  const venueTabs =
-    profile.role === "Zone Manager" ? (
-      <ZoneVenueTabs rooms={[...rooms].map((r) => ({ id: r.id, name: r.name })).sort((a, b) => a.name.localeCompare(b.name))} />
-    ) : undefined;
+  const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
+  const isZoneManager = profile.role === "Zone Manager";
+  const venueTabs = isZoneManager ? (
+    <ZoneVenueTabs rooms={[...rooms].map((r) => ({ id: r.id, name: r.name })).sort((a, b) => a.name.localeCompare(b.name))} />
+  ) : undefined;
 
   return (
     <SectionPageShell title="Attendance" scope={scope} headerExtra={venueTabs}>
       <AdminAttendanceSection
+        singleCampus={singleCampus}
+        hideVenue={isZoneManager}
         teams={teams}
         membersByTeam={membersByTeam}
         attendanceSessions={attendanceSessions}

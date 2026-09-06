@@ -85,6 +85,8 @@ export function RoomsZonesSection({
   const [editTeamId, setEditTeamId] = useState<string | null>(null);
   const [teamVenueDraft, setTeamVenueDraft] = useState("");
 
+  // View locked to a single campus (Campus Admin, or Super Admin in a campus module) — drop the constant Campus column/filter.
+  const singleCampus = campus != null;
   const staffById = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomById = (id: string | null) => localRooms.find((r) => r.id === id) ?? null;
   const zoneById = (id: string | null) => localZones.find((z) => z.id === id) ?? null;
@@ -481,7 +483,7 @@ export function RoomsZonesSection({
               <table className="w-full text-left font-heading text-sm">
                 <thead>
                   <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                    <th className="px-4 py-3">Campus</th>
+                    {!singleCampus && <th className="px-4 py-3">Campus</th>}
                     <th className="px-4 py-3">Zone</th>
                     <th className="px-4 py-3">Venues in that Zone</th>
                     <th className="px-4 py-3">SPOC</th>
@@ -491,7 +493,7 @@ export function RoomsZonesSection({
                 <tbody>
                   {zoneGroups.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                      <td colSpan={singleCampus ? 4 : 5} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
                         No zones or venues yet.
                       </td>
                     </tr>
@@ -507,7 +509,7 @@ export function RoomsZonesSection({
                       if (venues.length === 0) {
                         return (
                           <tr key={zone!.id} className="border-b border-border last:border-0">
-                            <td className="px-4 py-3 align-top text-ink-muted">{rowCampus}</td>
+                            {!singleCampus && <td className="px-4 py-3 align-top text-ink-muted">{rowCampus}</td>}
                             {zoneCell}
                             <td className="px-4 py-3 text-ink-faint">No venues</td>
                             <td className="px-4 py-3 text-ink-faint">—</td>
@@ -523,9 +525,11 @@ export function RoomsZonesSection({
                               <tr key={v.id} className="border-b border-border last:border-0">
                                 {i === 0 && (
                                   <>
-                                    <td rowSpan={span} className="px-4 py-3 align-top text-ink-muted">
-                                      {rowCampus}
-                                    </td>
+                                    {!singleCampus && (
+                                      <td rowSpan={span} className="px-4 py-3 align-top text-ink-muted">
+                                        {rowCampus}
+                                      </td>
+                                    )}
                                     {zoneCell}
                                   </>
                                 )}
@@ -646,7 +650,7 @@ export function RoomsZonesSection({
                   <thead>
                     <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                       <th className="px-4 py-3" />
-                      <th className="px-4 py-3">Campus</th>
+                      {!singleCampus && <th className="px-4 py-3">Campus</th>}
                       <th className="px-4 py-3">Team ID</th>
                       <th className="px-4 py-3">Team Name</th>
                       <th className="px-4 py-3">Team Size</th>
@@ -657,7 +661,7 @@ export function RoomsZonesSection({
                   <tbody>
                     {unassignedTeams.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                        <td colSpan={singleCampus ? 6 : 7} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
                           Every team has a venue.
                         </td>
                       </tr>
@@ -673,7 +677,7 @@ export function RoomsZonesSection({
                                 onChange={() => toggleTeamSelected(team.id)}
                               />
                             </td>
-                            <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>
+                            {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>}
                             <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                             <td className="px-4 py-3 text-ink">{team.team_name}</td>
                             <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>
@@ -698,14 +702,16 @@ export function RoomsZonesSection({
                 placeholder="Search team, ID, lead, phone…"
                 className={`${inputClass} py-1.5`}
               />
-              <select value={fCampus} onChange={(e) => setFCampus(e.target.value)} className={selectClass}>
-                <option value="">All campuses</option>
-                {campusFilterOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              {!singleCampus && (
+                <select value={fCampus} onChange={(e) => setFCampus(e.target.value)} className={selectClass}>
+                  <option value="">All campuses</option>
+                  {campusFilterOptions.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              )}
               <select value={fSize} onChange={(e) => setFSize(e.target.value)} className={selectClass}>
                 <option value="">All team sizes</option>
                 {sizeFilterOptions.map((s) => (
@@ -769,7 +775,7 @@ export function RoomsZonesSection({
               <table className="w-full text-left font-heading text-sm">
                 <thead>
                   <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                    <th className="px-4 py-3">Campus</th>
+                    {!singleCampus && <th className="px-4 py-3">Campus</th>}
                     <th className="px-4 py-3">Team Id</th>
                     <th className="px-4 py-3">Team Name</th>
                     <th className="px-4 py-3">Team Size</th>
@@ -785,7 +791,7 @@ export function RoomsZonesSection({
                 <tbody>
                   {viewRows.length === 0 ? (
                     <tr>
-                      <td colSpan={11} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                      <td colSpan={singleCampus ? 10 : 11} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
                         No teams match these filters.
                       </td>
                     </tr>
@@ -796,7 +802,7 @@ export function RoomsZonesSection({
                       const editing = editTeamId === team.id;
                       return (
                         <tr key={team.id} className="border-b border-border last:border-0">
-                          <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>
+                          {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>}
                           <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                           <td className="px-4 py-3 text-ink">{team.team_name}</td>
                           <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>

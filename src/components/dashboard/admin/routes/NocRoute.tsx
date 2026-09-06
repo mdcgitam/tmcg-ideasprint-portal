@@ -8,14 +8,17 @@ export async function NocRoute({ profile, roomId }: { profile: ProfileRow; roomI
   const { teams, membersByTeam, nocs, rooms, zones, staffAccounts, problemStatements, exitRequests, config } =
     await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
-  const venueTabs =
-    profile.role === "Zone Manager" ? (
-      <ZoneVenueTabs rooms={[...rooms].map((r) => ({ id: r.id, name: r.name })).sort((a, b) => a.name.localeCompare(b.name))} />
-    ) : undefined;
+  const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
+  const isZoneManager = profile.role === "Zone Manager";
+  const venueTabs = isZoneManager ? (
+    <ZoneVenueTabs rooms={[...rooms].map((r) => ({ id: r.id, name: r.name })).sort((a, b) => a.name.localeCompare(b.name))} />
+  ) : undefined;
 
   return (
     <SectionPageShell title="NOC" scope={scope} headerExtra={venueTabs}>
       <NocSection
+        singleCampus={singleCampus}
+        hideVenue={isZoneManager}
         teams={teams}
         membersByTeam={membersByTeam}
         nocs={nocs}

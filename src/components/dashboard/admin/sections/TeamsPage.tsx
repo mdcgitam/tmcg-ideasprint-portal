@@ -28,6 +28,8 @@ export function TeamsPage({
   rooms,
   zones,
   problemStatements,
+  singleCampus = false,
+  hideVenue = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -38,6 +40,8 @@ export function TeamsPage({
   rooms: RoomRow[];
   zones: ZoneRow[];
   problemStatements: ProblemStatementRow[];
+  singleCampus?: boolean;
+  hideVenue?: boolean;
 }) {
   const [localTeams, setLocalTeams] = useState(teams);
   const [view, setView] = useState<View>("by-team");
@@ -74,6 +78,8 @@ export function TeamsPage({
             exitRequests={exitRequests}
             nocs={nocs}
             scope={scope}
+            singleCampus={singleCampus}
+            hideVenue={hideVenue}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={onTeamDeleted}
           />
@@ -88,6 +94,8 @@ export function TeamsPage({
             rooms={rooms}
             zones={zones}
             problemStatements={problemStatements}
+            singleCampus={singleCampus}
+            hideVenue={hideVenue}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={onTeamDeleted}
           />

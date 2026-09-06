@@ -30,6 +30,8 @@ export function NocSection({
   exitRequests,
   config,
   scope,
+  singleCampus = false,
+  hideVenue = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -41,6 +43,8 @@ export function NocSection({
   exitRequests: ExitRequestRow[];
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
+  singleCampus?: boolean;
+  hideVenue?: boolean;
 }) {
   const [localTeams, setLocalTeams] = useState(teams);
   const [view, setView] = useState<View>("teams");
@@ -80,6 +84,8 @@ export function NocSection({
             exitRequests={exitRequests}
             config={config}
             scope={scope}
+            singleCampus={singleCampus}
+            hideVenue={hideVenue}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={onTeamDeleted}
           />
@@ -92,6 +98,8 @@ export function NocSection({
             staffAccounts={staffAccounts}
             config={config}
             scope={scope}
+            singleCampus={singleCampus}
+            hideVenue={hideVenue}
           />
         )}
       </div>

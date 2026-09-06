@@ -31,6 +31,8 @@ export function TeamsByMembersView({
   rooms,
   zones,
   problemStatements,
+  singleCampus = false,
+  hideVenue = false,
   onTeamRenamed,
   onTeamDeleted,
 }: {
@@ -43,6 +45,8 @@ export function TeamsByMembersView({
   rooms: RoomRow[];
   zones: ZoneRow[];
   problemStatements: ProblemStatementRow[];
+  singleCampus?: boolean;
+  hideVenue?: boolean;
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
 }) {
@@ -122,6 +126,8 @@ export function TeamsByMembersView({
         rows={allRows}
         rooms={rooms}
         staffAccounts={staffAccounts}
+        singleCampus={singleCampus}
+        hideVenue={hideVenue}
         sortById={sortById}
         onToggleSort={handleViewAll}
         extraActions={
@@ -146,7 +152,7 @@ export function TeamsByMembersView({
           <table className="w-full text-left font-heading text-sm">
             <thead>
               <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                <th className="px-4 py-3">Campus</th>
+                {!singleCampus && <th className="px-4 py-3">Campus</th>}
                 <th className="px-4 py-3">User ID</th>
                 <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Team Size</th>
@@ -181,7 +187,7 @@ export function TeamsByMembersView({
 
                       return (
                         <tr key={m.id} className="border-b border-border align-top last:border-0">
-                          <td className="px-4 py-3 text-ink-muted">{m.campus}</td>
+                          {!singleCampus && <td className="px-4 py-3 text-ink-muted">{m.campus}</td>}
                           <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
                           <td className="px-4 py-3 text-ink-muted">
                             {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>

@@ -27,6 +27,8 @@ export function TeamsByTeamView({
   exitRequests,
   nocs,
   scope,
+  singleCampus = false,
+  hideVenue = false,
   onTeamRenamed,
   onTeamDeleted,
 }: {
@@ -39,6 +41,8 @@ export function TeamsByTeamView({
   exitRequests: ExitRequestRow[];
   nocs: NocRow[];
   scope: "spoc" | "admin";
+  singleCampus?: boolean;
+  hideVenue?: boolean;
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
 }) {
@@ -62,7 +66,7 @@ export function TeamsByTeamView({
         const members = membersByTeam[team.id] ?? [];
         const lead = members.find((m) => m.is_lead);
         return {
-          Campus: team.campus,
+          ...(singleCampus ? {} : { Campus: team.campus }),
           "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
@@ -98,6 +102,8 @@ export function TeamsByTeamView({
         exitRequests={exitRequests}
         rooms={rooms}
         staffAccounts={staffAccounts}
+        singleCampus={singleCampus}
+        hideVenue={hideVenue}
         extraActions={
           <button
             type="button"
@@ -120,7 +126,7 @@ export function TeamsByTeamView({
           <table className="w-full text-left font-heading text-sm">
             <thead>
               <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                <th className="px-4 py-3">Campus</th>
+                {!singleCampus && <th className="px-4 py-3">Campus</th>}
                 <th className="px-4 py-3">Team ID</th>
                 <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Team Lead</th>
@@ -140,7 +146,7 @@ export function TeamsByTeamView({
 
                 return (
                   <tr key={team.id} className="border-b border-border align-top last:border-0">
-                    <td className="px-4 py-3 text-ink-muted">{team.campus}</td>
+                    {!singleCampus && <td className="px-4 py-3 text-ink-muted">{team.campus}</td>}
                     <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                     <td className="px-4 py-3 text-ink">{team.team_name}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>

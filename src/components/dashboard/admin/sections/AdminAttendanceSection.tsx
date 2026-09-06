@@ -61,6 +61,8 @@ export function AdminAttendanceSection({
   staffAccounts,
   spocs,
   rooms,
+  singleCampus = false,
+  hideVenue = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -70,6 +72,8 @@ export function AdminAttendanceSection({
   staffAccounts: ProfileRow[];
   spocs: ProfileRow[];
   rooms: RoomRow[];
+  singleCampus?: boolean;
+  hideVenue?: boolean;
 }) {
   const [localSessions, setLocalSessions] = useState(attendanceSessions);
   const [localAttendance, setLocalAttendance] = useState(attendance);
@@ -230,7 +234,7 @@ export function AdminAttendanceSection({
       filteredTeams.flatMap((team) => {
         const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
         return localSessions.map((s) => ({
-          Campus: lead?.campus ?? "—",
+          ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
@@ -285,7 +289,7 @@ export function AdminAttendanceSection({
       "attendance-by-member",
       filteredMembers.flatMap(({ member: m, team }) =>
         localSessions.map((s) => ({
-          Campus: m.campus,
+          ...(singleCampus ? {} : { Campus: m.campus }),
           "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Size": String(teamSize(team)),
@@ -307,8 +311,8 @@ export function AdminAttendanceSection({
     );
   }
 
-  const TEAM_FIXED_COLS = 7; // chevron, Campus, Team Name, Team Lead, Lead Phone No, SPOC, Venue
-  const MEMBER_FIXED_COLS = 9; // Campus, Team Name, Team Size, Member ID, Name, Position, Stay, Venue, SPOC
+  const TEAM_FIXED_COLS = singleCampus ? 6 : 7; // chevron, [Campus], Team Name, Team Lead, Lead Phone No, SPOC, Venue
+  const MEMBER_FIXED_COLS = singleCampus ? 8 : 9; // [Campus], Team Name, Team Size, Member ID, Name, Position, Stay, Venue, SPOC
 
   return (
     <div className="flex flex-col gap-6">
@@ -369,25 +373,29 @@ export function AdminAttendanceSection({
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <FilterSelect
-                      label="Campus"
-                      value={teamFilters.campus}
-                      onChange={(v) => setTeamFilters((f) => ({ ...f, campus: v }))}
-                      options={teamCampusOptions}
-                    />
+                    {!singleCampus && (
+                      <FilterSelect
+                        label="Campus"
+                        value={teamFilters.campus}
+                        onChange={(v) => setTeamFilters((f) => ({ ...f, campus: v }))}
+                        options={teamCampusOptions}
+                      />
+                    )}
                     <FilterSelect
                       label="Team Size"
                       value={teamFilters.teamSize}
                       onChange={(v) => setTeamFilters((f) => ({ ...f, teamSize: v }))}
                       options={["3", "4"]}
                     />
-                    <FilterSelect
-                      label="Venue"
-                      value={teamFilters.room}
-                      onChange={(v) => setTeamFilters((f) => ({ ...f, room: v }))}
-                      options={rooms.map((r) => r.name)}
-                      valueOptions={rooms.map((r) => r.id)}
-                    />
+                    {!hideVenue && (
+                      <FilterSelect
+                        label="Venue"
+                        value={teamFilters.room}
+                        onChange={(v) => setTeamFilters((f) => ({ ...f, room: v }))}
+                        options={rooms.map((r) => r.name)}
+                        valueOptions={rooms.map((r) => r.id)}
+                      />
+                    )}
                     <FilterSelect
                       label="SPOC"
                       value={teamFilters.spoc}
@@ -411,7 +419,7 @@ export function AdminAttendanceSection({
                     <thead>
                       <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                         <th className="px-2 py-3" />
-                        <th className="px-4 py-3">Campus</th>
+                        {!singleCampus && <th className="px-4 py-3">Campus</th>}
                         <th className="px-4 py-3">Team Name</th>
                         <th className="px-4 py-3">Team Lead</th>
                         <th className="px-4 py-3">Lead Phone No</th>
@@ -449,7 +457,7 @@ export function AdminAttendanceSection({
                                     {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                                   </button>
                                 </td>
-                                <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>
+                                {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
                                 <td className="px-4 py-3 text-ink">{team.team_name}</td>
                                 <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                                 <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
@@ -558,12 +566,14 @@ export function AdminAttendanceSection({
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <FilterSelect
-                      label="Campus"
-                      value={memberFilters.campus}
-                      onChange={(v) => setMemberFilters((f) => ({ ...f, campus: v }))}
-                      options={memberCampusOptions}
-                    />
+                    {!singleCampus && (
+                      <FilterSelect
+                        label="Campus"
+                        value={memberFilters.campus}
+                        onChange={(v) => setMemberFilters((f) => ({ ...f, campus: v }))}
+                        options={memberCampusOptions}
+                      />
+                    )}
                     <FilterSelect
                       label="Team Size"
                       value={memberFilters.teamSize}
@@ -583,13 +593,15 @@ export function AdminAttendanceSection({
                       onChange={(v) => setMemberFilters((f) => ({ ...f, stay: v }))}
                       options={memberStayOptions}
                     />
-                    <FilterSelect
-                      label="Venue"
-                      value={memberFilters.room}
-                      onChange={(v) => setMemberFilters((f) => ({ ...f, room: v }))}
-                      options={rooms.map((r) => r.name)}
-                      valueOptions={rooms.map((r) => r.id)}
-                    />
+                    {!hideVenue && (
+                      <FilterSelect
+                        label="Venue"
+                        value={memberFilters.room}
+                        onChange={(v) => setMemberFilters((f) => ({ ...f, room: v }))}
+                        options={rooms.map((r) => r.name)}
+                        valueOptions={rooms.map((r) => r.id)}
+                      />
+                    )}
                     <FilterSelect
                       label="SPOC"
                       value={memberFilters.spoc}
@@ -620,7 +632,7 @@ export function AdminAttendanceSection({
                   <table className="w-full text-left font-heading text-sm">
                     <thead>
                       <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                        <th className="px-4 py-3">Campus</th>
+                        {!singleCampus && <th className="px-4 py-3">Campus</th>}
                         <th className="px-4 py-3">Team Name</th>
                         <th className="px-4 py-3">Team Size</th>
                         <th className="px-4 py-3">User ID</th>
@@ -649,7 +661,7 @@ export function AdminAttendanceSection({
                             key={m.id}
                             className={`border-b border-border align-top last:border-0 ${m.is_active ? "" : "opacity-50"}`}
                           >
-                            <td className="px-4 py-3 text-ink-muted">{m.campus}</td>
+                            {!singleCampus && <td className="px-4 py-3 text-ink-muted">{m.campus}</td>}
                             <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
                             <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                             <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>

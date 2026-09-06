@@ -58,6 +58,7 @@ export function ProblemStatementsAdminSection({
   zones,
   staffAccounts,
   config,
+  singleCampus = false,
 }: {
   problemStatements: ProblemStatementRow[];
   problemStatementExtensions: ProblemStatementExtensionRow[];
@@ -67,6 +68,7 @@ export function ProblemStatementsAdminSection({
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
   config: Record<string, unknown>;
+  singleCampus?: boolean;
 }) {
   const [local, setLocal] = useState(problemStatements);
   const [localExtensions, setLocalExtensions] = useState(problemStatementExtensions);
@@ -269,7 +271,7 @@ export function ProblemStatementsAdminSection({
         const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
         const room = roomOf(team);
         return {
-          Campus: lead?.campus ?? "—",
+          ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
@@ -392,7 +394,7 @@ export function ProblemStatementsAdminSection({
                   <thead>
                     <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                       <th className="px-4 py-3" />
-                      <th className="px-4 py-3">Campus</th>
+                      {!singleCampus && <th className="px-4 py-3">Campus</th>}
                       <th className="px-4 py-3">Team Name</th>
                       <th className="px-4 py-3">Team Lead</th>
                       <th className="px-4 py-3">Lead Phone No</th>
@@ -420,7 +422,7 @@ export function ProblemStatementsAdminSection({
                           <td className="px-4 py-3">
                             <input type="checkbox" checked={selected.has(team.id)} onChange={() => toggleSelected(team.id)} />
                           </td>
-                          <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>
+                          {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
                           <td className="px-4 py-3 text-ink">
                             {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
                           </td>

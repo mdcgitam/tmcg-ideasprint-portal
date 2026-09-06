@@ -54,6 +54,8 @@ export function PptSection({
   problemStatements,
   config,
   scope,
+  singleCampus = false,
+  hideVenue = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -64,6 +66,8 @@ export function PptSection({
   problemStatements: ProblemStatementRow[];
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
+  singleCampus?: boolean;
+  hideVenue?: boolean;
 }) {
   const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
   const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
@@ -336,13 +340,16 @@ export function PptSection({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
-        <FilterSelect label="Campus" value={filters.campus} onChange={(v) => setFilters((f) => ({ ...f, campus: v }))} options={campusOptions} />
+        {!singleCampus && (
+          <FilterSelect label="Campus" value={filters.campus} onChange={(v) => setFilters((f) => ({ ...f, campus: v }))} options={campusOptions} />
+        )}
         <FilterSelect
           label="Team Size"
           value={filters.teamSize}
           onChange={(v) => setFilters((f) => ({ ...f, teamSize: v }))}
           options={["3", "4"]}
         />
+        {!hideVenue && (
         <FilterSelect
           label="Venue"
           value={filters.room}
@@ -350,6 +357,7 @@ export function PptSection({
           options={rooms.map((r) => r.name)}
           valueOptions={rooms.map((r) => r.id)}
         />
+        )}
         <FilterSelect
           label="SPOC"
           value={filters.spoc}
@@ -384,7 +392,7 @@ export function PptSection({
               <thead>
                 <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                   <th className="px-2 py-3" />
-                  <th className="px-4 py-3">Campus</th>
+                  {!singleCampus && <th className="px-4 py-3">Campus</th>}
                   <th className="px-4 py-3">Team Name</th>
                   <th className="px-4 py-3">Team Lead</th>
                   <th className="px-4 py-3">Lead Phone No</th>
@@ -424,7 +432,7 @@ export function PptSection({
                           onChange={() => toggleSelected(team.id)}
                         />
                       </td>
-                      <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>
+                      {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
                       <td className="px-4 py-3 text-ink">
                         {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
                       </td>

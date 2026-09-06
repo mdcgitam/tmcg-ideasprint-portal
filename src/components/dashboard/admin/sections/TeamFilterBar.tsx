@@ -54,6 +54,8 @@ export function TeamFilterBar({
   rooms,
   staffAccounts,
   extraActions,
+  singleCampus = false,
+  hideVenue = false,
 }: {
   filters: TeamFilters;
   onChange: (next: TeamFilters) => void;
@@ -63,6 +65,10 @@ export function TeamFilterBar({
   rooms: RoomRow[];
   staffAccounts: ProfileRow[];
   extraActions?: ReactNode;
+  /** Hide the Campus filter when the view is locked to one campus. */
+  singleCampus?: boolean;
+  /** Hide the Venue filter when a venue tab bar already covers it (Zone Manager). */
+  hideVenue?: boolean;
 }) {
   function set<K extends keyof TeamFilters>(key: K, value: string) {
     onChange({ ...filters, [key]: value });
@@ -92,15 +98,19 @@ export function TeamFilterBar({
         {extraActions}
       </div>
       <div className="flex flex-wrap gap-2">
-        <FilterSelect label="Campus" value={filters.campus} onChange={(v) => set("campus", v)} options={campusOptions} />
+        {!singleCampus && (
+          <FilterSelect label="Campus" value={filters.campus} onChange={(v) => set("campus", v)} options={campusOptions} />
+        )}
         <FilterSelect label="Team Size" value={filters.teamSize} onChange={(v) => set("teamSize", v)} options={["3", "4"]} />
-        <FilterSelect
-          label="Venue"
-          value={filters.room}
-          onChange={(v) => set("room", v)}
-          options={rooms.map((r) => r.name)}
-          valueOptions={rooms.map((r) => r.id)}
-        />
+        {!hideVenue && (
+          <FilterSelect
+            label="Venue"
+            value={filters.room}
+            onChange={(v) => set("room", v)}
+            options={rooms.map((r) => r.name)}
+            valueOptions={rooms.map((r) => r.id)}
+          />
+        )}
         <FilterSelect
           label="SPOC"
           value={filters.spoc}

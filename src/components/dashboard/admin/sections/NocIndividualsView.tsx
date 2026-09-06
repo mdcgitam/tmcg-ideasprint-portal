@@ -37,6 +37,8 @@ export function NocIndividualsView({
   staffAccounts,
   config,
   scope,
+  singleCampus = false,
+  hideVenue = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -45,6 +47,8 @@ export function NocIndividualsView({
   staffAccounts: ProfileRow[];
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
+  singleCampus?: boolean;
+  hideVenue?: boolean;
 }) {
   const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
   const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
@@ -231,7 +235,7 @@ export function NocIndividualsView({
     downloadCsv(
       "noc-individuals",
       filteredRows.map(({ member, team }) => ({
-        Campus: member.campus ?? "—",
+        ...(singleCampus ? {} : { Campus: member.campus ?? "—" }),
         "Team Name": team.team_name,
         "Participant Name": member.name,
         Position: member.is_lead ? "Team Lead" : "Member",
@@ -293,7 +297,9 @@ export function NocIndividualsView({
           className="min-w-[180px] w-full rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
         <div className="flex flex-wrap items-center gap-2">
-          <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} />
+          {!singleCampus && (
+            <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} />
+          )}
           <FilterSelect
             label="Position"
             value={positionFilter}
@@ -301,13 +307,15 @@ export function NocIndividualsView({
             options={["Team Lead", "Member"]}
             valueOptions={["lead", "member"]}
           />
-          <FilterSelect
-            label="Venue"
-            value={venueFilter}
-            onChange={setVenueFilter}
-            options={rooms.map((r) => r.name)}
-            valueOptions={rooms.map((r) => r.id)}
-          />
+          {!hideVenue && (
+            <FilterSelect
+              label="Venue"
+              value={venueFilter}
+              onChange={setVenueFilter}
+              options={rooms.map((r) => r.name)}
+              valueOptions={rooms.map((r) => r.id)}
+            />
+          )}
           <FilterSelect
             label="SPOC"
             value={spocFilter}
@@ -337,7 +345,7 @@ export function NocIndividualsView({
             <thead>
               <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                 <th className="px-4 py-3" />
-                <th className="px-4 py-3">Campus</th>
+                {!singleCampus && <th className="px-4 py-3">Campus</th>}
                 <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Participant Name</th>
                 <th className="px-4 py-3">Position</th>
@@ -367,7 +375,7 @@ export function NocIndividualsView({
                         onChange={() => toggleSelected(member.id)}
                       />
                     </td>
-                    <td className="px-4 py-3 text-ink-muted">{member.campus ?? "—"}</td>
+                    {!singleCampus && <td className="px-4 py-3 text-ink-muted">{member.campus ?? "—"}</td>}
                     <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
                     <td className="px-4 py-3 text-ink">{member.name}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.is_lead ? "Team Lead" : "Member"}</td>

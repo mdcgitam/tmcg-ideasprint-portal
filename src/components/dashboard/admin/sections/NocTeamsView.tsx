@@ -29,6 +29,8 @@ export function NocTeamsView({
   exitRequests,
   config,
   scope,
+  singleCampus = false,
+  hideVenue = false,
   onTeamRenamed,
   onTeamDeleted,
 }: {
@@ -42,6 +44,8 @@ export function NocTeamsView({
   exitRequests: ExitRequestRow[];
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
+  singleCampus?: boolean;
+  hideVenue?: boolean;
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
 }) {
@@ -209,7 +213,7 @@ export function NocTeamsView({
         const members = membersByTeam[team.id] ?? [];
         const lead = members.find((m) => m.is_lead);
         return {
-          Campus: lead?.campus ?? "—",
+          ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
           "Team Size": String(teamSize(team)),
@@ -264,7 +268,9 @@ export function NocTeamsView({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
-        <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} />
+        {!singleCampus && (
+          <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} />
+        )}
         <FilterSelect
           label="Team Size"
           value={teamSizeFilter}
@@ -273,13 +279,15 @@ export function NocTeamsView({
             .sort((a, b) => a - b)
             .map(String)}
         />
-        <FilterSelect
-          label="Venue"
-          value={venueFilter}
-          onChange={setVenueFilter}
-          options={rooms.map((r) => r.name)}
-          valueOptions={rooms.map((r) => r.id)}
-        />
+        {!hideVenue && (
+          <FilterSelect
+            label="Venue"
+            value={venueFilter}
+            onChange={setVenueFilter}
+            options={rooms.map((r) => r.name)}
+            valueOptions={rooms.map((r) => r.id)}
+          />
+        )}
         <FilterSelect
           label="SPOC"
           value={spocFilter}
@@ -314,7 +322,7 @@ export function NocTeamsView({
             <thead>
               <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                 <th className="px-4 py-3" />
-                <th className="px-4 py-3">Campus</th>
+                {!singleCampus && <th className="px-4 py-3">Campus</th>}
                 <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Team Lead</th>
                 <th className="px-4 py-3">Lead Phone No</th>
@@ -344,7 +352,7 @@ export function NocTeamsView({
                         onChange={() => toggleSelected(team.id)}
                       />
                     </td>
-                    <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>
+                    {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
                     <td className="px-4 py-3 text-ink">
                       {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
                     </td>

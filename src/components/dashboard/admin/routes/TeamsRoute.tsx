@@ -8,10 +8,11 @@ export async function TeamsRoute({ profile, roomId }: { profile: ProfileRow; roo
   const { teams, membersByTeam, nocs, exitRequests, staffAccounts, rooms, zones, problemStatements } =
     await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
-  const venueTabs =
-    profile.role === "Zone Manager" ? (
-      <ZoneVenueTabs rooms={[...rooms].map((r) => ({ id: r.id, name: r.name })).sort((a, b) => a.name.localeCompare(b.name))} />
-    ) : undefined;
+  const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
+  const isZoneManager = profile.role === "Zone Manager";
+  const venueTabs = isZoneManager ? (
+    <ZoneVenueTabs rooms={[...rooms].map((r) => ({ id: r.id, name: r.name })).sort((a, b) => a.name.localeCompare(b.name))} />
+  ) : undefined;
 
   return (
     <SectionPageShell title="Profile" scope={scope} headerExtra={venueTabs}>
@@ -25,6 +26,8 @@ export async function TeamsRoute({ profile, roomId }: { profile: ProfileRow; roo
         rooms={rooms}
         zones={zones}
         problemStatements={problemStatements}
+        singleCampus={singleCampus}
+        hideVenue={isZoneManager}
       />
     </SectionPageShell>
   );
