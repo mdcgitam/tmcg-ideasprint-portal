@@ -129,9 +129,16 @@ export function markNotificationRead(notificationId: string) {
   return callRpc<null>("mark_notification_read", { p_notification_id: notificationId });
 }
 
-/** Roles a broadcast can be narrowed to. "" = anyone the sender may reach. */
-export type BroadcastRoleFilter = "" | "Campus Admin" | "SPOC" | "Zone Manager" | "Team Lead" | "Member";
-export type BroadcastScope = "all" | "zone" | "venue";
+/** Roles a broadcast can be narrowed to. "" = every role the sender may reach; a comma list (e.g. "Team Lead,Member") targets several. */
+export type BroadcastRoleFilter =
+  | ""
+  | "Campus Admin"
+  | "SPOC"
+  | "Zone Manager"
+  | "Team Lead"
+  | "Member"
+  | "Team Lead,Member";
+export type BroadcastScope = "all" | "zone" | "venue" | "campus";
 
 /**
  * Sends a notification. The server enforces the sender's reach:

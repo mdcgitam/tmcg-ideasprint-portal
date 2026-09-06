@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { NotificationRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
+import type { CampusCode, NotificationRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
 import {
   markNotificationRead,
   broadcastNotification,
@@ -26,10 +26,10 @@ type View = "all" | "by-status";
  *   Team Lead / Member -> receive only, no compose box.
  */
 const SENDER_ROLES: Partial<Record<UserRole, BroadcastRoleFilter[]>> = {
-  "Super Admin": ["", "Campus Admin", "SPOC", "Zone Manager", "Team Lead", "Member"],
-  "Campus Admin": ["", "SPOC", "Zone Manager", "Team Lead", "Member"],
-  "Zone Manager": ["", "SPOC", "Team Lead", "Member"],
-  SPOC: ["", "Team Lead", "Member"],
+  "Super Admin": ["", "Campus Admin", "SPOC", "Zone Manager", "Team Lead", "Member", "Team Lead,Member"],
+  "Campus Admin": ["", "SPOC", "Zone Manager", "Team Lead", "Member", "Team Lead,Member"],
+  "Zone Manager": ["", "SPOC", "Team Lead", "Member", "Team Lead,Member"],
+  SPOC: ["", "Team Lead", "Member", "Team Lead,Member"],
 };
 
 const ROLE_LABEL: Record<BroadcastRoleFilter, string> = {
@@ -39,7 +39,21 @@ const ROLE_LABEL: Record<BroadcastRoleFilter, string> = {
   "Zone Manager": "Zone Managers",
   "Team Lead": "Team Leads",
   Member: "Members",
+  "Team Lead,Member": "Team Leads + Members",
 };
+
+const CAMPUS_NAME: Record<CampusCode, string> = {
+  VSP: "Visakhapatnam",
+  HYD: "Hyderabad",
+  BLR: "Bangalore",
+};
+
+/** Which "Where" scopes make sense for the selected "Who". */
+function whereKinds(who: BroadcastRoleFilter): Array<"campus" | "zone" | "venue"> {
+  if (who === "Campus Admin") return ["campus"];
+  if (who === "Zone Manager") return ["zone"];
+  return ["zone", "venue"];
+}
 
 export function AdminNotificationsSection({
   profileId,
@@ -95,8 +109,10 @@ export function AdminNotificationsSection({
   );
 
   const [roleFilter, setRoleFilter] = useState<BroadcastRoleFilter>("");
-  // "where" is a single string: "all" | `zone:<id>` | `venue:<id>`
+  // "where" is a single string: "all" | `campus:<code>` | `zone:<id>` | `venue:<id>`
   const [where, setWhere] = useState("all");
+  const kinds = whereKinds(roleFilter);
+  const campusCodes: CampusCode[] = ["VSP", "HYD", "BLR"];
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -106,7 +122,8 @@ export function AdminNotificationsSection({
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
     const [kind, id] = where.split(":");
-    const scope = (kind === "zone" ? "zone" : kind === "venue" ? "venue" : "all") as BroadcastScope;
+    const scope: BroadcastScope =
+      kind === "zone" || kind === "venue" || kind === "campus" ? kind : "all";
     setSending(true);
     setSendError(null);
     setSendSuccess(null);
@@ -172,7 +189,10 @@ export function AdminNotificationsSection({
               Who
               <select
                 value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value as BroadcastRoleFilter)}
+                onChange={(e) => {
+                  setRoleFilter(e.target.value as BroadcastRoleFilter);
+                  setWhere("all");
+                }}
                 className={inputClass}
               >
                 {roleOptions.map((r) => (
@@ -189,17 +209,25 @@ export function AdminNotificationsSection({
                 <option value="all">
                   {role === "SPOC" ? "All my venues" : role === "Zone Manager" ? "My whole zone" : "Everyone in reach"}
                 </option>
-                {role !== "SPOC" &&
+                {kinds.includes("campus") &&
+                  campusCodes.map((c) => (
+                    <option key={c} value={`campus:${c}`}>
+                      {CAMPUS_NAME[c]} ({c})
+                    </option>
+                  ))}
+                {kinds.includes("zone") &&
+                  role !== "SPOC" &&
                   zones.map((z) => (
                     <option key={z.id} value={`zone:${z.id}`}>
                       Zone · {z.name}
                     </option>
                   ))}
-                {whereRooms.map((r) => (
-                  <option key={r.id} value={`venue:${r.id}`}>
-                    Venue · {r.name}
-                  </option>
-                ))}
+                {kinds.includes("venue") &&
+                  whereRooms.map((r) => (
+                    <option key={r.id} value={`venue:${r.id}`}>
+                      Venue · {r.name}
+                    </option>
+                  ))}
               </select>
             </label>
           </div>
