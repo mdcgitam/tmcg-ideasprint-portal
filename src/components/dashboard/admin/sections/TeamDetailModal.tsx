@@ -141,6 +141,8 @@ export function TeamDetailModal({
   }
 
   function startAddMember() {
+    setSelectedMemberId(null);
+    setEditingMemberId(null);
     setAddForm(EMPTY_MEMBER_FORM);
     setAddError(null);
     setAddingMember(true);
@@ -207,7 +209,10 @@ export function TeamDetailModal({
                 <button
                   key={m.id}
                   type="button"
-                  onClick={() => setSelectedMemberId(m.id)}
+                  onClick={() => {
+                    setAddingMember(false);
+                    setSelectedMemberId(m.id);
+                  }}
                   className={`rounded-xl border p-3 text-left transition-colors ${
                     selectedMemberId === m.id ? "border-gold bg-gold/5" : "border-border hover:border-border-strong"
                   } ${m.is_active ? "" : "opacity-50"}`}
@@ -226,17 +231,7 @@ export function TeamDetailModal({
 
               {scope === "admin" && (
                 <div className="mt-1">
-                  {addingMember ? (
-                    <MemberEditForm
-                      form={addForm}
-                      onChange={setAddForm}
-                      onSave={handleAddMember}
-                      onCancel={() => setAddingMember(false)}
-                      saving={savingAdd}
-                      error={addError}
-                      saveLabel="Add Member"
-                    />
-                  ) : members.length >= 4 ? (
+                  {members.length >= 4 ? (
                     <p className="rounded-xl border border-border px-3 py-2 font-heading text-xs text-ink-faint">
                       Team is full (4 members).
                     </p>
@@ -244,7 +239,11 @@ export function TeamDetailModal({
                     <button
                       type="button"
                       onClick={startAddMember}
-                      className="w-full rounded-xl border border-dashed border-gold/50 px-3 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+                      className={`w-full rounded-xl border border-dashed px-3 py-2 font-heading text-xs font-medium transition-colors ${
+                        addingMember
+                          ? "border-gold bg-gold/10 text-gold"
+                          : "border-gold/50 text-gold hover:bg-gold/10"
+                      }`}
                     >
                       + Add Member
                     </button>
@@ -254,7 +253,24 @@ export function TeamDetailModal({
             </div>
 
             <div className="rounded-xl border border-border p-4">
-              {!selectedMember ? (
+              {addingMember ? (
+                <div className="flex flex-col gap-3">
+                  <h3 className="font-heading text-sm text-ink">New Member</h3>
+                  <p className="font-heading text-xs text-ink-muted">
+                    Added as a Member (not Team Lead). They link to this team when they sign in with the matching
+                    GITAM account.
+                  </p>
+                  <MemberEditForm
+                    form={addForm}
+                    onChange={setAddForm}
+                    onSave={handleAddMember}
+                    onCancel={() => setAddingMember(false)}
+                    saving={savingAdd}
+                    error={addError}
+                    saveLabel="Add Member"
+                  />
+                </div>
+              ) : !selectedMember ? (
                 <p className="font-heading text-sm text-ink-muted">Select a member to see their details.</p>
               ) : (
                 <div className="flex flex-col gap-4">
