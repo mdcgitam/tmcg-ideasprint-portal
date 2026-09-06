@@ -113,6 +113,10 @@ export function AdminNotificationsSection({
   const [where, setWhere] = useState("all");
   const kinds = whereKinds(roleFilter);
   const campusCodes: CampusCode[] = ["VSP", "HYD", "BLR"];
+  // When the sender's own "all" scope already *is* one zone/venue, don't
+  // also list that same item below it.
+  const selfAllIsOneZone = role === "Zone Manager" && zones.length === 1;
+  const selfAllIsOneVenue = role === "SPOC" && whereRooms.length === 1;
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -217,12 +221,14 @@ export function AdminNotificationsSection({
                   ))}
                 {kinds.includes("zone") &&
                   role !== "SPOC" &&
+                  !selfAllIsOneZone &&
                   zones.map((z) => (
                     <option key={z.id} value={`zone:${z.id}`}>
                       Zone · {z.name}
                     </option>
                   ))}
                 {kinds.includes("venue") &&
+                  !selfAllIsOneVenue &&
                   whereRooms.map((r) => (
                     <option key={r.id} value={`venue:${r.id}`}>
                       Venue · {r.name}
