@@ -217,6 +217,7 @@ export function NocTeamsView({
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
           "Team Size": String(teamSize(team)),
+          Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
           "No. of Uploads": `${uploadedCount(team)}/${members.length}`,
@@ -327,6 +328,7 @@ export function NocTeamsView({
                 <th className="px-4 py-3">Team Lead</th>
                 <th className="px-4 py-3">Lead Phone No</th>
                 <th className="px-4 py-3">Team Size</th>
+                <th className="px-4 py-3">Zone</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">No. of Uploads</th>
@@ -343,6 +345,7 @@ export function NocTeamsView({
                 const deadline = teamDeadline(team);
                 const busy = rowBusy === team.id;
                 const rowError = rowErrors[team.id];
+                const room = roomOf(team);
                 return (
                   <tr key={team.id} className="border-b border-border align-top last:border-0">
                     <td className="px-4 py-3">
@@ -359,7 +362,8 @@ export function NocTeamsView({
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
-                    <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">
                       {uploadedCount(team)}/{members.length}
@@ -379,20 +383,22 @@ export function NocTeamsView({
                           {deadline.isGeneral && " (General)"}
                           {deadline.expired && " — Time exceeded"}
                         </span>
-                        <input
-                          type="datetime-local"
-                          value={rowDeadlines[team.id] ?? toDatetimeLocal(deadline.iso)}
-                          onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                          className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
-                        />
-                        <button
-                          type="button"
-                          disabled={busy || !(rowDeadlines[team.id] ?? toDatetimeLocal(deadline.iso))}
-                          onClick={() => handleRowExtend(team)}
-                          className="w-fit rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
-                        >
-                          {busy ? "Saving…" : deadline.iso || deadline.mixed ? "Update" : "Set"}
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={busy || !(rowDeadlines[team.id] ?? toDatetimeLocal(deadline.iso))}
+                            onClick={() => handleRowExtend(team)}
+                            className="w-fit shrink-0 rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
+                          >
+                            {busy ? "Saving…" : deadline.iso || deadline.mixed ? "Update" : "Set"}
+                          </button>
+                          <input
+                            type="datetime-local"
+                            value={rowDeadlines[team.id] ?? toDatetimeLocal(deadline.iso)}
+                            onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [team.id]: e.target.value }))}
+                            className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
+                          />
+                        </div>
                         {rowError && <span className="font-heading text-[11px] text-danger">{rowError}</span>}
                       </div>
                     </td>

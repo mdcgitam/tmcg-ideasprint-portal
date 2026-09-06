@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { NocRow, ProfileRow, RoomRow, TeamRow } from "@/types/database";
+import type { NocRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import {
   deleteNoc,
@@ -34,6 +34,7 @@ export function NocIndividualsView({
   membersByTeam,
   nocs,
   rooms,
+  zones,
   staffAccounts,
   config,
   scope,
@@ -44,6 +45,7 @@ export function NocIndividualsView({
   membersByTeam: Record<string, TeamMemberProfile[]>;
   nocs: NocRow[];
   rooms: RoomRow[];
+  zones: ZoneRow[];
   staffAccounts: ProfileRow[];
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
@@ -74,6 +76,7 @@ export function NocIndividualsView({
 
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
+  const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
 
   function toDatetimeLocal(iso: string | null | undefined): string {
     if (!iso) return "";
@@ -242,6 +245,7 @@ export function NocIndividualsView({
         "Reg No": member.reg_no,
         Email: member.gitam_email,
         Phone: member.phone,
+        Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
         Venue: roomOf(team)?.name ?? "Unassigned",
         SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
         "File Status": statusLabel(nocOf(member.id)?.status ?? "Not Uploaded"),
@@ -352,6 +356,7 @@ export function NocIndividualsView({
                 <th className="px-4 py-3">Reg No</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Phone No</th>
+                <th className="px-4 py-3">Zone</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">File Status</th>
@@ -382,6 +387,7 @@ export function NocIndividualsView({
                     <td className="px-4 py-3 text-ink-muted">{member.reg_no}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.gitam_email}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.phone}</td>
+                    <td className="px-4 py-3 text-ink-muted">{zoneOf(roomOf(team))?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                     <td className="px-4 py-3">
@@ -453,20 +459,22 @@ export function NocIndividualsView({
                             </span>
                           );
                         })()}
-                        <input
-                          type="datetime-local"
-                          value={rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline)}
-                          onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [member.id]: e.target.value }))}
-                          className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
-                        />
-                        <button
-                          type="button"
-                          disabled={busy || !(rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline))}
-                          onClick={() => handleRowExtend(member.id)}
-                          className="w-fit rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
-                        >
-                          {noc?.deadline ?? generalDeadline ? "Update" : "Extend"}
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            disabled={busy || !(rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline))}
+                            onClick={() => handleRowExtend(member.id)}
+                            className="w-fit shrink-0 rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
+                          >
+                            {noc?.deadline ?? generalDeadline ? "Update" : "Extend"}
+                          </button>
+                          <input
+                            type="datetime-local"
+                            value={rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline)}
+                            onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [member.id]: e.target.value }))}
+                            className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
+                          />
+                        </div>
                         {rowError && <span className="font-heading text-[11px] text-danger">{rowError}</span>}
                       </div>
                     </td>

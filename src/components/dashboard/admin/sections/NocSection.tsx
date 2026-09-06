@@ -95,6 +95,7 @@ export function NocSection({
             membersByTeam={membersByTeam}
             nocs={nocs}
             rooms={rooms}
+            zones={zones}
             staffAccounts={staffAccounts}
             config={config}
             scope={scope}
