@@ -15,7 +15,7 @@
 
 with expected_enums(name) as (
   values ('user_role'),('team_status'),('ps_status'),('attendance_status'),
-         ('meal_status'),('noc_status'),('exit_status'),('approval_status'),
+         ('noc_status'),('exit_status'),('approval_status'),
          ('campus')
 ),
 enum_check as (
@@ -30,7 +30,7 @@ expected_tables(name) as (
   values ('campus_counters'),('profiles'),('teams'),('team_members'),
          ('problem_statements'),('problem_statement_selections'),
          ('problem_statement_extensions'),('attendance_sessions'),
-         ('attendance'),('attendance_audit_log'),('food_coupons'),
+         ('attendance'),('attendance_audit_log'),
          ('nocs'),('noc_audit_log'),('exit_forms'),('notifications'),
          ('approval_requests'),('audit_logs'),('configuration')
 ),
@@ -68,7 +68,6 @@ expected_functions(name, expected_arg_count) as (
     ('resolve_approval_request', 2),
     ('create_attendance_session', 4),
     ('record_attendance', 3),
-    ('record_food_redemption', 3),
     ('extend_problem_statement_deadline', 3),
     ('upsert_problem_statement', 5),
     ('assign_spoc', 2),
@@ -100,7 +99,7 @@ expected_policies(tbl, pol) as (
     ('problem_statement_selections','ps_selections_select'),
     ('problem_statement_extensions','ps_extensions_select'),
     ('attendance_sessions','attendance_sessions_select'), ('attendance','attendance_select'),
-    ('attendance_audit_log','attendance_audit_select'), ('food_coupons','food_coupons_select'),
+    ('attendance_audit_log','attendance_audit_select'),
     ('exit_forms','exit_forms_select'), ('approval_requests','approval_requests_select'),
     ('nocs','nocs_select'), ('noc_audit_log','noc_audit_select'),
     ('notifications','notifications_select'), ('audit_logs','audit_logs_select'),

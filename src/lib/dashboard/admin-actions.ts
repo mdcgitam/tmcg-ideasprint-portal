@@ -26,7 +26,7 @@ function friendlyError(raw: string): string {
   if (raw.includes("DUPLICATE_PHONE")) return "That phone number is already in use.";
   if (raw.includes("DUPLICATE_TEAM_NAME")) return "A team with that name already exists.";
   if (raw.includes("INVALID_ROLE")) return "Invalid role.";
-  if (raw.includes("INVALID_STATUS") || raw.includes("INVALID_DECISION") || raw.includes("INVALID_MEAL")) {
+  if (raw.includes("INVALID_STATUS") || raw.includes("INVALID_DECISION")) {
     return "Invalid value submitted.";
   }
   if (raw.includes("INVALID_AUDIENCE")) return "Choose an audience to notify.";

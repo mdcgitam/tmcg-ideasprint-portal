@@ -14,7 +14,6 @@ export type UserRole = "Super Admin" | "Campus Admin" | "SPOC" | "Team Lead" | "
 export type TeamStatus = "Registered" | "Active" | "Pending Approval" | "Qualified for Grand Finale" | "Exited";
 export type PsStatus = "Hidden" | "Released";
 export type AttendanceStatus = "Present" | "Absent";
-export type MealStatus = "Not Redeemed" | "Redeemed";
 export type NocStatus = "Not Uploaded" | "Uploaded" | "Verified" | "Missing";
 export type PresentationStatus = "Not Uploaded" | "Uploaded";
 export type MemberExitStatus = "Requested" | "Approved" | "Rejected";
@@ -138,16 +137,6 @@ export interface AttendanceRow {
   recorded_at: string;
 }
 
-export interface FoodCouponRow {
-  id: string;
-  profile_id: string;
-  lunch_status: MealStatus;
-  lunch_recorded_by: string | null;
-  lunch_recorded_at: string | null;
-  dinner_status: MealStatus;
-  dinner_recorded_by: string | null;
-  dinner_recorded_at: string | null;
-}
 
 export interface NocRow {
   id: string;

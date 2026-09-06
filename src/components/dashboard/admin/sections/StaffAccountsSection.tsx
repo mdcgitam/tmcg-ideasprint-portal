@@ -44,8 +44,8 @@ export function StaffAccountsSection({
   const fadeRef = useTabFade(view);
 
   const roleChangeOptions: UserRole[] = canManageCampusAdmins
-    ? ["SPOC", "Campus Admin", "Team Lead", "Member"]
-    : ["SPOC", "Team Lead", "Member"];
+    ? ["SPOC", "Campus Admin"]
+    : ["SPOC"];
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
