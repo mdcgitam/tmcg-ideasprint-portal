@@ -145,7 +145,7 @@ export function ExitRequestSection({
                       fileInputRefs.current[m.id] = el;
                     }}
                     type="file"
-                    accept="application/pdf"
+                    accept=".pdf,application/pdf"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];

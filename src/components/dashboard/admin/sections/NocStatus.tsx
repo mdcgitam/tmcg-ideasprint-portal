@@ -59,7 +59,7 @@ export function NocStatus({
   }
 
   async function handleUpload(file: File) {
-    if (file.type !== "application/pdf") {
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
       setError("Only PDF files are allowed.");
       return;
     }
@@ -93,7 +93,7 @@ export function NocStatus({
           <input
             ref={fileInputRef}
             type="file"
-            accept="application/pdf"
+            accept=".pdf,application/pdf"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];

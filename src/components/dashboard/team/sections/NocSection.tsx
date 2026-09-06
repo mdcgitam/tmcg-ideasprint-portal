@@ -53,7 +53,7 @@ export function NocSection({
       setError("Time exceeded — the upload deadline has passed. Ask your SPOC or Super Admin to extend it.");
       return;
     }
-    if (file.type !== "application/pdf") {
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
       setError("Only PDF files are allowed.");
       return;
     }
@@ -162,7 +162,7 @@ export function NocSection({
                       fileInputRefs.current[m.id] = el;
                     }}
                     type="file"
-                    accept="application/pdf"
+                    accept=".pdf,application/pdf"
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];

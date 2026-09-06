@@ -51,7 +51,7 @@ export function PresentationSection({
       setError("Time exceeded — the upload deadline has passed. Ask your SPOC or Super Admin to extend it.");
       return;
     }
-    if (file.type !== "application/pdf") {
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
       setError("Only PDF files are allowed.");
       return;
     }

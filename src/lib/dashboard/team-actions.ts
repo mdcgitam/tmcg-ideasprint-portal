@@ -96,7 +96,7 @@ export function extendPresentationDeadline(teamId: string, deadlineIso: string) 
 export async function uploadNocFile(profileId: string, file: File): Promise<string> {
   const supabase = createClient();
   const path = `${profileId}/${Date.now()}-${file.name}`;
-  const { error } = await supabase.storage.from("noc-uploads").upload(path, file, { upsert: true });
+  const { error } = await supabase.storage.from("noc-uploads").upload(path, file, { upsert: true, contentType: "application/pdf" });
   if (error) throw new DashboardActionError("Couldn't upload the file — please try again.");
   return path;
 }
@@ -110,7 +110,7 @@ export async function deleteNocFile(path: string): Promise<void> {
 export async function uploadExitRequestFile(profileId: string, file: File): Promise<string> {
   const supabase = createClient();
   const path = `${profileId}/${Date.now()}-${file.name}`;
-  const { error } = await supabase.storage.from("exit-requests").upload(path, file, { upsert: true });
+  const { error } = await supabase.storage.from("exit-requests").upload(path, file, { upsert: true, contentType: "application/pdf" });
   if (error) throw new DashboardActionError("Couldn't upload the file — please try again.");
   return path;
 }
@@ -124,7 +124,7 @@ export async function deleteExitRequestFile(path: string): Promise<void> {
 export async function uploadPresentationFile(teamId: string, file: File): Promise<string> {
   const supabase = createClient();
   const path = `${teamId}/${Date.now()}-${file.name}`;
-  const { error } = await supabase.storage.from("ppt-uploads").upload(path, file, { upsert: true });
+  const { error } = await supabase.storage.from("ppt-uploads").upload(path, file, { upsert: true, contentType: "application/pdf" });
   if (error) throw new DashboardActionError("Couldn't upload the file — please try again.");
   return path;
 }

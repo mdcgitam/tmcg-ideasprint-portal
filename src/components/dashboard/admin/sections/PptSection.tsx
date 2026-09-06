@@ -97,7 +97,7 @@ export function PptSection({
   }
 
   async function handleAdminUpload(teamId: string, file: File) {
-    if (file.type !== "application/pdf") {
+    if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
       setRowErrors((prev) => ({ ...prev, [teamId]: "Only PDF files are allowed." }));
       return;
     }
@@ -470,7 +470,7 @@ export function PptSection({
                                 uploadInputRefs.current[team.id] = el;
                               }}
                               type="file"
-                              accept="application/pdf"
+                              accept=".pdf,application/pdf"
                               className="hidden"
                               onChange={(e) => {
                                 const file = e.target.files?.[0];
