@@ -5,7 +5,7 @@ import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPag
 import { ZoneVenueTabs } from "@/components/dashboard/zone/ZoneVenueTabs";
 
 export async function NotificationsRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
-  const { notifications, rooms } = await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
+  const { notifications, rooms, zones } = await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   const venueTabs =
     profile.role === "Zone Manager" ? (
@@ -14,7 +14,13 @@ export async function NotificationsRoute({ profile, roomId }: { profile: Profile
 
   return (
     <SectionPageShell title="Notifications" scope={scope} headerExtra={venueTabs}>
-      <AdminNotificationsSection profileId={profile.id} role={profile.role} notifications={notifications} />
+      <AdminNotificationsSection
+        profileId={profile.id}
+        role={profile.role}
+        notifications={notifications}
+        rooms={rooms}
+        zones={zones}
+      />
     </SectionPageShell>
   );
 }

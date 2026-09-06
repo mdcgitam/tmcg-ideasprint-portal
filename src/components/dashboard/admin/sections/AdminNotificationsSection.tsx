@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { NotificationRow, UserRole } from "@/types/database";
+import { useEffect, useMemo, useState } from "react";
+import type { NotificationRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
 import {
   markNotificationRead,
   broadcastNotification,
   DashboardActionError,
   type BroadcastRoleFilter,
+  type BroadcastScope,
 } from "@/lib/dashboard/admin-actions";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -16,9 +17,8 @@ type View = "all" | "by-status";
 
 /**
  * Who each role may notify (server-enforced in broadcast_notification via
- * can_notify_target). The sender's *area* is implicit — a Campus Admin
- * reaches their campus, a Zone Manager their zone(s), a SPOC their room(s) —
- * so the compose box is just a role picker.
+ * can_notify_target). Two pickers: "Who" (a role, or all) and "Where"
+ * (everyone in reach / one zone / one venue).
  *   Super Admin  -> Campus Admin / SPOC / Zone Manager / Team Lead / Member (any campus)
  *   Campus Admin -> SPOC / Zone Manager / Team Lead / Member (own campus)
  *   Zone Manager -> SPOC + Team Leads / Members of their zone
@@ -33,7 +33,7 @@ const SENDER_ROLES: Partial<Record<UserRole, BroadcastRoleFilter[]>> = {
 };
 
 const ROLE_LABEL: Record<BroadcastRoleFilter, string> = {
-  "": "All roles",
+  "": "Everyone (all roles)",
   "Campus Admin": "Campus Admins",
   SPOC: "SPOCs",
   "Zone Manager": "Zone Managers",
@@ -41,21 +41,18 @@ const ROLE_LABEL: Record<BroadcastRoleFilter, string> = {
   Member: "Members",
 };
 
-const REACH_HINT: Partial<Record<UserRole, string>> = {
-  "Super Admin": "Reaches the chosen role across every campus.",
-  "Campus Admin": "Reaches the chosen role in your campus.",
-  "Zone Manager": "Reaches the chosen role in your zone.",
-  SPOC: "Reaches the chosen role in your venue(s).",
-};
-
 export function AdminNotificationsSection({
   profileId,
   role,
   notifications,
+  rooms,
+  zones,
 }: {
   profileId: string;
   role: UserRole;
   notifications: NotificationRow[];
+  rooms: RoomRow[];
+  zones: ZoneRow[];
 }) {
   const [local, setLocal] = useState(notifications);
 
@@ -91,8 +88,15 @@ export function AdminNotificationsSection({
   const fadeRef = useTabFade(view);
 
   const roleOptions = SENDER_ROLES[role];
+  // SPOC only ever sends into their own venues; others get the list as scoped by fetchAdminDashboardData.
+  const whereRooms = useMemo(
+    () => (role === "SPOC" ? rooms.filter((r) => r.spoc_profile_id === profileId) : rooms),
+    [role, rooms, profileId],
+  );
 
   const [roleFilter, setRoleFilter] = useState<BroadcastRoleFilter>("");
+  // "where" is a single string: "all" | `zone:<id>` | `venue:<id>`
+  const [where, setWhere] = useState("all");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -101,11 +105,13 @@ export function AdminNotificationsSection({
 
   async function handleSend(e: React.FormEvent) {
     e.preventDefault();
+    const [kind, id] = where.split(":");
+    const scope = (kind === "zone" ? "zone" : kind === "venue" ? "venue" : "all") as BroadcastScope;
     setSending(true);
     setSendError(null);
     setSendSuccess(null);
     try {
-      const count = await broadcastNotification(title.trim(), message.trim(), "all", "", roleFilter);
+      const count = await broadcastNotification(title.trim(), message.trim(), scope, id ?? "", roleFilter);
       setSendSuccess(`Sent to ${count} ${count === 1 ? "person" : "people"}.`);
       setTitle("");
       setMessage("");
@@ -161,23 +167,42 @@ export function AdminNotificationsSection({
         <form onSubmit={handleSend} className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Send Notification</span>
 
-          <div className="flex flex-wrap gap-2">
-            {roleOptions.map((r) => (
-              <button
-                key={r || "all"}
-                type="button"
-                onClick={() => setRoleFilter(r)}
-                className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
-                  roleFilter === r
-                    ? "border-gold bg-gold/10 text-gold"
-                    : "border-border text-ink-muted hover:border-gold hover:text-gold"
-                }`}
+          <div className="flex flex-wrap gap-3">
+            <label className="flex flex-col gap-1 font-heading text-xs text-ink-muted">
+              Who
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value as BroadcastRoleFilter)}
+                className={inputClass}
               >
-                {ROLE_LABEL[r]}
-              </button>
-            ))}
+                {roleOptions.map((r) => (
+                  <option key={r || "all"} value={r}>
+                    {ROLE_LABEL[r]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1 font-heading text-xs text-ink-muted">
+              Where
+              <select value={where} onChange={(e) => setWhere(e.target.value)} className={inputClass}>
+                <option value="all">
+                  {role === "SPOC" ? "All my venues" : role === "Zone Manager" ? "My whole zone" : "Everyone in reach"}
+                </option>
+                {role !== "SPOC" &&
+                  zones.map((z) => (
+                    <option key={z.id} value={`zone:${z.id}`}>
+                      Zone · {z.name}
+                    </option>
+                  ))}
+                {whereRooms.map((r) => (
+                  <option key={r.id} value={`venue:${r.id}`}>
+                    Venue · {r.name}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-          <p className="font-heading text-xs text-ink-faint">{REACH_HINT[role]}</p>
 
           <input
             value={title}
