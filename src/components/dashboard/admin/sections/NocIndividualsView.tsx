@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { NocRow, ProfileRow, RoomRow, TeamRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import {
@@ -48,6 +49,7 @@ export function NocIndividualsView({
   const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
   const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
 
+  const router = useRouter();
   const [localNocs, setLocalNocs] = useState(nocs);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeadline, setBulkDeadline] = useState("");
@@ -171,13 +173,21 @@ export function NocIndividualsView({
     setRowErrors((prev) => ({ ...prev, [profileId]: "" }));
     try {
       const path = await uploadNocFile(profileId, file);
-      await recordNocMetadata(profileId, path);
+      try {
+        await recordNocMetadata(profileId, path);
+      } catch (e) {
+        // The file bytes are already in storage — don't leave an orphan if the
+        // metadata write is rejected (deleted member, deadline, campus, …).
+        await deleteNocFile(path).catch(() => {});
+        throw e;
+      }
       setLocalNocs((prev) => {
         const exists = prev.find((n) => n.profile_id === profileId);
         return exists
           ? prev.map((n) => (n.profile_id === profileId ? { ...n, status: "Uploaded", file_path: path } : n))
           : [...prev, { profile_id: profileId, status: "Uploaded", file_path: path, deadline: null } as NocRow];
       });
+      router.refresh(); // reconcile with server truth so the row can't silently drift
     } catch (err) {
       setRowErrors((prev) => ({
         ...prev,
@@ -206,6 +216,7 @@ export function NocIndividualsView({
       setLocalNocs((prev) =>
         prev.map((n) => (n.profile_id === profileId ? { ...n, status: "Not Uploaded", file_path: null } : n)),
       );
+      router.refresh();
     } catch (err) {
       setRowErrors((prev) => ({
         ...prev,

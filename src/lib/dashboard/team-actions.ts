@@ -20,7 +20,8 @@ function friendlyError(raw: string): string {
   if (raw.includes("SELECTION_NOT_CONFIGURED")) return "Problem statement selection hasn't been opened yet.";
   if (raw.includes("SELECTION_CLOSED")) return "The problem statement selection window is currently closed.";
   if (raw.includes("INVALID_PS_NUMBER")) return "That problem statement number wasn't found. Double-check it and try again.";
-  if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant couldn't be found.";
+  if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant no longer exists — refresh the page.";
+  if (raw.includes("TEAM_NOT_FOUND")) return "That team no longer exists — refresh the page.";
   if (raw.includes("REQUEST_NOT_FOUND")) return "That request couldn't be found.";
   if (raw.includes("INVALID_DECISION")) return "Invalid decision.";
   if (raw.includes("DEADLINE_PASSED")) {

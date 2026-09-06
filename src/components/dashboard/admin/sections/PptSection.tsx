@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type {
   PresentationRow,
   ProblemStatementRow,
@@ -67,6 +68,7 @@ export function PptSection({
   const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
   const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
 
+  const router = useRouter();
   const [localPresentations, setLocalPresentations] = useState(presentations);
   const [filters, setFilters] = useState<PptFilters>(EMPTY_PPT_FILTERS);
 
@@ -107,7 +109,12 @@ export function PptSection({
     setRowErrors((prev) => ({ ...prev, [teamId]: "" }));
     try {
       const path = await uploadPresentationFile(teamId, file);
-      await recordPresentation(teamId, path);
+      try {
+        await recordPresentation(teamId, path);
+      } catch (e) {
+        await deletePresentationFile(path).catch(() => {});
+        throw e;
+      }
       setLocalPresentations((prev) => {
         const exists = prev.find((p) => p.team_id === teamId);
         return exists
@@ -125,6 +132,7 @@ export function PptSection({
               } as PresentationRow,
             ];
       });
+      router.refresh();
     } catch (err) {
       setRowErrors((prev) => ({
         ...prev,
@@ -236,6 +244,7 @@ export function PptSection({
       setLocalPresentations((prev) =>
         prev.map((p) => (p.team_id === teamId ? { ...p, status: "Not Uploaded", file_path: null } : p)),
       );
+      router.refresh();
     } catch (err) {
       setRowErrors((prev) => ({
         ...prev,
