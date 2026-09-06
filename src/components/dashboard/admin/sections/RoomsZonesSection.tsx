@@ -334,6 +334,40 @@ export function RoomsZonesSection({
                 <p className="mt-3 font-heading text-xs text-ink-faint">
                   Set the Zone&rsquo;s manager later, in the Assign tab.
                 </p>
+
+                {localZones.length > 0 && (
+                  <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
+                    {localZones.map((z) =>
+                      editZoneId === z.id ? (
+                        <div key={z.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-4 py-2">
+                          <input
+                            value={zoneDraft}
+                            onChange={(e) => setZoneDraft(e.target.value)}
+                            className={`flex-1 ${inputClass} py-1 text-sm`}
+                          />
+                          <button type="button" onClick={() => handleSaveZone(z)} disabled={busy === `edit-zone:${z.id}`} className="rounded-full bg-gold px-3 py-1 text-xs font-medium text-void hover:bg-gold-light disabled:opacity-60">
+                            Save
+                          </button>
+                          <button type="button" onClick={() => setEditZoneId(null)} className="rounded-full border border-border px-3 py-1 text-xs text-ink-muted hover:bg-void">
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <div key={z.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-4 py-2">
+                          <span className="font-heading text-sm text-ink">{z.name}</span>
+                          <div className="flex items-center gap-3">
+                            <button type="button" onClick={() => { setEditZoneId(z.id); setZoneDraft(z.name); }} className="text-xs text-gold underline">
+                              Edit
+                            </button>
+                            <button type="button" onClick={() => handleDeleteZone(z)} disabled={busy === `del-zone:${z.id}`} className="text-xs text-danger underline disabled:opacity-60">
+                              Delete
+                            </button>
+                          </div>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Create Venue */}
@@ -401,46 +435,10 @@ export function RoomsZonesSection({
                     zoneGroups.map(({ zone, venues }) => {
                       const rowCampus = zone?.campus ?? venues[0]?.campus ?? "—";
                       const span = Math.max(venues.length, 1);
-                      const editingZone = zone != null && editZoneId === zone.id;
                       const zoneCell = (
                         <td rowSpan={span} className="px-4 py-3 align-top text-ink">
-                          {zone == null ? (
-                            <span className="text-ink-faint">Unassigned</span>
-                          ) : editingZone ? (
-                            <input
-                              value={zoneDraft}
-                              onChange={(e) => setZoneDraft(e.target.value)}
-                              className={`${inputClass} py-1 text-sm`}
-                            />
-                          ) : (
-                            zone.name
-                          )}
+                          {zone?.name ?? <span className="text-ink-faint">Unassigned</span>}
                         </td>
-                      );
-                      // Zone-level actions live in the Actions column (first row of the group only).
-                      const zoneActions = zone == null ? null : (
-                        <div className="mb-2 flex flex-wrap items-center gap-2 border-b border-border/60 pb-2">
-                          <span className="font-mono text-[10px] text-ink-faint uppercase">Zone</span>
-                          {editingZone ? (
-                            <>
-                              <button type="button" onClick={() => handleSaveZone(zone)} disabled={busy === `edit-zone:${zone.id}`} className="rounded-full bg-gold px-3 py-1 text-xs font-medium text-void hover:bg-gold-light disabled:opacity-60">
-                                Save
-                              </button>
-                              <button type="button" onClick={() => setEditZoneId(null)} className="rounded-full border border-border px-3 py-1 text-xs text-ink-muted hover:bg-void">
-                                Cancel
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button type="button" onClick={() => { setEditRoomId(null); setEditZoneId(zone.id); setZoneDraft(zone.name); }} className="text-xs text-gold underline">
-                                Rename
-                              </button>
-                              <button type="button" onClick={() => handleDeleteZone(zone)} disabled={busy === `del-zone:${zone.id}`} className="text-xs text-danger underline disabled:opacity-60">
-                                Delete
-                              </button>
-                            </>
-                          )}
-                        </div>
                       );
                       if (venues.length === 0) {
                         return (
@@ -449,7 +447,7 @@ export function RoomsZonesSection({
                             {zoneCell}
                             <td className="px-4 py-3 text-ink-faint">No venues</td>
                             <td className="px-4 py-3 text-ink-faint">—</td>
-                            <td className="px-4 py-3 align-top">{zoneActions}</td>
+                            <td className="px-4 py-3 text-ink-faint">—</td>
                           </tr>
                         );
                       }
@@ -497,10 +495,8 @@ export function RoomsZonesSection({
                                   )}
                                 </td>
                                 <td className="px-4 py-3 align-top">
-                                  {i === 0 && zoneActions}
                                   {editing ? (
                                     <div className="flex flex-wrap items-center gap-2">
-                                      <span className="font-mono text-[10px] text-ink-faint uppercase">Venue</span>
                                       <select
                                         value={roomDraft.zoneId}
                                         onChange={(e) => setRoomDraft((d) => ({ ...d, zoneId: e.target.value }))}
