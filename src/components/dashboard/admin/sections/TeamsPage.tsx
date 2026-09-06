@@ -58,7 +58,7 @@ export function TeamsPage({
         onChange={setView}
         options={[
           { value: "by-team", label: "View by Team" },
-          { value: "by-members", label: "View by Members" },
+          { value: "by-members", label: "View by Participants" },
         ]}
       />
 

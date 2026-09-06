@@ -153,6 +153,7 @@ export function TeamsByMembersView({
                 <th className="px-4 py-3">School</th>
                 <th className="px-4 py-3">Department</th>
                 <th className="px-4 py-3">Branch</th>
+                <th className="px-4 py-3">Gender</th>
                 <th className="px-4 py-3">Stay</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
@@ -186,6 +187,7 @@ export function TeamsByMembersView({
                           <td className="px-4 py-3 text-ink-muted">{m.school}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.department}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.branch}</td>
+                          <td className="px-4 py-3 text-ink-muted">{m.gender}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.stay}</td>
                           <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                           <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>

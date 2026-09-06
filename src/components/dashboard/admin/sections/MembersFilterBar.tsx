@@ -17,6 +17,7 @@ export interface MemberFilters {
   school: string;
   department: string;
   branch: string;
+  gender: string;
   stay: string;
   room: string;
   spoc: string;
@@ -31,6 +32,7 @@ export const EMPTY_MEMBER_FILTERS: MemberFilters = {
   school: "",
   department: "",
   branch: "",
+  gender: "",
   stay: "",
   room: "",
   spoc: "",
@@ -51,6 +53,7 @@ export function filterMembers(rows: MemberRow[], filters: MemberFilters): Member
     if (filters.school && member.school !== filters.school) return false;
     if (filters.department && member.department !== filters.department) return false;
     if (filters.branch && member.branch !== filters.branch) return false;
+    if (filters.gender && member.gender !== filters.gender) return false;
     if (filters.stay && member.stay !== filters.stay) return false;
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
@@ -89,6 +92,7 @@ export function MembersFilterBar({
   const schoolOptions = useMemo(() => uniqueOptions(rows, (m) => m.school), [rows]);
   const departmentOptions = useMemo(() => uniqueOptions(rows, (m) => m.department), [rows]);
   const branchOptions = useMemo(() => uniqueOptions(rows, (m) => m.branch), [rows]);
+  const genderOptions = useMemo(() => uniqueOptions(rows, (m) => m.gender), [rows]);
   const stayOptions = useMemo(() => uniqueOptions(rows, (m) => m.stay), [rows]);
 
   return (
@@ -116,6 +120,7 @@ export function MembersFilterBar({
         <FilterSelect label="School" value={filters.school} onChange={(v) => set("school", v)} options={schoolOptions} />
         <FilterSelect label="Department" value={filters.department} onChange={(v) => set("department", v)} options={departmentOptions} />
         <FilterSelect label="Branch" value={filters.branch} onChange={(v) => set("branch", v)} options={branchOptions} />
+        <FilterSelect label="Gender" value={filters.gender} onChange={(v) => set("gender", v)} options={genderOptions} />
         <FilterSelect label="Stay" value={filters.stay} onChange={(v) => set("stay", v)} options={stayOptions} />
         <FilterSelect
           label="Venue"
