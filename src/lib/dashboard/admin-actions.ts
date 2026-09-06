@@ -11,6 +11,7 @@ function friendlyError(raw: string): string {
   if (raw.includes("REQUEST_NOT_FOUND")) return "That request couldn't be found.";
   if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant couldn't be found.";
   if (raw.includes("NOT_A_SPOC")) return "That account isn't a SPOC — assign the SPOC role first.";
+  if (raw.includes("NOT_A_ZONE_MANAGER")) return "Only a Zone Manager account can manage a zone.";
   if (raw.includes("DUPLICATE_PS_NUMBER")) return "That problem statement number is already in use.";
   if (raw.includes("DUPLICATE_ROOM_NAME")) return "A room with that name already exists.";
   if (raw.includes("DUPLICATE_ZONE_NAME")) return "A zone with that name already exists.";
@@ -157,6 +158,11 @@ export function createCampusAdmin(input: CreateStaffInput & { campus: "VSP" | "B
   return callRpc<string>("create_campus_admin", { p_name: input.name, p_email: input.email, p_campus: input.campus });
 }
 
+/** Zone Manager account — supervises the SPOCs of the venues in a zone. Campus Admin -> own campus / Super Admin -> must pass `campus`. */
+export function createZoneManager(input: CreateStaffInput) {
+  return callRpc<string>("create_zone_manager", { p_name: input.name, p_email: input.email, p_campus: input.campus ?? null });
+}
+
 // ── Rooms & Zones (item 11: SPOC is assigned to a room only, never a team/person) ──
 
 export function createRoom(name: string, zoneId: string | null, campus?: "VSP" | "BLR" | "HYD" | null) {
@@ -213,6 +219,10 @@ export function deleteMember(profileId: string) {
 
 export function deleteSpoc(profileId: string) {
   return callRpc<null>("delete_spoc", { p_profile_id: profileId });
+}
+
+export function deleteZoneManager(profileId: string) {
+  return callRpc<null>("delete_zone_manager", { p_profile_id: profileId });
 }
 
 // ── Edits (admin-only: rename a team, edit a member's/participant's details) ──

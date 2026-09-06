@@ -9,6 +9,8 @@ export function dashboardPathForRole(role: UserRole): string {
       return "/dashboard/super";
     case "Campus Admin":
       return "/dashboard/admin";
+    case "Zone Manager":
+      return "/dashboard/zone";
     case "SPOC":
       return "/dashboard/spoc";
     case "Team Lead":

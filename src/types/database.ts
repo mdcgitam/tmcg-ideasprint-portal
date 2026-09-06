@@ -10,7 +10,7 @@
 
 export type CampusCode = "VSP" | "BLR" | "HYD";
 
-export type UserRole = "Super Admin" | "Campus Admin" | "SPOC" | "Team Lead" | "Member";
+export type UserRole = "Super Admin" | "Campus Admin" | "Zone Manager" | "SPOC" | "Team Lead" | "Member";
 export type TeamStatus = "Registered" | "Active" | "Pending Approval" | "Qualified for Grand Finale" | "Exited";
 export type PsStatus = "Hidden" | "Released";
 export type AttendanceStatus = "Present" | "Absent";

@@ -76,6 +76,8 @@ expected_functions(name, expected_arg_count) as (
     ('create_campus_admin', 3),
     ('create_spoc', 3),
     ('is_platform_admin', 0),
+    ('create_zone_manager', 3),
+    ('delete_zone_manager', 1),
     ('update_room_name', 2),
     ('update_zone_name', 2),
     ('delete_room', 1),

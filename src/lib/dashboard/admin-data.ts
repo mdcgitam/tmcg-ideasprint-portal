@@ -34,6 +34,7 @@ export interface AdminDashboardData {
   problemStatementExtensions: ProblemStatementExtensionRow[];
   config: Record<string, unknown>;
   spocs: ProfileRow[];
+  zoneManagers: ProfileRow[];
   staffAccounts: ProfileRow[];
   notifications: NotificationRow[];
   rooms: RoomRow[];
@@ -76,6 +77,7 @@ export async function fetchAdminDashboardData(
     { data: problemStatementExtensions },
     { data: configRows },
     { data: spocs },
+    { data: zoneManagers },
     { data: staffAccounts },
     { data: notifications },
     { data: rooms },
@@ -93,7 +95,12 @@ export async function fetchAdminDashboardData(
     supabase.from("problem_statement_extensions").select("*"),
     supabase.from("configuration").select("*"),
     supabase.from("profiles").select("*").eq("role", "SPOC"),
-    supabase.from("profiles").select("*").in("role", ["SPOC", "Super Admin"]).order("created_at", { ascending: false }),
+    supabase.from("profiles").select("*").eq("role", "Zone Manager"),
+    supabase
+      .from("profiles")
+      .select("*")
+      .in("role", ["SPOC", "Zone Manager", "Campus Admin", "Super Admin"])
+      .order("created_at", { ascending: false }),
     supabase.from("notifications").select("*").order("created_at", { ascending: false }),
     supabase.from("rooms").select("*").order("name"),
     supabase.from("zones").select("*").order("name"),
@@ -192,6 +199,7 @@ export async function fetchAdminDashboardData(
     problemStatementExtensions: scopedPsExtensions,
     config,
     spocs: inCampus((spocs ?? []) as ProfileRow[]),
+    zoneManagers: inCampus((zoneManagers ?? []) as ProfileRow[]),
     staffAccounts: inCampus((staffAccounts ?? []) as ProfileRow[]),
     notifications: (notifications ?? []) as NotificationRow[],
     rooms: inCampus((rooms ?? []) as RoomRow[]),

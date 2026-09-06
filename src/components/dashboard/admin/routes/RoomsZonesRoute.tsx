@@ -4,7 +4,8 @@ import { RoomsZonesSection } from "@/components/dashboard/admin/sections/RoomsZo
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function RoomsZonesRoute({ profile }: { profile: ProfileRow }) {
-  const { teams, membersByTeam, rooms, zones, spocs, staffAccounts } = await fetchAdminDashboardData(profile);
+  const { teams, membersByTeam, rooms, zones, spocs, zoneManagers, staffAccounts } =
+    await fetchAdminDashboardData(profile);
 
   return (
     <SectionPageShell title="Zones and Venues" scope="admin">
@@ -15,6 +16,7 @@ export async function RoomsZonesRoute({ profile }: { profile: ProfileRow }) {
         rooms={rooms}
         zones={zones}
         spocs={spocs}
+        zoneManagers={zoneManagers}
         staffAccounts={staffAccounts}
       />
     </SectionPageShell>

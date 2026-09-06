@@ -39,6 +39,7 @@ export function RoomsZonesSection({
   teams,
   membersByTeam,
   spocs,
+  zoneManagers,
   staffAccounts,
 }: {
   campus: CampusCode | null;
@@ -47,6 +48,7 @@ export function RoomsZonesSection({
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   spocs: ProfileRow[];
+  zoneManagers: ProfileRow[];
   staffAccounts: ProfileRow[];
 }) {
   const [localRooms, setLocalRooms] = useState(rooms);
@@ -325,15 +327,15 @@ export function RoomsZonesSection({
                           <div className="flex flex-wrap items-center gap-2">
                             <select
                               value={z.zone_manager_profile_id ?? ""}
-                              disabled={busy === `zone-manager:${z.id}`}
+                              disabled={busy === `zone-manager:${z.id}` || zoneManagers.length === 0}
                               onChange={(e) => handleAssignZoneManager(z.id, e.target.value)}
                               className={selectClass}
                               aria-label={`Zone manager for ${z.name}`}
                             >
-                              <option value="">No zone manager</option>
-                              {staffAccounts.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                  {s.name} ({s.role})
+                              <option value="">{zoneManagers.length === 0 ? "No Zone Manager accounts yet" : "No zone manager"}</option>
+                              {zoneManagers.map((m) => (
+                                <option key={m.id} value={m.id}>
+                                  {m.name}
                                 </option>
                               ))}
                             </select>

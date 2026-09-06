@@ -2,13 +2,21 @@
 
 import { useState } from "react";
 import type { CampusCode, ProfileRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
-import { createSpoc, createCampusAdmin, updateUserRole, deleteSpoc, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import {
+  createSpoc,
+  createCampusAdmin,
+  createZoneManager,
+  updateUserRole,
+  deleteSpoc,
+  deleteZoneManager,
+  DashboardActionError,
+} from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
 
 type View = "all" | "by-assignment";
-type NewRole = "SPOC" | "Campus Admin";
+type NewRole = "SPOC" | "Zone Manager" | "Campus Admin";
 
 /**
  * Staff accounts don't go through team registration — this is the only way to
@@ -44,8 +52,8 @@ export function StaffAccountsSection({
   const fadeRef = useTabFade(view);
 
   const roleChangeOptions: UserRole[] = canManageCampusAdmins
-    ? ["SPOC", "Campus Admin"]
-    : ["SPOC"];
+    ? ["SPOC", "Zone Manager", "Campus Admin"]
+    : ["SPOC", "Zone Manager"];
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +64,9 @@ export function StaffAccountsSection({
       const id =
         role === "Campus Admin" && campus
           ? await createCampusAdmin({ ...payload, campus })
-          : await createSpoc(payload);
+          : role === "Zone Manager"
+            ? await createZoneManager(payload)
+            : await createSpoc(payload);
       setLocal((prev) => [
         { id, auth_user_id: null, user_id: "", campus, role, name: name.trim(), gitam_email: email.trim().toLowerCase(), phone: "", reg_no: "", graduation: null, program: null, year_of_study: "", school: "", department: "", branch: "", gender: "", stay: "", is_active: true, deactivated_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         ...prev,
@@ -83,13 +93,14 @@ export function StaffAccountsSection({
     }
   }
 
-  async function handleDeleteSpoc(profileId: string, name: string) {
-    if (!window.confirm(`Delete SPOC ${name}? This unassigns them from every room first.`)) return;
-    setChangingId(profileId);
+  async function handleDeleteStaff(s: ProfileRow) {
+    const label = s.role === "Zone Manager" ? "Zone Manager" : "SPOC";
+    if (!window.confirm(`Delete ${label} ${s.name}? They're unassigned from every ${s.role === "Zone Manager" ? "zone" : "venue"} first.`)) return;
+    setChangingId(s.id);
     setRowError(null);
     try {
-      await deleteSpoc(profileId);
-      setLocal((prev) => prev.filter((p) => p.id !== profileId));
+      await (s.role === "Zone Manager" ? deleteZoneManager(s.id) : deleteSpoc(s.id));
+      setLocal((prev) => prev.filter((p) => p.id !== s.id));
     } catch (err) {
       setRowError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
@@ -117,20 +128,15 @@ export function StaffAccountsSection({
             required
             className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
           />
-          {canManageCampusAdmins ? (
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as NewRole)}
-              className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-            >
-              <option value="SPOC">SPOC</option>
-              <option value="Campus Admin">Campus Admin</option>
-            </select>
-          ) : (
-            <div className="flex items-center rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink-muted">
-              SPOC
-            </div>
-          )}
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as NewRole)}
+            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          >
+            <option value="SPOC">SPOC</option>
+            <option value="Zone Manager">Zone Manager</option>
+            {canManageCampusAdmins && <option value="Campus Admin">Campus Admin</option>}
+          </select>
         </div>
         {campus && (
           <p className="mt-2 font-heading text-xs text-ink-faint">New account will be created in <span className="text-gold">{campus}</span>.</p>
@@ -205,11 +211,11 @@ export function StaffAccountsSection({
                             </option>
                           )}
                         </select>
-                        {s.role === "SPOC" && (
+                        {(s.role === "SPOC" || s.role === "Zone Manager") && (
                           <button
                             type="button"
                             disabled={changingId === s.id}
-                            onClick={() => handleDeleteSpoc(s.id, s.name)}
+                            onClick={() => handleDeleteStaff(s)}
                             className="rounded-full border border-danger/50 px-3 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
                           >
                             Delete
