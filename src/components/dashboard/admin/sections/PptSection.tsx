@@ -39,7 +39,10 @@ function toDatetimeLocal(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** Presentation (PPT) tracker — one row per team, matching the admin NOC Teams table's format. Files must be a PDF under 16MB, uploaded by the Team Lead only. */
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const GENERAL_DEADLINE_KEY = "ppt.general_deadline";
+
+/** Presentation (PPT) tracker — one row per team, matching the admin NOC Teams table's format. Files must be a PDF, 2MB or less; uploadable by the Team Lead, or by an Admin on the team's behalf (mirroring NOC's admin-upload path). */
 export function PptSection({
   teams,
   membersByTeam,
@@ -48,6 +51,7 @@ export function PptSection({
   zones,
   staffAccounts,
   problemStatements,
+  config,
   scope,
 }: {
   teams: TeamRow[];
@@ -57,8 +61,12 @@ export function PptSection({
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
   problemStatements: ProblemStatementRow[];
+  config: Record<string, unknown>;
   scope: "spoc" | "admin";
 }) {
+  const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
+  const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
+
   const [localPresentations, setLocalPresentations] = useState(presentations);
   const [filters, setFilters] = useState<PptFilters>(EMPTY_PPT_FILTERS);
 
@@ -75,13 +83,19 @@ export function PptSection({
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
+  /** Team-specific deadline wins; otherwise the Configuration-wide General PPT Deadline. */
+  function effectiveDeadline(teamId: string): { iso: string | null; isOverride: boolean } {
+    const override = localPresentations.find((p) => p.team_id === teamId)?.deadline ?? null;
+    return override ? { iso: override, isOverride: true } : { iso: generalDeadline, isOverride: false };
+  }
+
   async function handleAdminUpload(teamId: string, file: File) {
     if (file.type !== "application/pdf") {
       setRowErrors((prev) => ({ ...prev, [teamId]: "Only PDF files are allowed." }));
       return;
     }
-    if (file.size > 16 * 1024 * 1024) {
-      setRowErrors((prev) => ({ ...prev, [teamId]: "File exceeds the 16MB limit." }));
+    if (file.size > MAX_FILE_SIZE) {
+      setRowErrors((prev) => ({ ...prev, [teamId]: "PDF file size must be 2 MB or less." }));
       return;
     }
     setRowBusy(teamId);
@@ -201,7 +215,7 @@ export function PptSection({
       const status = localPresentations.find((p) => p.team_id === team.id)?.status ?? "Not Uploaded";
 
       if (q) {
-        const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
+        const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""} ${psOf(team)?.number ?? ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       if (filters.campus && lead?.campus !== filters.campus) return false;
@@ -226,7 +240,7 @@ export function PptSection({
   return (
     <div className="flex flex-col gap-4">
       <p className="font-heading text-xs text-ink-muted">
-        PPT files must be a PDF under 16MB. Only the Team Lead can upload.
+        PPT files must be a PDF, 2 MB or less. Uploadable by the Team Lead, or by an Admin on the team's behalf.
       </p>
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
@@ -260,7 +274,7 @@ export function PptSection({
         <input
           value={filters.search}
           onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-          placeholder="Team name / team lead / lead phone…"
+          placeholder="Team name / team lead / lead phone / PS code…"
           className="min-w-[180px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
       </div>
@@ -301,7 +315,7 @@ export function PptSection({
                   const venue = room ? (zone ? `${room.name} (${zone.name})` : room.name) : "Unassigned";
                   const ps = psOf(team);
                   const uploaded = presentation?.status === "Uploaded" && presentation.file_path;
-                  const currentDeadline = presentation?.deadline ?? null;
+                  const { iso: currentDeadline, isOverride } = effectiveDeadline(team.id);
                   const expired = !!currentDeadline && new Date(currentDeadline) < new Date();
                   const deadlineBusyHere = deadlineBusy === team.id;
                   const deadlineError = deadlineErrors[team.id];
@@ -388,6 +402,7 @@ export function PptSection({
                                   timeStyle: "short",
                                 })
                               : "Not set"}
+                            {currentDeadline && !isOverride && " (General)"}
                             {expired && " — Time exceeded"}
                           </span>
                           <input

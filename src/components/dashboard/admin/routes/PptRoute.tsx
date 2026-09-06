@@ -12,6 +12,7 @@ export async function PptRoute({ profile }: { profile: ProfileRow }) {
     zones,
     staffAccounts,
     problemStatements,
+    config,
   } = await fetchAdminDashboardData(profile);
   const scope = profile.role === "Super Admin" ? "admin" : "spoc";
 
@@ -25,6 +26,7 @@ export async function PptRoute({ profile }: { profile: ProfileRow }) {
         zones={zones}
         staffAccounts={staffAccounts}
         problemStatements={problemStatements}
+        config={config}
         scope={scope}
       />
     </SectionPageShell>

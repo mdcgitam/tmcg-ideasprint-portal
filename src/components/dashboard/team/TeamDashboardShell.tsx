@@ -125,7 +125,12 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
           )}
           {tab === "NOC" && <NocSection profile={props.profile} members={props.members} nocs={props.nocs} isLead={isLead} />}
           {tab === "Presentation" && (
-            <PresentationSection team={props.team} presentation={props.presentation} isLead={isLead} />
+            <PresentationSection
+              team={props.team}
+              presentation={props.presentation}
+              isLead={isLead}
+              config={props.config}
+            />
           )}
           {tab === "Exit Request" && (
             <ExitRequestSection

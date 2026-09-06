@@ -12,21 +12,24 @@ import {
 } from "@/lib/dashboard/team-actions";
 
 const ACCEPT = ".pdf,application/pdf";
-const MAX_FILE_SIZE = 16 * 1024 * 1024;
+const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const GENERAL_DEADLINE_KEY = "ppt.general_deadline";
 
 /**
  * Team Lead uploads the team's pitch deck; Members see status only — same
- * shape as ExitFormSection. Files must be a PDF under 16MB (matches the
+ * shape as ExitFormSection. Files must be a PDF, 2MB or less (matches the
  * ppt-uploads storage bucket's file_size_limit/allowed_mime_types).
  */
 export function PresentationSection({
   team,
   presentation,
   isLead,
+  config,
 }: {
   team: TeamRow;
   presentation: PresentationRow | null;
   isLead: boolean;
+  config: Record<string, unknown>;
 }) {
   const [local, setLocal] = useState(presentation);
   const [busy, setBusy] = useState(false);
@@ -35,7 +38,13 @@ export function PresentationSection({
 
   const status: PresentationStatus = local?.status ?? "Not Uploaded";
   const uploaded = status === "Uploaded" && local?.file_path;
-  const expired = !!local?.deadline && new Date(local.deadline) < new Date();
+
+  // Team-specific deadline (record_presentation/0027) wins over the
+  // Configuration-wide General PPT Deadline set by Super Admin.
+  const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
+  const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
+  const effectiveDeadline = local?.deadline ?? generalDeadline;
+  const expired = !!effectiveDeadline && new Date(effectiveDeadline) < new Date();
 
   async function handleUpload(file: File) {
     if (expired) {
@@ -47,7 +56,7 @@ export function PresentationSection({
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
-      setError("File exceeds the 16MB limit.");
+      setError("PDF file size must be 2 MB or less.");
       return;
     }
     setBusy(true);
@@ -97,12 +106,12 @@ export function PresentationSection({
       <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Presentation (PPT)</span>
       <p className={`mt-3 font-heading text-lg ${uploaded ? "text-gitam" : "text-ink-muted"}`}>{status}</p>
       <p className="mt-2 max-w-lg font-heading text-xs text-ink-muted">
-        Upload your team&rsquo;s pitch deck. Only the Team Lead can upload — PDF only, max 16MB.
+        Upload your team&rsquo;s pitch deck. Only the Team Lead can upload — PDF only, max 2MB.
       </p>
       <p className={`mt-2 font-heading text-xs ${expired ? "text-danger" : "text-ink-faint"}`}>
         Deadline:{" "}
-        {local?.deadline
-          ? new Date(local.deadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
+        {effectiveDeadline
+          ? new Date(effectiveDeadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
           : "Not set"}
         {expired && " — Time exceeded"}
       </p>
