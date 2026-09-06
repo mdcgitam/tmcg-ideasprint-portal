@@ -1,8 +1,7 @@
 import { requireProfile } from "@/lib/auth/require-profile";
 import { NotificationsRoute } from "@/components/dashboard/admin/routes/NotificationsRoute";
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ room?: string }> }) {
+export default async function Page() {
   const profile = await requireProfile(["Zone Manager"]);
-  const { room } = await searchParams;
-  return <NotificationsRoute profile={profile} roomId={room} />;
+  return <NotificationsRoute profile={profile} />;
 }
