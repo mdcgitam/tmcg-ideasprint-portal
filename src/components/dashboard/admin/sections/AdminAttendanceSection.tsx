@@ -442,8 +442,8 @@ export function AdminAttendanceSection({
                         <th className="px-4 py-3">Lead Phone No</th>
                         <th className="px-4 py-3">Team Size</th>
                         <th className="px-4 py-3">Zone</th>
-                        <th className="px-4 py-3">SPOC</th>
                         <th className="px-4 py-3">Venue</th>
+                        <th className="px-4 py-3">SPOC</th>
                         {localSessions.map((s) => (
                           <th key={s.id} className="px-4 py-3">
                             Attendance Status ({s.name})
@@ -483,8 +483,8 @@ export function AdminAttendanceSection({
                                 <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                                 <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                                 <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
-                                <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                                 <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
+                                <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                                 {localSessions.map((s) => {
                                   const status = teamStatus(team, s);
                                   const busy = busyKey === `team:${team.id}:${s.id}`;
