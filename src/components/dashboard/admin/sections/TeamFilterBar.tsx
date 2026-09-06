@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo } from "react";
-import type { ExitRequestRow, RoomRow, TeamRow, ProfileRow } from "@/types/database";
+import type { ExitRequestRow, RoomRow, TeamRow, ProfileRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { FilterSelect } from "./TeamFormFields";
 import { TEAM_STATUS_OPTIONS, activeMemberCount, teamActiveStatus } from "./ExitStatusBadge";
@@ -8,6 +8,7 @@ export interface TeamFilters {
   search: string;
   campus: string;
   teamSize: string;
+  zone: string;
   room: string;
   spoc: string;
   status: string;
@@ -17,16 +18,18 @@ export const EMPTY_TEAM_FILTERS: TeamFilters = {
   search: "",
   campus: "",
   teamSize: "",
+  zone: "",
   room: "",
   spoc: "",
   status: "",
 };
 
-/** "View by Teams"' filter set — Campus / Team Size / Venue / SPOC / Status. Search matches Team Name, Team ID, Team Lead, and Lead Phone No only. */
+/** "View by Teams"' filter set — Campus / Team Size / Zone / Venue / SPOC / Status. Search matches Team Name, Team ID, Team Lead, and Lead Phone No only. */
 export function filterTeams(
   teams: TeamRow[],
   membersByTeam: Record<string, TeamMemberProfile[]>,
   filters: TeamFilters,
+  rooms: RoomRow[],
 ): TeamRow[] {
   const q = filters.search.trim().toLowerCase();
   return teams.filter((team) => {
@@ -39,6 +42,10 @@ export function filterTeams(
     }
     if (filters.campus && lead?.campus !== filters.campus) return false;
     if (filters.teamSize && String(activeMemberCount(members) || team.member_count) !== filters.teamSize) return false;
+    if (filters.zone) {
+      const room = rooms.find((r) => r.id === team.room_id);
+      if (!room || room.zone_id !== filters.zone) return false;
+    }
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
     if (filters.status && teamActiveStatus(members) !== filters.status) return false;
@@ -52,6 +59,7 @@ export function TeamFilterBar({
   teams,
   membersByTeam,
   rooms,
+  zones,
   staffAccounts,
   extraActions,
   singleCampus = false,
@@ -63,11 +71,12 @@ export function TeamFilterBar({
   membersByTeam: Record<string, TeamMemberProfile[]>;
   exitRequests: ExitRequestRow[];
   rooms: RoomRow[];
+  zones: ZoneRow[];
   staffAccounts: ProfileRow[];
   extraActions?: ReactNode;
   /** Hide the Campus filter when the view is locked to one campus. */
   singleCampus?: boolean;
-  /** Hide the Venue filter when a venue tab bar already covers it (Zone Manager). */
+  /** Hide the Zone/Venue filters when a venue tab bar already covers them (Zone Manager). */
   hideVenue?: boolean;
 }) {
   function set<K extends keyof TeamFilters>(key: K, value: string) {
@@ -103,13 +112,22 @@ export function TeamFilterBar({
         )}
         <FilterSelect label="Team Size" value={filters.teamSize} onChange={(v) => set("teamSize", v)} options={["3", "4"]} />
         {!hideVenue && (
-          <FilterSelect
-            label="Venue"
-            value={filters.room}
-            onChange={(v) => set("room", v)}
-            options={rooms.map((r) => r.name)}
-            valueOptions={rooms.map((r) => r.id)}
-          />
+          <>
+            <FilterSelect
+              label="Zone"
+              value={filters.zone}
+              onChange={(v) => set("zone", v)}
+              options={zones.map((z) => z.name)}
+              valueOptions={zones.map((z) => z.id)}
+            />
+            <FilterSelect
+              label="Venue"
+              value={filters.room}
+              onChange={(v) => set("room", v)}
+              options={rooms.map((r) => r.name)}
+              valueOptions={rooms.map((r) => r.id)}
+            />
+          </>
         )}
         <FilterSelect
           label="SPOC"

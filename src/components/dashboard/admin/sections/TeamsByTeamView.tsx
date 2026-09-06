@@ -55,8 +55,8 @@ export function TeamsByTeamView({
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
   const filteredTeams = useMemo(
-    () => filterTeams(teams, membersByTeam, filters),
-    [teams, membersByTeam, filters],
+    () => filterTeams(teams, membersByTeam, filters, rooms),
+    [teams, membersByTeam, filters, rooms],
   );
 
   function handleExportCsv() {
@@ -72,6 +72,7 @@ export function TeamsByTeamView({
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
           "Team Size": String(activeMemberCount(members) || members.length),
+          Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
           Status: teamActiveStatus(members),
@@ -101,6 +102,7 @@ export function TeamsByTeamView({
         membersByTeam={membersByTeam}
         exitRequests={exitRequests}
         rooms={rooms}
+        zones={zones}
         staffAccounts={staffAccounts}
         singleCampus={singleCampus}
         hideVenue={hideVenue}
@@ -132,6 +134,7 @@ export function TeamsByTeamView({
                 <th className="px-4 py-3">Team Lead</th>
                 <th className="px-4 py-3">Lead Phone No</th>
                 <th className="px-4 py-3">Team Size</th>
+                <th className="px-4 py-3">Zone</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">Status</th>
@@ -152,6 +155,7 @@ export function TeamsByTeamView({
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{activeMemberCount(members) || members.length}</td>
+                    <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{teamActiveStatus(members)}</td>

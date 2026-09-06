@@ -1,5 +1,5 @@
 import { type ReactNode, useMemo } from "react";
-import type { ExitRequestRow, ProfileRow, RoomRow, TeamRow } from "@/types/database";
+import type { ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { FilterSelect, YEAR_OPTIONS } from "./TeamFormFields";
 import { MEMBER_STATUS_OPTIONS, exitStatusLabel } from "./ExitStatusBadge";
@@ -22,6 +22,7 @@ export interface MemberFilters {
   branch: string;
   gender: string;
   stay: string;
+  zone: string;
   room: string;
   spoc: string;
   status: string;
@@ -40,13 +41,19 @@ export const EMPTY_MEMBER_FILTERS: MemberFilters = {
   branch: "",
   gender: "",
   stay: "",
+  zone: "",
   room: "",
   spoc: "",
   status: "",
 };
 
 /** "View by Participants"' filter set — one row per member. Search matches User ID, Team Name, Participant Name, Reg No, Email, Phone No. */
-export function filterMembers(rows: MemberRow[], filters: MemberFilters, exitRequests: ExitRequestRow[]): MemberRow[] {
+export function filterMembers(
+  rows: MemberRow[],
+  filters: MemberFilters,
+  exitRequests: ExitRequestRow[],
+  rooms: RoomRow[],
+): MemberRow[] {
   const q = filters.search.trim().toLowerCase();
   return rows.filter(({ member, team }) => {
     if (q) {
@@ -65,6 +72,10 @@ export function filterMembers(rows: MemberRow[], filters: MemberFilters, exitReq
     if (filters.branch && member.branch !== filters.branch) return false;
     if (filters.gender && member.gender !== filters.gender) return false;
     if (filters.stay && member.stay !== filters.stay) return false;
+    if (filters.zone) {
+      const room = rooms.find((r) => r.id === team.room_id);
+      if (!room || room.zone_id !== filters.zone) return false;
+    }
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
     if (filters.status && exitStatusLabel(exitRequests.find((r) => r.profile_id === member.id)) !== filters.status) return false;
@@ -81,10 +92,9 @@ export function MembersFilterBar({
   onChange,
   rows,
   rooms,
+  zones,
   staffAccounts,
   extraActions,
-  sortById,
-  onToggleSort,
   singleCampus = false,
   hideVenue = false,
 }: {
@@ -92,10 +102,9 @@ export function MembersFilterBar({
   onChange: (next: MemberFilters) => void;
   rows: MemberRow[];
   rooms: RoomRow[];
+  zones: ZoneRow[];
   staffAccounts: ProfileRow[];
   extraActions?: ReactNode;
-  sortById?: boolean;
-  onToggleSort?: () => void;
   singleCampus?: boolean;
   hideVenue?: boolean;
 }) {
@@ -144,13 +153,22 @@ export function MembersFilterBar({
         <FilterSelect label="Gender" value={filters.gender} onChange={(v) => set("gender", v)} options={genderOptions} />
         <FilterSelect label="Stay" value={filters.stay} onChange={(v) => set("stay", v)} options={stayOptions} />
         {!hideVenue && (
-          <FilterSelect
-            label="Venue"
-            value={filters.room}
-            onChange={(v) => set("room", v)}
-            options={rooms.map((r) => r.name)}
-            valueOptions={rooms.map((r) => r.id)}
-          />
+          <>
+            <FilterSelect
+              label="Zone"
+              value={filters.zone}
+              onChange={(v) => set("zone", v)}
+              options={zones.map((z) => z.name)}
+              valueOptions={zones.map((z) => z.id)}
+            />
+            <FilterSelect
+              label="Venue"
+              value={filters.room}
+              onChange={(v) => set("room", v)}
+              options={rooms.map((r) => r.name)}
+              valueOptions={rooms.map((r) => r.id)}
+            />
+          </>
         )}
         <FilterSelect
           label="SPOC"
@@ -160,17 +178,6 @@ export function MembersFilterBar({
           valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
         />
         <FilterSelect label="Status" value={filters.status} onChange={(v) => set("status", v)} options={[...MEMBER_STATUS_OPTIONS]} />
-        {onToggleSort && (
-          <button
-            type="button"
-            onClick={onToggleSort}
-            className={`rounded-lg border px-3 py-1.5 font-heading text-xs transition-colors ${
-              sortById ? "border-gold bg-gold/10 text-gold" : "border-border text-ink-muted hover:border-gold hover:text-gold"
-            }`}
-          >
-            View All (by ID)
-          </button>
-        )}
       </div>
     </div>
   );

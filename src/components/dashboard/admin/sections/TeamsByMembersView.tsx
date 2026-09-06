@@ -8,13 +8,6 @@ import { ExitStatusBadge } from "./ExitStatusBadge";
 import { MembersFilterBar, filterMembers, EMPTY_MEMBER_FILTERS, type MemberFilters, type MemberRow } from "./MembersFilterBar";
 import { TeamDetailModal } from "./TeamDetailModal";
 
-// team_id looks like "TeamID01", "TeamID100" — sort on the numeric tail so
-// "View All" orders teams by ID number rather than lexicographically.
-function teamIdSortKey(teamId: string): number {
-  const match = teamId.match(/(\d+)$/);
-  return match ? parseInt(match[1], 10) : 0;
-}
-
 /**
  * "View by Participants" — one row per member, filtered/searched at the
  * member level, with a View button that opens the full TeamDetailModal
@@ -52,12 +45,6 @@ export function TeamsByMembersView({
 }) {
   const [openTeamId, setOpenTeamId] = useState<string | null>(null);
   const [filters, setFilters] = useState<MemberFilters>(EMPTY_MEMBER_FILTERS);
-  const [sortById, setSortById] = useState(false);
-
-  function handleViewAll() {
-    setFilters(EMPTY_MEMBER_FILTERS);
-    setSortById(true);
-  }
 
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
@@ -71,7 +58,10 @@ export function TeamsByMembersView({
     [teams, membersByTeam],
   );
 
-  const filteredRows = useMemo(() => filterMembers(allRows, filters, exitRequests), [allRows, filters, exitRequests]);
+  const filteredRows = useMemo(
+    () => filterMembers(allRows, filters, exitRequests, rooms),
+    [allRows, filters, exitRequests, rooms],
+  );
 
   const groups = useMemo(() => {
     const map = new Map<string, MemberRow[]>();
@@ -80,12 +70,8 @@ export function TeamsByMembersView({
       list.push(row);
       map.set(row.team.id, list);
     }
-    const entries = Array.from(map.values());
-    if (sortById) {
-      entries.sort((a, b) => teamIdSortKey(a[0].team.team_id) - teamIdSortKey(b[0].team.team_id));
-    }
-    return entries;
-  }, [filteredRows, sortById]);
+    return Array.from(map.values());
+  }, [filteredRows]);
 
   function handleDownloadAllMembers() {
     downloadCsv(
@@ -101,6 +87,7 @@ export function TeamsByMembersView({
         "Team Size": String(teamSize(team)),
         "Team Lead": (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.name ?? "—",
         SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
+        Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
         "Room Number": roomOf(team)?.name ?? "Unassigned",
       })),
     );
@@ -125,11 +112,10 @@ export function TeamsByMembersView({
         onChange={setFilters}
         rows={allRows}
         rooms={rooms}
+        zones={zones}
         staffAccounts={staffAccounts}
         singleCampus={singleCampus}
         hideVenue={hideVenue}
-        sortById={sortById}
-        onToggleSort={handleViewAll}
         extraActions={
           <button
             type="button"
@@ -169,6 +155,7 @@ export function TeamsByMembersView({
                 <th className="px-4 py-3">Branch</th>
                 <th className="px-4 py-3">Gender</th>
                 <th className="px-4 py-3">Stay</th>
+                <th className="px-4 py-3">Zone</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">Status</th>
@@ -206,6 +193,7 @@ export function TeamsByMembersView({
                           <td className="px-4 py-3 text-ink-muted">{m.branch}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.gender}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.stay}</td>
+                          <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
                           <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                           <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                           <td className="px-4 py-3">
