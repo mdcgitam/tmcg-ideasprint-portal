@@ -10,6 +10,10 @@ import {
   assignZoneManager,
   createRoom,
   createZone,
+  deleteRoom,
+  deleteZone,
+  updateRoomName,
+  updateZoneName,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
@@ -63,6 +67,12 @@ export function RoomsZonesSection({
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
   const [bulkRoomId, setBulkRoomId] = useState("");
   const [bulkAssignBusy, setBulkAssignBusy] = useState(false);
+
+  // Inline edit state for the Create-tab table
+  const [editRoomId, setEditRoomId] = useState<string | null>(null);
+  const [roomDraft, setRoomDraft] = useState({ name: "", zoneId: "", spocId: "" });
+  const [editZoneId, setEditZoneId] = useState<string | null>(null);
+  const [zoneDraft, setZoneDraft] = useState("");
 
   const staffById = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomById = (id: string | null) => localRooms.find((r) => r.id === id) ?? null;
@@ -202,6 +212,85 @@ export function RoomsZonesSection({
     }
   }
 
+  function startEditRoom(room: RoomRow) {
+    setEditZoneId(null);
+    setEditRoomId(room.id);
+    setRoomDraft({ name: room.name, zoneId: room.zone_id ?? "", spocId: room.spoc_profile_id ?? "" });
+  }
+
+  async function handleSaveRoom(room: RoomRow) {
+    const name = roomDraft.name.trim();
+    if (!name) return;
+    const zoneId = roomDraft.zoneId || null;
+    const spocId = roomDraft.spocId || null;
+    setBusy(`edit-room:${room.id}`);
+    setError(null);
+    try {
+      if (name !== room.name) await updateRoomName(room.id, name);
+      if (zoneId !== room.zone_id) await assignRoomToZone(room.id, zoneId);
+      if (spocId !== room.spoc_profile_id) await assignSpocToRoom(room.id, spocId);
+      setLocalRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, name, zone_id: zoneId, spoc_profile_id: spocId } : r)));
+      if (spocId !== room.spoc_profile_id) {
+        setLocalTeams((prev) => prev.map((t) => (t.room_id === room.id ? { ...t, spoc_profile_id: spocId } : t)));
+      }
+      setEditRoomId(null);
+    } catch (err) {
+      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDeleteRoom(room: RoomRow) {
+    if (!window.confirm(`Delete venue "${room.name}"? Teams in it are pulled out and lose its SPOC.`)) return;
+    setBusy(`del-room:${room.id}`);
+    setError(null);
+    try {
+      await deleteRoom(room.id);
+      setLocalRooms((prev) => prev.filter((r) => r.id !== room.id));
+      setLocalTeams((prev) => prev.map((t) => (t.room_id === room.id ? { ...t, room_id: null, spoc_profile_id: null } : t)));
+      if (editRoomId === room.id) setEditRoomId(null);
+    } catch (err) {
+      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleSaveZone(zone: ZoneRow) {
+    const name = zoneDraft.trim();
+    if (!name || name === zone.name) {
+      setEditZoneId(null);
+      return;
+    }
+    setBusy(`edit-zone:${zone.id}`);
+    setError(null);
+    try {
+      await updateZoneName(zone.id, name);
+      setLocalZones((prev) => prev.map((z) => (z.id === zone.id ? { ...z, name } : z)));
+      setEditZoneId(null);
+    } catch (err) {
+      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDeleteZone(zone: ZoneRow) {
+    if (!window.confirm(`Delete zone "${zone.name}"? Its venues stay but become zone-less.`)) return;
+    setBusy(`del-zone:${zone.id}`);
+    setError(null);
+    try {
+      await deleteZone(zone.id);
+      setLocalZones((prev) => prev.filter((z) => z.id !== zone.id));
+      setLocalRooms((prev) => prev.map((r) => (r.zone_id === zone.id ? { ...r, zone_id: null } : r)));
+    } catch (err) {
+      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   const inputClass =
     "rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold";
   const selectClass =
@@ -289,7 +378,7 @@ export function RoomsZonesSection({
               </div>
             </div>
 
-            {/* One table below both boxes: Campus / Zone / Venues in that zone / SPOC per venue */}
+            {/* One table below both boxes: Campus / Zone / Venues in that zone / SPOC per venue, each editable + deletable */}
             <div className="overflow-x-auto rounded-xl border border-border bg-surface">
               <table className="w-full text-left font-heading text-sm">
                 <thead>
@@ -298,12 +387,13 @@ export function RoomsZonesSection({
                     <th className="px-4 py-3">Zone</th>
                     <th className="px-4 py-3">Venues in that Zone</th>
                     <th className="px-4 py-3">SPOC</th>
+                    <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {zoneGroups.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                      <td colSpan={5} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
                         No zones or venues yet.
                       </td>
                     </tr>
@@ -311,34 +401,127 @@ export function RoomsZonesSection({
                     zoneGroups.map(({ zone, venues }) => {
                       const rowCampus = zone?.campus ?? venues[0]?.campus ?? "—";
                       const span = Math.max(venues.length, 1);
+                      const zoneCell = (
+                        <td rowSpan={span} className="px-4 py-3 align-top text-ink">
+                          {zone == null ? (
+                            <span className="text-ink-faint">Unassigned</span>
+                          ) : editZoneId === zone.id ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <input
+                                value={zoneDraft}
+                                onChange={(e) => setZoneDraft(e.target.value)}
+                                className={`${inputClass} py-1 text-sm`}
+                              />
+                              <button type="button" onClick={() => handleSaveZone(zone)} disabled={busy === `edit-zone:${zone.id}`} className="rounded-full bg-gold px-3 py-1 text-xs font-medium text-void hover:bg-gold-light disabled:opacity-60">
+                                Save
+                              </button>
+                              <button type="button" onClick={() => setEditZoneId(null)} className="rounded-full border border-border px-3 py-1 text-xs text-ink-muted hover:bg-void">
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span>{zone.name}</span>
+                              <button type="button" onClick={() => { setEditRoomId(null); setEditZoneId(zone.id); setZoneDraft(zone.name); }} className="text-xs text-gold underline">
+                                Edit
+                              </button>
+                              <button type="button" onClick={() => handleDeleteZone(zone)} disabled={busy === `del-zone:${zone.id}`} className="text-xs text-danger underline disabled:opacity-60">
+                                Delete
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      );
                       if (venues.length === 0) {
                         return (
                           <tr key={zone!.id} className="border-b border-border last:border-0">
-                            <td className="px-4 py-3 text-ink-muted">{rowCampus}</td>
-                            <td className="px-4 py-3 text-ink">{zone!.name}</td>
+                            <td className="px-4 py-3 align-top text-ink-muted">{rowCampus}</td>
+                            {zoneCell}
                             <td className="px-4 py-3 text-ink-faint">No venues</td>
                             <td className="px-4 py-3 text-ink-faint">—</td>
+                            <td className="px-4 py-3" />
                           </tr>
                         );
                       }
                       return (
                         <Fragment key={zone?.id ?? "unassigned"}>
-                          {venues.map((v, i) => (
-                            <tr key={v.id} className="border-b border-border last:border-0">
-                              {i === 0 && (
-                                <>
-                                  <td rowSpan={span} className="px-4 py-3 align-top text-ink-muted">
-                                    {rowCampus}
-                                  </td>
-                                  <td rowSpan={span} className="px-4 py-3 align-top text-ink">
-                                    {zone?.name ?? <span className="text-ink-faint">Unassigned</span>}
-                                  </td>
-                                </>
-                              )}
-                              <td className="px-4 py-3 text-ink">{v.name}</td>
-                              <td className="px-4 py-3 text-ink-muted">{staffById(v.spoc_profile_id) ?? "Unassigned"}</td>
-                            </tr>
-                          ))}
+                          {venues.map((v, i) => {
+                            const editing = editRoomId === v.id;
+                            return (
+                              <tr key={v.id} className="border-b border-border last:border-0">
+                                {i === 0 && (
+                                  <>
+                                    <td rowSpan={span} className="px-4 py-3 align-top text-ink-muted">
+                                      {rowCampus}
+                                    </td>
+                                    {zoneCell}
+                                  </>
+                                )}
+                                <td className="px-4 py-3 text-ink">
+                                  {editing ? (
+                                    <input
+                                      value={roomDraft.name}
+                                      onChange={(e) => setRoomDraft((d) => ({ ...d, name: e.target.value }))}
+                                      className={`${inputClass} py-1 text-sm`}
+                                    />
+                                  ) : (
+                                    v.name
+                                  )}
+                                </td>
+                                <td className="px-4 py-3 text-ink-muted">
+                                  {editing ? (
+                                    <select
+                                      value={roomDraft.spocId}
+                                      onChange={(e) => setRoomDraft((d) => ({ ...d, spocId: e.target.value }))}
+                                      className={selectClass}
+                                    >
+                                      <option value="">No SPOC</option>
+                                      {spocs.map((s) => (
+                                        <option key={s.id} value={s.id}>
+                                          {s.name}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  ) : (
+                                    (staffById(v.spoc_profile_id) ?? "Unassigned")
+                                  )}
+                                </td>
+                                <td className="px-4 py-3">
+                                  {editing ? (
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <select
+                                        value={roomDraft.zoneId}
+                                        onChange={(e) => setRoomDraft((d) => ({ ...d, zoneId: e.target.value }))}
+                                        className={selectClass}
+                                      >
+                                        <option value="">No zone</option>
+                                        {localZones.map((z) => (
+                                          <option key={z.id} value={z.id}>
+                                            {z.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <button type="button" onClick={() => handleSaveRoom(v)} disabled={busy === `edit-room:${v.id}`} className="rounded-full bg-gold px-3 py-1 text-xs font-medium text-void hover:bg-gold-light disabled:opacity-60">
+                                        Save
+                                      </button>
+                                      <button type="button" onClick={() => setEditRoomId(null)} className="rounded-full border border-border px-3 py-1 text-xs text-ink-muted hover:bg-void">
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-wrap items-center gap-3">
+                                      <button type="button" onClick={() => startEditRoom(v)} className="text-xs text-gold underline">
+                                        Edit
+                                      </button>
+                                      <button type="button" onClick={() => handleDeleteRoom(v)} disabled={busy === `del-room:${v.id}`} className="text-xs text-danger underline disabled:opacity-60">
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
                         </Fragment>
                       );
                     })

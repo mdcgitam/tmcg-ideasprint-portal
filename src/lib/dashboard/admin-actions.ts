@@ -14,7 +14,8 @@ function friendlyError(raw: string): string {
   if (raw.includes("DUPLICATE_PS_NUMBER")) return "That problem statement number is already in use.";
   if (raw.includes("DUPLICATE_ROOM_NAME")) return "A room with that name already exists.";
   if (raw.includes("DUPLICATE_ZONE_NAME")) return "A zone with that name already exists.";
-  if (raw.includes("ROOM_NOT_FOUND")) return "That room couldn't be found.";
+  if (raw.includes("ROOM_NOT_FOUND")) return "That venue no longer exists — refresh the page.";
+  if (raw.includes("ZONE_NOT_FOUND")) return "That zone no longer exists — refresh the page.";
   if (raw.includes("TEAM_NOT_FOUND")) return "That team couldn't be found.";
   if (raw.includes("ALREADY_LEAD")) return "That member is already the Team Lead.";
   if (raw.includes("CANNOT_DELETE_LEAD")) return "This member is the Team Lead — delete the whole team instead.";
@@ -168,6 +169,22 @@ export function createZone(name: string, managerProfileId: string | null, campus
 
 export function assignZoneManager(zoneId: string, managerProfileId: string | null) {
   return callRpc<null>("assign_zone_manager", { p_zone_id: zoneId, p_manager_profile_id: managerProfileId });
+}
+
+export function updateRoomName(roomId: string, name: string) {
+  return callRpc<null>("update_room_name", { p_room_id: roomId, p_name: name });
+}
+
+export function updateZoneName(zoneId: string, name: string) {
+  return callRpc<null>("update_zone_name", { p_zone_id: zoneId, p_name: name });
+}
+
+export function deleteRoom(roomId: string) {
+  return callRpc<null>("delete_room", { p_room_id: roomId });
+}
+
+export function deleteZone(zoneId: string) {
+  return callRpc<null>("delete_zone", { p_zone_id: zoneId });
 }
 
 export function assignRoomToZone(roomId: string, zoneId: string | null) {
