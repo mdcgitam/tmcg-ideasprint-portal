@@ -9,10 +9,13 @@ import { CloseTabButton } from "./CloseTabButton";
  */
 export function SectionPageShell({
   title,
+  headerExtra,
   children,
 }: {
   title: string;
   scope: "spoc" | "admin";
+  /** Optional bar under the title — used for the Zone Manager venue tabs. */
+  headerExtra?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -22,6 +25,7 @@ export function SectionPageShell({
           <h1 className="font-display text-3xl text-ink sm:text-4xl">{title}</h1>
           <CloseTabButton />
         </div>
+        {headerExtra ? <div className="-mt-2 mb-8">{headerExtra}</div> : null}
         {children}
       </div>
     </main>
