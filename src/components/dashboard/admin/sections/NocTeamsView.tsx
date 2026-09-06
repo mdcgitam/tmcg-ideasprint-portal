@@ -60,6 +60,7 @@ export function NocTeamsView({
 
   const [campusFilter, setCampusFilter] = useState("");
   const [teamSizeFilter, setTeamSizeFilter] = useState("");
+  const [zoneFilter, setZoneFilter] = useState("");
   const [venueFilter, setVenueFilter] = useState("");
   const [spocFilter, setSpocFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -131,6 +132,7 @@ export function NocTeamsView({
       }
       if (campusFilter && lead?.campus !== campusFilter) return false;
       if (teamSizeFilter && String(teamSize(team)) !== teamSizeFilter) return false;
+      if (zoneFilter && zoneOf(roomOf(team))?.id !== zoneFilter) return false;
       if (venueFilter && team.room_id !== venueFilter) return false;
       if (spocFilter && team.spoc_profile_id !== spocFilter) return false;
       if (statusFilter) {
@@ -141,7 +143,7 @@ export function NocTeamsView({
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, search, campusFilter, teamSizeFilter, venueFilter, spocFilter, statusFilter, localNocs]);
+  }, [teams, membersByTeam, search, campusFilter, teamSizeFilter, zoneFilter, venueFilter, spocFilter, statusFilter, localNocs]);
 
   function toggleSelected(teamId: string) {
     setSelected((prev) => {
@@ -281,13 +283,22 @@ export function NocTeamsView({
             .map(String)}
         />
         {!hideVenue && (
-          <FilterSelect
-            label="Venue"
-            value={venueFilter}
-            onChange={setVenueFilter}
-            options={rooms.map((r) => r.name)}
-            valueOptions={rooms.map((r) => r.id)}
-          />
+          <>
+            <FilterSelect
+              label="Zone"
+              value={zoneFilter}
+              onChange={setZoneFilter}
+              options={zones.map((z) => z.name)}
+              valueOptions={zones.map((z) => z.id)}
+            />
+            <FilterSelect
+              label="Venue"
+              value={venueFilter}
+              onChange={setVenueFilter}
+              options={rooms.map((r) => r.name)}
+              valueOptions={rooms.map((r) => r.id)}
+            />
+          </>
         )}
         <FilterSelect
           label="SPOC"
@@ -384,6 +395,12 @@ export function NocTeamsView({
                           {deadline.expired && " — Time exceeded"}
                         </span>
                         <div className="flex items-center gap-1">
+                          <input
+                            type="datetime-local"
+                            value={rowDeadlines[team.id] ?? toDatetimeLocal(deadline.iso)}
+                            onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [team.id]: e.target.value }))}
+                            className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
+                          />
                           <button
                             type="button"
                             disabled={busy || !(rowDeadlines[team.id] ?? toDatetimeLocal(deadline.iso))}
@@ -392,12 +409,6 @@ export function NocTeamsView({
                           >
                             {busy ? "Saving…" : deadline.iso || deadline.mixed ? "Update" : "Set"}
                           </button>
-                          <input
-                            type="datetime-local"
-                            value={rowDeadlines[team.id] ?? toDatetimeLocal(deadline.iso)}
-                            onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                            className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
-                          />
                         </div>
                         {rowError && <span className="font-heading text-[11px] text-danger">{rowError}</span>}
                       </div>

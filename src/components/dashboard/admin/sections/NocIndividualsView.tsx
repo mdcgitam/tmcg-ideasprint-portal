@@ -69,6 +69,7 @@ export function NocIndividualsView({
 
   const [campusFilter, setCampusFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState(""); // "" | "lead" | "member"
+  const [zoneFilter, setZoneFilter] = useState("");
   const [venueFilter, setVenueFilter] = useState("");
   const [spocFilter, setSpocFilter] = useState("");
   const [fileStatusFilter, setFileStatusFilter] = useState("");
@@ -107,13 +108,14 @@ export function NocIndividualsView({
       }
       if (campusFilter && member.campus !== campusFilter) return false;
       if (positionFilter && (positionFilter === "lead") !== member.is_lead) return false;
+      if (zoneFilter && zoneOf(roomOf(team))?.id !== zoneFilter) return false;
       if (venueFilter && team.room_id !== venueFilter) return false;
       if (spocFilter && team.spoc_profile_id !== spocFilter) return false;
       if (fileStatusFilter && (nocOf(member.id)?.status ?? "Not Uploaded") !== fileStatusFilter) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allRows, search, campusFilter, positionFilter, venueFilter, spocFilter, fileStatusFilter, localNocs]);
+  }, [allRows, search, campusFilter, positionFilter, zoneFilter, venueFilter, spocFilter, fileStatusFilter, localNocs]);
 
   function toggleSelected(profileId: string) {
     setSelected((prev) => {
@@ -312,13 +314,22 @@ export function NocIndividualsView({
             valueOptions={["lead", "member"]}
           />
           {!hideVenue && (
-            <FilterSelect
-              label="Venue"
-              value={venueFilter}
-              onChange={setVenueFilter}
-              options={rooms.map((r) => r.name)}
-              valueOptions={rooms.map((r) => r.id)}
-            />
+            <>
+              <FilterSelect
+                label="Zone"
+                value={zoneFilter}
+                onChange={setZoneFilter}
+                options={zones.map((z) => z.name)}
+                valueOptions={zones.map((z) => z.id)}
+              />
+              <FilterSelect
+                label="Venue"
+                value={venueFilter}
+                onChange={setVenueFilter}
+                options={rooms.map((r) => r.name)}
+                valueOptions={rooms.map((r) => r.id)}
+              />
+            </>
           )}
           <FilterSelect
             label="SPOC"
@@ -460,6 +471,12 @@ export function NocIndividualsView({
                           );
                         })()}
                         <div className="flex items-center gap-1">
+                          <input
+                            type="datetime-local"
+                            value={rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline)}
+                            onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [member.id]: e.target.value }))}
+                            className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
+                          />
                           <button
                             type="button"
                             disabled={busy || !(rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline))}
@@ -468,12 +485,6 @@ export function NocIndividualsView({
                           >
                             {noc?.deadline ?? generalDeadline ? "Update" : "Extend"}
                           </button>
-                          <input
-                            type="datetime-local"
-                            value={rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline)}
-                            onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [member.id]: e.target.value }))}
-                            className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
-                          />
                         </div>
                         {rowError && <span className="font-heading text-[11px] text-danger">{rowError}</span>}
                       </div>
