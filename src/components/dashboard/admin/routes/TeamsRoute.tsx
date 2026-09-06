@@ -6,7 +6,7 @@ import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPag
 export async function TeamsRoute({ profile }: { profile: ProfileRow }) {
   const { teams, membersByTeam, nocs, exitRequests, staffAccounts, rooms, zones, problemStatements } =
     await fetchAdminDashboardData(profile);
-  const scope = profile.role === "Super Admin" ? "admin" : "spoc";
+  const scope = profile.role === "SPOC" ? "spoc" : "admin";
 
   return (
     <SectionPageShell title="Profile" scope={scope}>

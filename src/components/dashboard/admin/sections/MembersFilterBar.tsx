@@ -99,7 +99,7 @@ export function MembersFilterBar({
     onChange({ ...filters, [key]: value });
   }
 
-  const campusOptions = useMemo(() => uniqueOptions(rows, (m) => m.campus), [rows]);
+  const campusOptions = useMemo(() => uniqueOptions(rows, (m) => m.campus ?? ""), [rows]);
   const graduationOptions = useMemo(() => uniqueOptions(rows, (m) => m.graduation ?? ""), [rows]);
   const programOptions = useMemo(() => uniqueOptions(rows, (m) => m.program ?? ""), [rows]);
   const schoolOptions = useMemo(() => uniqueOptions(rows, (m) => m.school), [rows]);

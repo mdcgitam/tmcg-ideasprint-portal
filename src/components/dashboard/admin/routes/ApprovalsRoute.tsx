@@ -5,7 +5,7 @@ import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPag
 
 export async function ApprovalsRoute({ profile }: { profile: ProfileRow }) {
   const { pendingApprovals, exitRequests, teams, membersByTeam } = await fetchAdminDashboardData(profile);
-  const scope = profile.role === "Super Admin" ? "admin" : "spoc";
+  const scope = profile.role === "SPOC" ? "spoc" : "admin";
 
   return (
     <SectionPageShell title="Approvals" scope={scope}>

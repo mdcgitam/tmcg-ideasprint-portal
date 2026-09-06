@@ -45,7 +45,7 @@ export function RoomsZonesSection({
   spocs,
   staffAccounts,
 }: {
-  campus: CampusCode;
+  campus: CampusCode | null;
   rooms: RoomRow[];
   zones: ZoneRow[];
   teams: TeamRow[];
@@ -113,10 +113,10 @@ export function RoomsZonesSection({
     setCreatingZone(true);
     setError(null);
     try {
-      const id = await createZone(zoneName.trim(), null);
+      const id = await createZone(zoneName.trim(), null, campus);
       setLocalZones((prev) => [
         ...prev,
-        { id, name: zoneName.trim(), campus, zone_manager_profile_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id, name: zoneName.trim(), campus: campus ?? "VSP", zone_manager_profile_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       ]);
       setZoneName("");
     } catch (err) {
@@ -134,7 +134,7 @@ export function RoomsZonesSection({
     try {
       const zoneId = roomZoneId || null;
       const spocId = roomSpocId || null;
-      const id = await createRoom(roomName.trim(), zoneId);
+      const id = await createRoom(roomName.trim(), zoneId, campus);
 
       if (spocId) await assignSpocToRoom(id, spocId);
 
@@ -143,7 +143,7 @@ export function RoomsZonesSection({
         {
           id,
           name: roomName.trim(),
-          campus,
+          campus: campus ?? "VSP",
           zone_id: zoneId,
           spoc_profile_id: spocId,
           created_at: new Date().toISOString(),

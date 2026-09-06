@@ -5,10 +5,17 @@ import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPag
 
 export async function StaffAccountsRoute({ profile }: { profile: ProfileRow }) {
   const { staffAccounts, rooms, zones } = await fetchAdminDashboardData(profile);
+  const isSuperAdmin = profile.role === "Super Admin";
 
   return (
     <SectionPageShell title="Staff Accounts" scope="admin">
-      <StaffAccountsSection campus={profile.campus} staffAccounts={staffAccounts} rooms={rooms} zones={zones} />
+      <StaffAccountsSection
+        campus={profile.campus}
+        canManageCampusAdmins={isSuperAdmin}
+        staffAccounts={staffAccounts}
+        rooms={rooms}
+        zones={zones}
+      />
     </SectionPageShell>
   );
 }

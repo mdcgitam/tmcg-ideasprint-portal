@@ -2,29 +2,32 @@
 
 import { useState } from "react";
 import type { CampusCode, ProfileRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
-import { createStaffProfile, updateUserRole, deleteSpoc, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { createSpoc, createCampusAdmin, updateUserRole, deleteSpoc, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
 
-const STAFF_ROLES: UserRole[] = ["SPOC", "Super Admin"];
-
 type View = "all" | "by-assignment";
+type NewRole = "SPOC" | "Campus Admin";
 
 /**
- * SPOC/Super Admin accounts don't go through team registration — this is
- * the only way to create one. A staff account gets a bare `profiles` row
- * (name + email + role only, no team) via create_staff_profile; once that
- * person signs in with the matching Google account, auth/callback links it
- * exactly like a participant profile.
+ * Staff accounts don't go through team registration — this is the only way to
+ * create one. A Campus Admin creates SPOCs in their own campus; the global
+ * Super Admin creates SPOCs or Campus Admins for the campus module they're in
+ * (`campus` prop). Once the person signs in with the matching Google account,
+ * auth/callback links the bare `profiles` row exactly like a participant.
  */
 export function StaffAccountsSection({
   campus,
+  canManageCampusAdmins = false,
   staffAccounts,
   rooms,
   zones,
 }: {
-  campus: CampusCode;
+  /** Campus the new account is stamped with. Own campus for a Campus Admin; the active module's campus for the Super Admin. */
+  campus: CampusCode | null;
+  /** Super Admin only — enables creating Campus Admins and promoting to admin roles. */
+  canManageCampusAdmins?: boolean;
   staffAccounts: ProfileRow[];
   rooms: RoomRow[];
   zones: ZoneRow[];
@@ -32,7 +35,7 @@ export function StaffAccountsSection({
   const [local, setLocal] = useState(staffAccounts);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<UserRole>("SPOC");
+  const [role, setRole] = useState<NewRole>("SPOC");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [changingId, setChangingId] = useState<string | null>(null);
@@ -40,12 +43,20 @@ export function StaffAccountsSection({
   const [view, setView] = useState<View>("all");
   const fadeRef = useTabFade(view);
 
+  const roleChangeOptions: UserRole[] = canManageCampusAdmins
+    ? ["SPOC", "Campus Admin", "Team Lead", "Member"]
+    : ["SPOC", "Team Lead", "Member"];
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setCreating(true);
     setCreateError(null);
     try {
-      const id = await createStaffProfile({ name: name.trim(), email: email.trim(), role: role as "SPOC" | "Super Admin" });
+      const payload = { name: name.trim(), email: email.trim(), campus };
+      const id =
+        role === "Campus Admin" && campus
+          ? await createCampusAdmin({ ...payload, campus })
+          : await createSpoc(payload);
       setLocal((prev) => [
         { id, auth_user_id: null, user_id: "", campus, role, name: name.trim(), gitam_email: email.trim().toLowerCase(), phone: "", reg_no: "", graduation: null, program: null, year_of_study: "", school: "", department: "", branch: "", gender: "", stay: "", is_active: true, deactivated_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         ...prev,
@@ -106,18 +117,24 @@ export function StaffAccountsSection({
             required
             className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
           />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as UserRole)}
-            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-          >
-            {STAFF_ROLES.map((r) => (
-              <option key={r} value={r}>
-                {r}
-              </option>
-            ))}
-          </select>
+          {canManageCampusAdmins ? (
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as NewRole)}
+              className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+            >
+              <option value="SPOC">SPOC</option>
+              <option value="Campus Admin">Campus Admin</option>
+            </select>
+          ) : (
+            <div className="flex items-center rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink-muted">
+              SPOC
+            </div>
+          )}
         </div>
+        {campus && (
+          <p className="mt-2 font-heading text-xs text-ink-faint">New account will be created in <span className="text-gold">{campus}</span>.</p>
+        )}
         {createError && <p className="mt-3 font-heading text-sm text-danger">{createError}</p>}
         <button
           type="submit"
@@ -177,11 +194,16 @@ export function StaffAccountsSection({
                           onChange={(e) => handleRoleChange(s.id, e.target.value as UserRole)}
                           className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
                         >
-                          {(["SPOC", "Super Admin", "Team Lead", "Member"] as UserRole[]).map((r) => (
+                          {roleChangeOptions.map((r) => (
                             <option key={r} value={r}>
                               {r}
                             </option>
                           ))}
+                          {!roleChangeOptions.includes(s.role) && (
+                            <option value={s.role} disabled>
+                              {s.role}
+                            </option>
+                          )}
                         </select>
                         {s.role === "SPOC" && (
                           <button

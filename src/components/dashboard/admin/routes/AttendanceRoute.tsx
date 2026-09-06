@@ -6,7 +6,7 @@ import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPag
 export async function AttendanceRoute({ profile }: { profile: ProfileRow }) {
   const { teams, membersByTeam, attendanceSessions, attendance, staffAccounts, spocs, rooms } =
     await fetchAdminDashboardData(profile);
-  const scope = profile.role === "Super Admin" ? "admin" : "spoc";
+  const scope = profile.role === "SPOC" ? "spoc" : "admin";
 
   return (
     <SectionPageShell title="Attendance" scope={scope}>

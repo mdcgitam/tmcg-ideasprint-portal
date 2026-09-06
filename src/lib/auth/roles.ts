@@ -6,6 +6,8 @@ export type { UserRole };
 export function dashboardPathForRole(role: UserRole): string {
   switch (role) {
     case "Super Admin":
+      return "/dashboard/super";
+    case "Campus Admin":
       return "/dashboard/admin";
     case "SPOC":
       return "/dashboard/spoc";

@@ -10,7 +10,7 @@
 
 export type CampusCode = "VSP" | "BLR" | "HYD";
 
-export type UserRole = "Super Admin" | "SPOC" | "Team Lead" | "Member";
+export type UserRole = "Super Admin" | "Campus Admin" | "SPOC" | "Team Lead" | "Member";
 export type TeamStatus = "Registered" | "Active" | "Pending Approval" | "Qualified for Grand Finale" | "Exited";
 export type PsStatus = "Hidden" | "Released";
 export type AttendanceStatus = "Present" | "Absent";
@@ -24,7 +24,7 @@ export interface ProfileRow {
   id: string;
   auth_user_id: string | null;
   user_id: string;
-  campus: CampusCode;
+  campus: CampusCode | null; // null for the global Super Admin (no home campus)
   role: UserRole;
   name: string;
   gitam_email: string;

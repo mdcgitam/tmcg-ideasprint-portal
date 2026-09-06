@@ -14,7 +14,7 @@ export async function PptRoute({ profile }: { profile: ProfileRow }) {
     problemStatements,
     config,
   } = await fetchAdminDashboardData(profile);
-  const scope = profile.role === "Super Admin" ? "admin" : "spoc";
+  const scope = profile.role === "SPOC" ? "spoc" : "admin";
 
   return (
     <SectionPageShell title="PPT" scope={scope}>

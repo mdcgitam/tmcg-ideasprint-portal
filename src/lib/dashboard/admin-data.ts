@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type {
+  CampusCode,
   ProfileRow,
   TeamRow,
   NocRow,
@@ -52,10 +53,14 @@ export interface AdminDashboardData {
  * trusted to RLS. This is deliberate defense-in-depth — RLS state on a live
  * database isn't something the app can verify at request time, so "a SPOC
  * only ever sees their assigned teams" is guaranteed here regardless of it.
- * For a Super Admin the same pass narrows every returned row to the caller's
- * own campus (`profile.campus`), keeping the three campuses isolated.
+ * For a Campus Admin the same pass narrows every returned row to `profile.campus`.
+ * For the global Super Admin it narrows to `opts.campus` (the selected VSP/BLR/HYD
+ * module) — or, when `opts.campus` is "all"/omitted, returns every campus's data.
  */
-export async function fetchAdminDashboardData(profile: ProfileRow): Promise<AdminDashboardData> {
+export async function fetchAdminDashboardData(
+  profile: ProfileRow,
+  opts?: { campus?: CampusCode | "all" },
+): Promise<AdminDashboardData> {
   const supabase = await createClient();
 
   const [
@@ -142,15 +147,24 @@ export async function fetchAdminDashboardData(profile: ProfileRow): Promise<Admi
     };
   }
 
-  // Campus-scoped standalone lists — for a Super Admin this isolates the three
-  // campuses; for a SPOC every row is already single-campus so it's harmless.
-  const inCampus = <T extends { campus?: string }>(rows: T[]) =>
-    rows.filter((r) => r.campus === profile.campus);
+  // The campus this request is scoped to:
+  //  - Campus Admin / SPOC  -> their own campus
+  //  - Super Admin          -> the selected module, or null for the "All" view
+  const selectedCampus: CampusCode | null =
+    profile.role === "Super Admin"
+      ? opts?.campus && opts.campus !== "all"
+        ? opts.campus
+        : (profile.campus ?? null) // effectiveAdminProfile pins profile.campus to the picked module
+      : (profile.campus ?? null);
 
-  if (profile.role === "Super Admin") {
-    scopedTeams = scopedTeams.filter((t) => t.campus === profile.campus);
-  } else {
+  // Campus-scoped standalone lists. null => no narrowing (Super Admin "All").
+  const inCampus = <T extends { campus?: string | null }>(rows: T[]) =>
+    selectedCampus == null ? rows : rows.filter((r) => r.campus === selectedCampus);
+
+  if (profile.role === "SPOC") {
     scopedTeams = scopedTeams.filter((t) => t.spoc_profile_id === profile.id);
+  } else if (selectedCampus != null) {
+    scopedTeams = scopedTeams.filter((t) => t.campus === selectedCampus);
   }
   {
     const teamIds = new Set(scopedTeams.map((t) => t.id));
