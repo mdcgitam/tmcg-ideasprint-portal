@@ -10,15 +10,34 @@ type View = "all" | "by-category";
 /**
  * SPEC §79-88: everything admin-configurable lives in one generic
  * key/value table — new settings don't need new UI or a migration, just a
- * new entry in this list. Datetime fields take a plain ISO 8601 string
- * (e.g. 2026-09-25T16:00:00+05:30) rather than a datetime-local picker,
- * since the stored value is read back as raw text by the RPCs that consume
- * it (select_problem_statement in supabase/migrations/0002/0003).
+ * new entry in one of these lists. Datetime settings use a calendar
+ * date + time picker and are stored as a timestamptz-parseable ISO 8601
+ * string (e.g. 2026-09-25T16:00:00.000Z), the form the consuming RPCs read
+ * back as raw text (select_problem_statement in supabase/migrations/
+ * 0002/0003; record_presentation / record_noc_metadata in 0027/0028).
  */
 const KNOWN_KEYS = [
   { key: "problem_statement.spreadsheet_url", label: "Problem Statement Spreadsheet URL", placeholder: "https://docs.google.com/spreadsheets/..." },
-  { key: "problem_statement.selection_start", label: "Selection Window Start", placeholder: "2026-09-25T16:00:00+05:30" },
-  { key: "problem_statement.selection_end", label: "Selection Window End", placeholder: "2026-09-25T21:30:00+05:30" },
+] as const;
+
+// Selection window — calendar date + time pickers. Stored as a
+// timestamptz-parseable ISO string (same convention as the deadline keys
+// below), read back by select_problem_statement (supabase/migrations/
+// 0002/0003) to gate the Team Lead selection flow. The window End also acts
+// as the default per-team deadline shown in the Problem Statements module.
+const SELECTION_WINDOW_KEYS = [
+  {
+    key: "problem_statement.selection_start",
+    label: "Selection Window Start",
+    hint: "When Team Leads can begin selecting a problem statement.",
+    description: "Problem statement selection window open time.",
+  },
+  {
+    key: "problem_statement.selection_end",
+    label: "Selection Window End",
+    hint: "When problem statement selection closes. Also the default deadline shown per team in the Problem Statements module.",
+    description: "Problem statement selection window close time.",
+  },
 ] as const;
 
 // Homepage Journey section (University Level card) shows "to be announced"
@@ -76,7 +95,7 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     initial[PRIVACY_POLICY_KEY] = typeof rawPrivacy === "string" ? rawPrivacy : "";
     const rawTnc = config[TNC_URL_KEY];
     initial[TNC_URL_KEY] = typeof rawTnc === "string" ? rawTnc : "";
-    for (const { key } of DEADLINE_KEYS) {
+    for (const { key } of [...SELECTION_WINDOW_KEYS, ...DEADLINE_KEYS]) {
       const raw = config[key];
       initial[key] = toDatetimeLocal(typeof raw === "string" ? raw : null);
     }
@@ -169,7 +188,17 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     );
   }
 
-  function deadlineField({ key, label, hint, description }: (typeof DEADLINE_KEYS)[number]) {
+  function deadlineField({
+    key,
+    label,
+    hint,
+    description,
+  }: {
+    key: string;
+    label: string;
+    hint: string;
+    description: string;
+  }) {
     return (
       <div key={key} className="rounded-xl border border-border bg-surface p-6">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">{label}</span>
@@ -238,6 +267,7 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
         {view === "all" ? (
           <div className="flex flex-col gap-4">
             {simpleFields(KNOWN_KEYS)}
+            {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
             {DEADLINE_KEYS.map((d) => deadlineField(d))}
             {simpleFields(GRAND_FINALE_KEYS)}
             {tncField()}
@@ -249,7 +279,10 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
               <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">
                 Problem Statement Settings
               </p>
-              <div className="flex flex-col gap-4">{simpleFields(KNOWN_KEYS)}</div>
+              <div className="flex flex-col gap-4">
+                {simpleFields(KNOWN_KEYS)}
+                {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
+              </div>
             </div>
             <div>
               <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">PPT &amp; NOC Deadlines</p>
