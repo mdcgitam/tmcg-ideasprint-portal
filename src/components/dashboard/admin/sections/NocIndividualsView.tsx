@@ -278,8 +278,8 @@ export function NocIndividualsView({
             label="SPOC"
             value={spocFilter}
             onChange={setSpocFilter}
-            options={staffAccounts.map((s) => s.name)}
-            valueOptions={staffAccounts.map((s) => s.id)}
+            options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
+            valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
           />
           <FilterSelect
             label="File Status"
@@ -304,7 +304,7 @@ export function NocIndividualsView({
                 <th className="px-4 py-3" />
                 <th className="px-4 py-3">Campus</th>
                 <th className="px-4 py-3">Team Name</th>
-                <th className="px-4 py-3">Name</th>
+                <th className="px-4 py-3">Participant Name</th>
                 <th className="px-4 py-3">Position</th>
                 <th className="px-4 py-3">Reg No</th>
                 <th className="px-4 py-3">Email</th>

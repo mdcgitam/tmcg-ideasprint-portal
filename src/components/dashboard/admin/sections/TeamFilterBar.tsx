@@ -100,8 +100,8 @@ export function TeamFilterBar({
           label="SPOC"
           value={filters.spoc}
           onChange={(v) => set("spoc", v)}
-          options={staffAccounts.map((s) => s.name)}
-          valueOptions={staffAccounts.map((s) => s.id)}
+          options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
+          valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
         />
       </div>
     </div>

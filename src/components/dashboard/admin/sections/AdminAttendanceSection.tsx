@@ -476,7 +476,7 @@ export function AdminAttendanceSection({
                                       <table className="w-full text-left font-heading text-sm">
                                         <thead>
                                           <tr className="border-b border-border text-xs text-ink-muted uppercase">
-                                            <th className="px-4 py-2">Name</th>
+                                            <th className="px-4 py-2">Participant Name</th>
                                             <th className="px-4 py-2">Email</th>
                                             <th className="px-4 py-2">Position</th>
                                             <th className="px-4 py-2">Phone No</th>
@@ -613,7 +613,7 @@ export function AdminAttendanceSection({
                         <th className="px-4 py-3">Team Name</th>
                         <th className="px-4 py-3">Team Size</th>
                         <th className="px-4 py-3">User ID</th>
-                        <th className="px-4 py-3">Name</th>
+                        <th className="px-4 py-3">Participant Name</th>
                         <th className="px-4 py-3">Position</th>
                         <th className="px-4 py-3">Stay</th>
                         <th className="px-4 py-3">Venue</th>

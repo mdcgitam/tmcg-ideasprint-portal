@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ExitRequestRow, NocRow, ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
@@ -43,6 +43,11 @@ export function TeamDetailModal({
   onTeamDeleted: (teamId: string) => void;
   onClose: () => void;
 }) {
+  useEffect(() => {
+    document.body.classList.add("overflow-hidden");
+    return () => document.body.classList.remove("overflow-hidden");
+  }, []);
+
   const [localNocs, setLocalNocs] = useState(nocs);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(
     members.find((m) => m.is_lead)?.id ?? members[0]?.id ?? null,

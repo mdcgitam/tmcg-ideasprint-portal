@@ -261,8 +261,8 @@ export function NocTeamsView({
           label="SPOC"
           value={spocFilter}
           onChange={setSpocFilter}
-          options={staffAccounts.map((s) => s.name)}
-          valueOptions={staffAccounts.map((s) => s.id)}
+          options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
+          valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
         />
         <FilterSelect
           label="Status"
