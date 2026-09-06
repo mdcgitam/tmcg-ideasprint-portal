@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { CampusCode, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import {
@@ -19,18 +19,16 @@ import {
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
 
-type View = "create" | "assign";
-
-const UNASSIGN = "__unassign__";
+type View = "create" | "assign" | "view";
 
 /**
- * Zones and Venues module. Two tabs:
- *  - Create: make Zones and Venues (a Venue is created with its Zone and its
- *    SPOC), with a table below both boxes showing Campus / Zone / the Venues
- *    grouped under that Zone / the SPOC on each Venue.
- *  - Assign: re-assign a Venue's Zone or SPOC, set Zone managers, and put
- *    teams into Venues (a team inherits its Venue's SPOC server-side — SPOCs
- *    are never assigned to a team directly).
+ * Zones and Venues module. Three tabs:
+ *  - Create: make Zones and Venues, each editable/deletable inline.
+ *  - Assign: put *unassigned* teams into a Venue — assigned teams drop off
+ *    this list.
+ *  - View: every team with its Zone / Zone Manager / Venue / SPOC, filterable
+ *    and searchable, with per-team Edit (change Venue) and Delete (pull it
+ *    out of its Venue).
  */
 export function RoomsZonesSection({
   campus,
@@ -76,10 +74,90 @@ export function RoomsZonesSection({
   const [editZoneId, setEditZoneId] = useState<string | null>(null);
   const [zoneDraft, setZoneDraft] = useState("");
 
+  // View tab
+  const [search, setSearch] = useState("");
+  const [fCampus, setFCampus] = useState("");
+  const [fZone, setFZone] = useState("");
+  const [fZoneMgr, setFZoneMgr] = useState("");
+  const [fVenue, setFVenue] = useState("");
+  const [fSpoc, setFSpoc] = useState("");
+  const [editTeamId, setEditTeamId] = useState<string | null>(null);
+  const [teamVenueDraft, setTeamVenueDraft] = useState("");
+
   const staffById = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomById = (id: string | null) => localRooms.find((r) => r.id === id) ?? null;
   const zoneById = (id: string | null) => localZones.find((z) => z.id === id) ?? null;
-  const campusOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.campus ?? team.campus ?? "—";
+  const campusOf = (team: TeamRow): CampusCode =>
+    (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.campus ?? team.campus;
+  const leadOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).find((m) => m.is_lead) ?? null;
+  const sizeOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
+
+  /** All the Zone/Manager/Venue/SPOC context for one team. */
+  function teamContext(team: TeamRow) {
+    const room = roomById(team.room_id);
+    const zone = room ? zoneById(room.zone_id) : null;
+    return {
+      room,
+      zone,
+      venueName: room?.name ?? null,
+      zoneName: zone?.name ?? null,
+      zoneManager: zone ? staffById(zone.zone_manager_profile_id) : null,
+      spoc: staffById(team.spoc_profile_id),
+    };
+  }
+
+  const unassignedTeams = localTeams.filter((t) => !t.room_id);
+
+  const viewRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return localTeams.filter((team) => {
+      const lead = leadOf(team);
+      const { room, zone } = teamContext(team);
+      if (q) {
+        const hay = `${team.team_name} ${team.team_id} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (fCampus && campusOf(team) !== fCampus) return false;
+      if (fZone && (zone?.id ?? "") !== fZone) return false;
+      if (fZoneMgr && (zone?.zone_manager_profile_id ?? "") !== fZoneMgr) return false;
+      if (fVenue && (room?.id ?? "") !== fVenue) return false;
+      if (fSpoc && (team.spoc_profile_id ?? "") !== fSpoc) return false;
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localTeams, localRooms, localZones, search, fCampus, fZone, fZoneMgr, fVenue, fSpoc]);
+
+  const campusFilterOptions = Array.from(new Set(localTeams.map((t) => campusOf(t))));
+
+  async function handleSaveTeamVenue(team: TeamRow) {
+    const roomId = teamVenueDraft || null;
+    setBusy(`edit-team:${team.id}`);
+    setError(null);
+    try {
+      await assignTeamToRoom(team.id, roomId);
+      const spoc = roomId ? (roomById(roomId)?.spoc_profile_id ?? null) : null;
+      setLocalTeams((prev) => prev.map((t) => (t.id === team.id ? { ...t, room_id: roomId, spoc_profile_id: spoc } : t)));
+      setEditTeamId(null);
+    } catch (err) {
+      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleUnassignTeam(team: TeamRow) {
+    if (!window.confirm(`Remove "${team.team_name}" from its venue? It goes back to the Assign list.`)) return;
+    setBusy(`del-team:${team.id}`);
+    setError(null);
+    try {
+      await assignTeamToRoom(team.id, null);
+      setLocalTeams((prev) => prev.map((t) => (t.id === team.id ? { ...t, room_id: null, spoc_profile_id: null } : t)));
+    } catch (err) {
+      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(null);
+    }
+  }
 
   /** Zones (plus an "Unassigned" bucket) with the venues that sit in each. */
   const zoneGroups: Array<{ zone: ZoneRow | null; venues: RoomRow[] }> = [
@@ -101,12 +179,11 @@ export function RoomsZonesSection({
     setBulkAssignBusy(true);
     setError(null);
     try {
-      const targetRoomId = bulkRoomId === UNASSIGN ? null : bulkRoomId;
-      const spoc = targetRoomId ? (roomById(targetRoomId)?.spoc_profile_id ?? null) : null;
+      const spoc = roomById(bulkRoomId)?.spoc_profile_id ?? null;
       const teamIds = Array.from(selectedTeamIds);
-      await Promise.all(teamIds.map((teamId) => assignTeamToRoom(teamId, targetRoomId)));
+      await Promise.all(teamIds.map((teamId) => assignTeamToRoom(teamId, bulkRoomId)));
       setLocalTeams((prev) =>
-        prev.map((t) => (selectedTeamIds.has(t.id) ? { ...t, room_id: targetRoomId, spoc_profile_id: spoc } : t)),
+        prev.map((t) => (selectedTeamIds.has(t.id) ? { ...t, room_id: bulkRoomId, spoc_profile_id: spoc } : t)),
       );
       setSelectedTeamIds(new Set());
       setBulkRoomId("");
@@ -278,6 +355,7 @@ export function RoomsZonesSection({
         options={[
           { value: "create", label: "Create" },
           { value: "assign", label: "Assign" },
+          { value: "view", label: "View" },
         ]}
       />
 
@@ -521,22 +599,21 @@ export function RoomsZonesSection({
               </table>
             </div>
           </div>
-        ) : (
+        ) : view === "assign" ? (
           <div className="flex flex-col gap-6">
             {/* Teams → Venues */}
             <div className="rounded-xl border border-border bg-surface p-6">
               <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Add Teams Into Venues</span>
               <p className="mt-2 font-heading text-xs text-ink-muted">
                 Check one or more teams, pick a Venue, and assign — this is the only place team-to-venue assignment
-                happens. A team immediately inherits that Venue&rsquo;s SPOC; SPOCs are never assigned to a team
-                directly.
+                happens. A team immediately inherits that Venue&rsquo;s SPOC. Once a team has a Venue it drops off this
+                list; move or remove it from the View tab.
               </p>
 
               <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
                 <span className="font-heading text-xs text-ink-muted">Assign selected teams to:</span>
                 <select value={bulkRoomId} onChange={(e) => setBulkRoomId(e.target.value)} className={selectClass}>
                   <option value="">Choose a venue…</option>
-                  <option value={UNASSIGN}>No venue (unassign)</option>
                   {localRooms.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name}
@@ -549,7 +626,7 @@ export function RoomsZonesSection({
                   onClick={handleBulkAssignRoom}
                   className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
                 >
-                  {bulkAssignBusy ? "Working…" : bulkRoomId === UNASSIGN ? "Unassign Selected" : "Assign Selected"}
+                  {bulkAssignBusy ? "Working…" : "Assign Selected"}
                 </button>
                 <button
                   type="button"
@@ -567,37 +644,221 @@ export function RoomsZonesSection({
                     <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                       <th className="px-4 py-3" />
                       <th className="px-4 py-3">Campus</th>
+                      <th className="px-4 py-3">Team ID</th>
                       <th className="px-4 py-3">Team Name</th>
-                      <th className="px-4 py-3">Venue</th>
-                      <th className="px-4 py-3">SPOC</th>
+                      <th className="px-4 py-3">Team Size</th>
+                      <th className="px-4 py-3">Team Lead</th>
+                      <th className="px-4 py-3">Lead Phone Number</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {localTeams.map((team) => {
-                      const room = roomById(team.room_id);
-                      const zone = room ? zoneById(room.zone_id) : null;
-                      const venue = room ? (zone ? `${room.name} (${zone.name})` : room.name) : "Unassigned";
-                      return (
-                        <tr key={team.id} className="border-b border-border bg-surface last:border-0">
-                          <td className="px-4 py-3">
-                            <input
-                              type="checkbox"
-                              checked={selectedTeamIds.has(team.id)}
-                              onChange={() => toggleTeamSelected(team.id)}
-                            />
-                          </td>
-                          <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>
-                          <td className="px-4 py-3 text-ink">
-                            {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
-                          </td>
-                          <td className="px-4 py-3 text-ink-muted">{venue}</td>
-                          <td className="px-4 py-3 text-ink-muted">{staffById(team.spoc_profile_id) ?? "Unassigned"}</td>
-                        </tr>
-                      );
-                    })}
+                    {unassignedTeams.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                          Every team has a venue.
+                        </td>
+                      </tr>
+                    ) : (
+                      unassignedTeams.map((team) => {
+                        const lead = leadOf(team);
+                        return (
+                          <tr key={team.id} className="border-b border-border bg-surface last:border-0">
+                            <td className="px-4 py-3">
+                              <input
+                                type="checkbox"
+                                checked={selectedTeamIds.has(team.id)}
+                                onChange={() => toggleTeamSelected(team.id)}
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>
+                            <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
+                            <td className="px-4 py-3 text-ink">{team.team_name}</td>
+                            <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>
+                            <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
+                            <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
+                          </tr>
+                        );
+                      })
+                    )}
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {/* Filters + search */}
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search team, ID, lead, phone…"
+                className={`${inputClass} py-1.5`}
+              />
+              <select value={fCampus} onChange={(e) => setFCampus(e.target.value)} className={selectClass}>
+                <option value="">All campuses</option>
+                {campusFilterOptions.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+              <select value={fZone} onChange={(e) => setFZone(e.target.value)} className={selectClass}>
+                <option value="">All zones</option>
+                {localZones.map((z) => (
+                  <option key={z.id} value={z.id}>
+                    {z.name}
+                  </option>
+                ))}
+              </select>
+              <select value={fZoneMgr} onChange={(e) => setFZoneMgr(e.target.value)} className={selectClass}>
+                <option value="">All zone managers</option>
+                {zoneManagers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+              <select value={fVenue} onChange={(e) => setFVenue(e.target.value)} className={selectClass}>
+                <option value="">All venues</option>
+                {localRooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+              <select value={fSpoc} onChange={(e) => setFSpoc(e.target.value)} className={selectClass}>
+                <option value="">All SPOCs</option>
+                {spocs.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              {(search || fCampus || fZone || fZoneMgr || fVenue || fSpoc) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setFCampus("");
+                    setFZone("");
+                    setFZoneMgr("");
+                    setFVenue("");
+                    setFSpoc("");
+                  }}
+                  className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+              <table className="w-full text-left font-heading text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+                    <th className="px-4 py-3">Campus</th>
+                    <th className="px-4 py-3">Team Id</th>
+                    <th className="px-4 py-3">Team Name</th>
+                    <th className="px-4 py-3">Team Size</th>
+                    <th className="px-4 py-3">Team Lead</th>
+                    <th className="px-4 py-3">Lead Phone Number</th>
+                    <th className="px-4 py-3">Zone</th>
+                    <th className="px-4 py-3">Zone Manager</th>
+                    <th className="px-4 py-3">Venue</th>
+                    <th className="px-4 py-3">Spoc</th>
+                    <th className="px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {viewRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={11} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                        No teams match these filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    viewRows.map((team) => {
+                      const lead = leadOf(team);
+                      const { zoneName, zoneManager, venueName, spoc } = teamContext(team);
+                      const editing = editTeamId === team.id;
+                      return (
+                        <tr key={team.id} className="border-b border-border last:border-0">
+                          <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>
+                          <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
+                          <td className="px-4 py-3 text-ink">{team.team_name}</td>
+                          <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>
+                          <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{zoneName ?? "—"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{zoneManager ?? "—"}</td>
+                          <td className="px-4 py-3 text-ink-muted">
+                            {editing ? (
+                              <select
+                                value={teamVenueDraft}
+                                onChange={(e) => setTeamVenueDraft(e.target.value)}
+                                className={selectClass}
+                              >
+                                <option value="">No venue</option>
+                                {localRooms.map((r) => (
+                                  <option key={r.id} value={r.id}>
+                                    {r.name}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              (venueName ?? "—")
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-ink-muted">{spoc ?? "—"}</td>
+                          <td className="px-4 py-3">
+                            {editing ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSaveTeamVenue(team)}
+                                  disabled={busy === `edit-team:${team.id}`}
+                                  className="rounded-full bg-gold px-3 py-1 text-xs font-medium text-void hover:bg-gold-light disabled:opacity-60"
+                                >
+                                  Save
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditTeamId(null)}
+                                  className="rounded-full border border-border px-3 py-1 text-xs text-ink-muted hover:bg-void"
+                                >
+                                  Cancel
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-3">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditTeamId(team.id);
+                                    setTeamVenueDraft(team.room_id ?? "");
+                                  }}
+                                  className="text-xs text-gold underline"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUnassignTeam(team)}
+                                  disabled={busy === `del-team:${team.id}`}
+                                  className="text-xs text-danger underline disabled:opacity-60"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
