@@ -113,10 +113,10 @@ export function AdminNotificationsSection({
   const [where, setWhere] = useState("all");
   const kinds = whereKinds(roleFilter);
   const campusCodes: CampusCode[] = ["VSP", "HYD", "BLR"];
-  // When the sender's own "all" scope already *is* one zone/venue, don't
-  // also list that same item below it.
+  // A SPOC only ever has one venue, so "My venue" is the whole story — no
+  // venue list. A Zone Manager with a single zone likewise needs no zone
+  // list beyond "My whole zone".
   const selfAllIsOneZone = role === "Zone Manager" && zones.length === 1;
-  const selfAllIsOneVenue = role === "SPOC" && whereRooms.length === 1;
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
@@ -211,7 +211,7 @@ export function AdminNotificationsSection({
               Where
               <select value={where} onChange={(e) => setWhere(e.target.value)} className={inputClass}>
                 <option value="all">
-                  {role === "SPOC" ? "All my venues" : role === "Zone Manager" ? "My whole zone" : "Everyone in reach"}
+                  {role === "SPOC" ? "My venue" : role === "Zone Manager" ? "My whole zone" : "Everyone in reach"}
                 </option>
                 {kinds.includes("campus") &&
                   campusCodes.map((c) => (
@@ -228,7 +228,7 @@ export function AdminNotificationsSection({
                     </option>
                   ))}
                 {kinds.includes("venue") &&
-                  !selfAllIsOneVenue &&
+                  role !== "SPOC" &&
                   whereRooms.map((r) => (
                     <option key={r.id} value={`venue:${r.id}`}>
                       Venue · {r.name}
