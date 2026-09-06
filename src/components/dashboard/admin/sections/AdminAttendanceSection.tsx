@@ -18,18 +18,27 @@ interface TeamFilters {
   search: string;
   campus: string;
   teamSize: string;
+  zone: string;
   room: string;
   spoc: string;
   sessionStatus: Record<string, string>; // session_id -> "" | "Present" | "Absent"
 }
 
-const EMPTY_TEAM_FILTERS: TeamFilters = { search: "", campus: "", teamSize: "", room: "", spoc: "", sessionStatus: {} };
+const EMPTY_TEAM_FILTERS: TeamFilters = {
+  search: "",
+  campus: "",
+  teamSize: "",
+  zone: "",
+  room: "",
+  spoc: "",
+  sessionStatus: {},
+};
 
 interface MemberFilters {
   search: string;
   campus: string;
   teamSize: string;
-  stay: string;
+  zone: string;
   room: string;
   spoc: string;
   position: string; // "" | "lead" | "member"
@@ -40,7 +49,7 @@ const EMPTY_MEMBER_FILTERS: MemberFilters = {
   search: "",
   campus: "",
   teamSize: "",
-  stay: "",
+  zone: "",
   room: "",
   spoc: "",
   position: "",
@@ -221,6 +230,10 @@ export function AdminAttendanceSection({
       }
       if (teamFilters.campus && lead?.campus !== teamFilters.campus) return false;
       if (teamFilters.teamSize && String(teamSize(team)) !== teamFilters.teamSize) return false;
+      if (teamFilters.zone) {
+        const room = roomOf(team);
+        if (zoneOf(room)?.id !== teamFilters.zone) return false;
+      }
       if (teamFilters.room && team.room_id !== teamFilters.room) return false;
       if (teamFilters.spoc && team.spoc_profile_id !== teamFilters.spoc) return false;
       for (const [sessionId, status] of Object.entries(teamFilters.sessionStatus)) {
@@ -258,7 +271,6 @@ export function AdminAttendanceSection({
   // ── Members tab ──────────────────────────────────────────────────────
 
   const allMembers = useMemo(() => teams.flatMap((t) => membersByTeam[t.id] ?? []), [teams, membersByTeam]);
-  const memberStayOptions = useMemo(() => uniqueValues(allMembers.map((m) => m.stay)), [allMembers]);
   const memberCampusOptions = useMemo(() => uniqueValues(allMembers.map((m) => m.campus)), [allMembers]);
 
   const filteredMembers = useMemo(() => {
@@ -275,7 +287,10 @@ export function AdminAttendanceSection({
           }
           if (memberFilters.campus && m.campus !== memberFilters.campus) return false;
           if (memberFilters.teamSize && String(teamSize(team)) !== memberFilters.teamSize) return false;
-          if (memberFilters.stay && m.stay !== memberFilters.stay) return false;
+          if (memberFilters.zone) {
+            const room = roomOf(team);
+            if (zoneOf(room)?.id !== memberFilters.zone) return false;
+          }
           if (memberFilters.room && team.room_id !== memberFilters.room) return false;
           if (memberFilters.spoc && team.spoc_profile_id !== memberFilters.spoc) return false;
           if (memberFilters.position && (memberFilters.position === "lead") !== m.is_lead) return false;
@@ -309,7 +324,6 @@ export function AdminAttendanceSection({
           Year: m.year_of_study,
           School: m.school,
           Branch: m.branch,
-          Stay: m.stay,
           Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
@@ -321,7 +335,7 @@ export function AdminAttendanceSection({
   }
 
   const TEAM_FIXED_COLS = singleCampus ? 8 : 9; // chevron, [Campus], Team Name, Team Lead, Lead Phone No, Team Size, Zone, SPOC, Venue
-  const MEMBER_FIXED_COLS = singleCampus ? 9 : 10; // [Campus], User ID, Team Name, Team Size, Name, Position, Stay, Zone, Venue, SPOC
+  const MEMBER_FIXED_COLS = singleCampus ? 9 : 10; // [Campus], User ID, Team Name, Team Size, Name, Position, Zone, Venue, SPOC
 
   return (
     <div className="flex flex-col gap-6">
@@ -397,13 +411,22 @@ export function AdminAttendanceSection({
                       options={["3", "4"]}
                     />
                     {!hideVenue && (
-                      <FilterSelect
-                        label="Venue"
-                        value={teamFilters.room}
-                        onChange={(v) => setTeamFilters((f) => ({ ...f, room: v }))}
-                        options={rooms.map((r) => r.name)}
-                        valueOptions={rooms.map((r) => r.id)}
-                      />
+                      <>
+                        <FilterSelect
+                          label="Zone"
+                          value={teamFilters.zone}
+                          onChange={(v) => setTeamFilters((f) => ({ ...f, zone: v }))}
+                          options={zones.map((z) => z.name)}
+                          valueOptions={zones.map((z) => z.id)}
+                        />
+                        <FilterSelect
+                          label="Venue"
+                          value={teamFilters.room}
+                          onChange={(v) => setTeamFilters((f) => ({ ...f, room: v }))}
+                          options={rooms.map((r) => r.name)}
+                          valueOptions={rooms.map((r) => r.id)}
+                        />
+                      </>
                     )}
                     <FilterSelect
                       label="SPOC"
@@ -609,20 +632,23 @@ export function AdminAttendanceSection({
                       options={["Team Lead", "Member"]}
                       valueOptions={["lead", "member"]}
                     />
-                    <FilterSelect
-                      label="Stay"
-                      value={memberFilters.stay}
-                      onChange={(v) => setMemberFilters((f) => ({ ...f, stay: v }))}
-                      options={memberStayOptions}
-                    />
                     {!hideVenue && (
-                      <FilterSelect
-                        label="Venue"
-                        value={memberFilters.room}
-                        onChange={(v) => setMemberFilters((f) => ({ ...f, room: v }))}
-                        options={rooms.map((r) => r.name)}
-                        valueOptions={rooms.map((r) => r.id)}
-                      />
+                      <>
+                        <FilterSelect
+                          label="Zone"
+                          value={memberFilters.zone}
+                          onChange={(v) => setMemberFilters((f) => ({ ...f, zone: v }))}
+                          options={zones.map((z) => z.name)}
+                          valueOptions={zones.map((z) => z.id)}
+                        />
+                        <FilterSelect
+                          label="Venue"
+                          value={memberFilters.room}
+                          onChange={(v) => setMemberFilters((f) => ({ ...f, room: v }))}
+                          options={rooms.map((r) => r.name)}
+                          valueOptions={rooms.map((r) => r.id)}
+                        />
+                      </>
                     )}
                     <FilterSelect
                       label="SPOC"
@@ -660,7 +686,6 @@ export function AdminAttendanceSection({
                         <th className="px-4 py-3">Team Size</th>
                         <th className="px-4 py-3">Participant Name</th>
                         <th className="px-4 py-3">Position</th>
-                        <th className="px-4 py-3">Stay</th>
                         <th className="px-4 py-3">Zone</th>
                         <th className="px-4 py-3">Venue</th>
                         <th className="px-4 py-3">SPOC</th>
@@ -693,7 +718,6 @@ export function AdminAttendanceSection({
                               {!m.is_active && <span className="ml-1 text-xs text-danger">(Exited)</span>}
                             </td>
                             <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
-                            <td className="px-4 py-3 text-ink-muted">{m.stay}</td>
                             <td className="px-4 py-3 text-ink-muted">{zoneOf(roomOf(team))?.name ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
