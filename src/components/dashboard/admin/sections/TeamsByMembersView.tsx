@@ -57,6 +57,8 @@ export function TeamsByMembersView({
 
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
+  // Live roster length — the stored teams.member_count can lag a member deletion.
+  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
@@ -92,7 +94,7 @@ export function TeamsByMembersView({
         Program: member.program ?? "",
         Year: member.year_of_study,
         "Team Name": team.team_name,
-        "Team Size": String(team.member_count),
+        "Team Size": String(teamSize(team)),
         "Team Lead": (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.name ?? "—",
         SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
         "Room Number": roomOf(team)?.name ?? "Unassigned",
@@ -184,7 +186,7 @@ export function TeamsByMembersView({
                           <td className="px-4 py-3 text-ink-muted">
                             {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
                           </td>
-                          <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
+                          <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                           <td className="px-4 py-3 text-ink">{m.name}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>

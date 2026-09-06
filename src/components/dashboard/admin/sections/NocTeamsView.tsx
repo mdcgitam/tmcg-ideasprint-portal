@@ -67,6 +67,8 @@ export function NocTeamsView({
 
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
+  // Live roster length — the stored teams.member_count can lag a member deletion.
+  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
@@ -124,7 +126,7 @@ export function NocTeamsView({
         if (!haystack.includes(q)) return false;
       }
       if (campusFilter && lead?.campus !== campusFilter) return false;
-      if (teamSizeFilter && String(team.member_count) !== teamSizeFilter) return false;
+      if (teamSizeFilter && String(teamSize(team)) !== teamSizeFilter) return false;
       if (venueFilter && team.room_id !== venueFilter) return false;
       if (spocFilter && team.spoc_profile_id !== spocFilter) return false;
       if (statusFilter) {
@@ -210,7 +212,7 @@ export function NocTeamsView({
           Campus: lead?.campus ?? "—",
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
-          "Team Size": String(team.member_count),
+          "Team Size": String(teamSize(team)),
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
           "No. of Uploads": `${uploadedCount(team)}/${members.length}`,
@@ -263,7 +265,14 @@ export function NocTeamsView({
 
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
         <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} />
-        <FilterSelect label="Team Size" value={teamSizeFilter} onChange={setTeamSizeFilter} options={["3", "4"]} />
+        <FilterSelect
+          label="Team Size"
+          value={teamSizeFilter}
+          onChange={setTeamSizeFilter}
+          options={Array.from(new Set(teams.map((t) => teamSize(t))))
+            .sort((a, b) => a - b)
+            .map(String)}
+        />
         <FilterSelect
           label="Venue"
           value={venueFilter}
@@ -341,7 +350,7 @@ export function NocTeamsView({
                     </td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
+                    <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                     <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">

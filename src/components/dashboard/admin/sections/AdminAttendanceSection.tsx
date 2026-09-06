@@ -85,6 +85,8 @@ export function AdminAttendanceSection({
 
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
+  // Live roster length — the stored teams.member_count can lag a member deletion.
+  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
   const latestSession = localSessions[localSessions.length - 1] ?? null;
 
   function toggleExpanded(teamId: string) {
@@ -210,7 +212,7 @@ export function AdminAttendanceSection({
         if (!haystack.includes(q)) return false;
       }
       if (teamFilters.campus && lead?.campus !== teamFilters.campus) return false;
-      if (teamFilters.teamSize && String(team.member_count) !== teamFilters.teamSize) return false;
+      if (teamFilters.teamSize && String(teamSize(team)) !== teamFilters.teamSize) return false;
       if (teamFilters.room && team.room_id !== teamFilters.room) return false;
       if (teamFilters.spoc && team.spoc_profile_id !== teamFilters.spoc) return false;
       if (teamFilters.status && status !== teamFilters.status) return false;
@@ -255,7 +257,7 @@ export function AdminAttendanceSection({
             if (!haystack.includes(q)) return false;
           }
           if (memberFilters.campus && m.campus !== memberFilters.campus) return false;
-          if (memberFilters.teamSize && String(team.member_count) !== memberFilters.teamSize) return false;
+          if (memberFilters.teamSize && String(teamSize(team)) !== memberFilters.teamSize) return false;
           if (memberFilters.stay && m.stay !== memberFilters.stay) return false;
           if (memberFilters.room && team.room_id !== memberFilters.room) return false;
           if (memberFilters.spoc && team.spoc_profile_id !== memberFilters.spoc) return false;
@@ -281,7 +283,7 @@ export function AdminAttendanceSection({
           Campus: m.campus,
           "Team ID": team.team_id,
           "Team Name": team.team_name,
-          "Team Size": String(team.member_count),
+          "Team Size": String(teamSize(team)),
           "User ID": m.user_id,
           Name: m.name,
           Position: m.is_lead ? "Team Lead" : "Member",
@@ -637,7 +639,7 @@ export function AdminAttendanceSection({
                           <tr key={m.id} className="border-b border-border align-top last:border-0">
                             <td className="px-4 py-3 text-ink-muted">{m.campus}</td>
                             <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
-                            <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
+                            <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                             <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
                             <td className="px-4 py-3 text-ink">{m.name}</td>
                             <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>

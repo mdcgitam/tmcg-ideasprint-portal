@@ -86,6 +86,8 @@ export function PptSection({
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
+  // Live roster length — the stored teams.member_count can lag a member deletion.
+  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
@@ -279,12 +281,13 @@ export function PptSection({
         if (!haystack.includes(q)) return false;
       }
       if (filters.campus && lead?.campus !== filters.campus) return false;
-      if (filters.teamSize && String(team.member_count) !== filters.teamSize) return false;
+      if (filters.teamSize && String(members.length || team.member_count) !== filters.teamSize) return false;
       if (filters.room && team.room_id !== filters.room) return false;
       if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
       if (filters.status && status !== filters.status) return false;
       return true;
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teams, membersByTeam, filters, localPresentations]);
 
   if (teams.length === 0) {
@@ -300,7 +303,7 @@ export function PptSection({
   return (
     <div className="flex flex-col gap-4">
       <p className="font-heading text-xs text-ink-muted">
-        PPT files must be a PDF, 2 MB or less. Uploadable by the Team Lead, or by an Admin on the team's behalf.
+        PPT files must be a PDF, 2 MB or less. Uploadable by the Team Lead, or by an Admin on the team&rsquo;s behalf.
       </p>
 
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
@@ -427,7 +430,7 @@ export function PptSection({
                       </td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                      <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
+                      <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                       <td className="px-4 py-3 text-ink-muted">{venue}</td>
                       <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{ps?.number ?? "—"}</td>
