@@ -5,7 +5,7 @@ import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPag
 import { ZoneVenueTabs } from "@/components/dashboard/zone/ZoneVenueTabs";
 
 export async function AttendanceRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
-  const { teams, membersByTeam, attendanceSessions, attendance, staffAccounts, spocs, rooms } =
+  const { teams, membersByTeam, attendanceSessions, attendance, staffAccounts, spocs, rooms, zones } =
     await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
@@ -27,6 +27,7 @@ export async function AttendanceRoute({ profile, roomId }: { profile: ProfileRow
         staffAccounts={staffAccounts}
         spocs={spocs}
         rooms={rooms}
+        zones={zones}
       />
     </SectionPageShell>
   );
