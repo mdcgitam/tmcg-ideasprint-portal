@@ -77,6 +77,7 @@ export function RoomsZonesSection({
   // View tab
   const [search, setSearch] = useState("");
   const [fCampus, setFCampus] = useState("");
+  const [fSize, setFSize] = useState("");
   const [fZone, setFZone] = useState("");
   const [fZoneMgr, setFZoneMgr] = useState("");
   const [fVenue, setFVenue] = useState("");
@@ -118,6 +119,7 @@ export function RoomsZonesSection({
         if (!hay.includes(q)) return false;
       }
       if (fCampus && campusOf(team) !== fCampus) return false;
+      if (fSize && String(sizeOf(team)) !== fSize) return false;
       if (fZone && (zone?.id ?? "") !== fZone) return false;
       if (fZoneMgr && (zone?.zone_manager_profile_id ?? "") !== fZoneMgr) return false;
       if (fVenue && (room?.id ?? "") !== fVenue) return false;
@@ -125,9 +127,10 @@ export function RoomsZonesSection({
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localTeams, localRooms, localZones, search, fCampus, fZone, fZoneMgr, fVenue, fSpoc]);
+  }, [localTeams, localRooms, localZones, search, fCampus, fSize, fZone, fZoneMgr, fVenue, fSpoc]);
 
   const campusFilterOptions = Array.from(new Set(localTeams.map((t) => campusOf(t))));
+  const sizeFilterOptions = Array.from(new Set(localTeams.map((t) => sizeOf(t)))).sort((a, b) => a - b);
 
   async function handleSaveTeamVenue(team: TeamRow) {
     const roomId = teamVenueDraft || null;
@@ -703,6 +706,14 @@ export function RoomsZonesSection({
                   </option>
                 ))}
               </select>
+              <select value={fSize} onChange={(e) => setFSize(e.target.value)} className={selectClass}>
+                <option value="">All team sizes</option>
+                {sizeFilterOptions.map((s) => (
+                  <option key={s} value={s}>
+                    {s} {s === 1 ? "member" : "members"}
+                  </option>
+                ))}
+              </select>
               <select value={fZone} onChange={(e) => setFZone(e.target.value)} className={selectClass}>
                 <option value="">All zones</option>
                 {localZones.map((z) => (
@@ -735,12 +746,13 @@ export function RoomsZonesSection({
                   </option>
                 ))}
               </select>
-              {(search || fCampus || fZone || fZoneMgr || fVenue || fSpoc) && (
+              {(search || fCampus || fSize || fZone || fZoneMgr || fVenue || fSpoc) && (
                 <button
                   type="button"
                   onClick={() => {
                     setSearch("");
                     setFCampus("");
+                    setFSize("");
                     setFZone("");
                     setFZoneMgr("");
                     setFVenue("");
