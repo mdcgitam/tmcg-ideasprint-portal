@@ -69,6 +69,8 @@ export function TeamDetailModal({
       gitam_email: m.gitam_email,
       phone: m.phone,
       reg_no: m.reg_no,
+      graduation: m.graduation ?? "",
+      program: m.program ?? "",
       year_of_study: m.year_of_study,
       school: m.school,
       department: m.department,

@@ -88,6 +88,8 @@ export function TeamsByMembersView({
         "Member Name": member.name,
         Email: member.gitam_email,
         "Reg./Roll No.": member.reg_no,
+        Graduation: member.graduation ?? "",
+        Program: member.program ?? "",
         "Year of Study": member.year_of_study,
         "Team Name": team.team_name,
         "Team Lead": (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.name ?? "—",
@@ -149,6 +151,8 @@ export function TeamsByMembersView({
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Reg No</th>
                 <th className="px-4 py-3">Phone No</th>
+                <th className="px-4 py-3">Graduation</th>
+                <th className="px-4 py-3">Program</th>
                 <th className="px-4 py-3">Year</th>
                 <th className="px-4 py-3">School</th>
                 <th className="px-4 py-3">Department</th>
@@ -183,6 +187,8 @@ export function TeamsByMembersView({
                           <td className="px-4 py-3 text-ink-muted">{m.gitam_email}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.phone}</td>
+                          <td className="px-4 py-3 text-ink-muted">{m.graduation ?? "—"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{m.program ?? "—"}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.year_of_study}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.school}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.department}</td>

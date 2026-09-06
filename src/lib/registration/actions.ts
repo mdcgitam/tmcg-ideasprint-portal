@@ -46,6 +46,18 @@ function friendlyMessage(raw: string): string {
   if (raw.startsWith("DUPLICATE_ENTRY")) {
     return "Some of the details you entered are already registered. Please check and try again.";
   }
+  if (raw.startsWith("INVALID_CAMPUS")) {
+    return "Please choose a valid campus for your team.";
+  }
+  // validate_member_academics (supabase/migrations/0026) raises
+  // `CODE: <member> — <field-specific sentence>` — surface the sentence as-is.
+  const academic = raw.match(
+    /^(?:MISSING_FIELD|INVALID_NAME|INVALID_REGNO_PREFIX|INVALID_EMAIL_DOMAIN|INVALID_PHONE|INVALID_GRADUATION|INVALID_PROGRAM_FOR_GRADUATION|INVALID_YEAR_FOR_PROGRAM|INVALID_SCHOOL|INVALID_DEPARTMENT_FOR_SCHOOL|INVALID_BRANCH_FOR_DEPARTMENT|INVALID_GENDER|INVALID_STAY):\s*([^]+)/,
+  );
+  if (academic) {
+    const detail = academic[1].trim();
+    return detail ? detail.charAt(0).toUpperCase() + detail.slice(1) : "Please review the highlighted fields and try again.";
+  }
   return "Something went wrong while submitting your registration. Please try again.";
 }
 
@@ -59,14 +71,10 @@ function friendlyMessage(raw: string): string {
 export async function submitRegistration(input: SubmitRegistrationInput): Promise<SubmitRegistrationOutcome> {
   const supabase = createServiceClient();
 
-  // The registration form no longer collects "department" (it duplicated
-  // "branch" in practice) — register_team's profiles.department column is
-  // still NOT NULL, so mirror branch into it here rather than touching the
-  // DB schema.
-  const payload = {
-    team: input.team,
-    members: input.members.map((member) => ({ ...member, department: member.branch })),
-  };
+  // The member objects already carry every field register_team reads
+  // (name, regNo, gitamEmail, phone, graduation, program, yearOfStudy, school,
+  // department, branch, gender, stay) — pass them straight through.
+  const payload = { team: input.team, members: input.members };
 
   const { data, error } = await supabase.rpc("register_team", { p_payload: payload });
 

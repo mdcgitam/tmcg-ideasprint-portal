@@ -1,24 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
+import { useFieldArray, useFormContext, useWatch, type FieldPath } from "react-hook-form";
 import { FormField, fieldInputClass } from "@/components/registration/FormField";
 import {
-  BRANCH_OPTIONS,
-  emptyMember,
   GENDER_OPTIONS,
-  SCHOOL_LABELS,
-  SCHOOL_VALUES,
+  GRADUATION_OPTIONS,
+  SCHOOL_OPTIONS,
   STAY_OPTIONS,
-  YEAR_OF_STUDY_OPTIONS,
+  branchesFor,
+  departmentsFor,
+  emptyMember,
+  programsFor,
+  yearsFor,
   type RegistrationFormValues,
 } from "@/lib/registration/schema";
 import { cn } from "@/lib/utils";
 
 /**
- * SPEC.md §10 — after Step 1, the Team Lead provides their own info and
- * every member's info. All fields are mandatory for every member, including
- * the lead (who is always member index 0).
+ * SPEC.md §10 + Registration Page Restructuring — after Step 1 the Team Lead
+ * provides their own info and every member's info. All fields are mandatory.
+ * Graduation → Program → Year of Study and School → Department → Branch are
+ * dependent selects: picking a parent narrows the child, and changing a parent
+ * resets its children back to "Select …".
  */
 export function MemberDetailsStep() {
   const {
@@ -29,33 +33,9 @@ export function MemberDetailsStep() {
   } = useFormContext<RegistrationFormValues>();
 
   const memberCount = useWatch<RegistrationFormValues>({ control, name: "team.memberCount" }) as number;
-  const memberValues = useWatch({ control, name: "members" });
+  const members = useWatch({ control, name: "members" }) as RegistrationFormValues["members"];
   const { fields, append, remove } = useFieldArray({ control, name: "members" });
   const [openIndex, setOpenIndex] = useState(0);
-  const [customBranchIds, setCustomBranchIds] = useState<Set<string>>(new Set());
-
-  function selectBranch(index: number, fieldId: string, value: string) {
-    if (value === "Other") {
-      setCustomBranchIds((prev) => new Set(prev).add(fieldId));
-      setValue(`members.${index}.branch`, "", { shouldValidate: true });
-    } else {
-      setCustomBranchIds((prev) => {
-        const next = new Set(prev);
-        next.delete(fieldId);
-        return next;
-      });
-      setValue(`members.${index}.branch`, value, { shouldValidate: true });
-    }
-  }
-
-  function resetBranchToList(index: number, fieldId: string) {
-    setCustomBranchIds((prev) => {
-      const next = new Set(prev);
-      next.delete(fieldId);
-      return next;
-    });
-    setValue(`members.${index}.branch`, "", { shouldValidate: true });
-  }
 
   useEffect(() => {
     if (!memberCount) return;
@@ -66,6 +46,13 @@ export function MemberDetailsStep() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberCount]);
+
+  /** Set one member sub-field (dynamic path — cast mirrors RegistrationStepper's setError use). */
+  const set = (index: number, field: string, value: string) =>
+    setValue(`members.${index}.${field}` as FieldPath<RegistrationFormValues>, value, {
+      shouldValidate: true,
+      shouldDirty: true,
+    });
 
   return (
     <div className="flex flex-col gap-8">
@@ -80,6 +67,7 @@ export function MemberDetailsStep() {
           const memberErrors = errors.members?.[index];
           const hasError = memberErrors && Object.keys(memberErrors).length > 0;
           const isOpen = openIndex === index;
+          const m = members?.[index] ?? emptyMember();
 
           return (
             <div key={field.id} className="overflow-hidden rounded-xl border border-border bg-surface">
@@ -98,10 +86,7 @@ export function MemberDetailsStep() {
                 </span>
               </button>
 
-              <div
-                className="grid transition-all duration-300"
-                style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}
-              >
+              <div className="grid transition-all duration-300" style={{ gridTemplateRows: isOpen ? "1fr" : "0fr" }}>
                 <div className="overflow-hidden">
                   <div className="grid gap-5 border-t border-border p-5 sm:grid-cols-2">
                     <FormField label="Full Name" required error={memberErrors?.name?.message}>
@@ -115,12 +100,13 @@ export function MemberDetailsStep() {
                     <FormField label="Registration Number" required error={memberErrors?.regNo?.message}>
                       <input
                         className={fieldInputClass}
+                        placeholder="2023…"
                         aria-invalid={!!memberErrors?.regNo}
                         {...register(`members.${index}.regNo`)}
                       />
                     </FormField>
 
-                    <FormField label="GITAM Mail ID" required error={memberErrors?.gitamEmail?.message}>
+                    <FormField label="GITAM Email" required error={memberErrors?.gitamEmail?.message}>
                       <input
                         type="email"
                         placeholder="name@student.gitam.edu"
@@ -133,6 +119,7 @@ export function MemberDetailsStep() {
                     <FormField label="Phone Number" required error={memberErrors?.phone?.message}>
                       <input
                         type="tel"
+                        inputMode="numeric"
                         placeholder="10-digit mobile number"
                         className={fieldInputClass}
                         aria-invalid={!!memberErrors?.phone}
@@ -140,13 +127,62 @@ export function MemberDetailsStep() {
                       />
                     </FormField>
 
+                    <FormField label="Graduation" required error={memberErrors?.graduation?.message}>
+                      <select
+                        className={fieldInputClass}
+                        aria-invalid={!!memberErrors?.graduation}
+                        value={m.graduation}
+                        onChange={(e) => {
+                          set(index, "graduation", e.target.value);
+                          set(index, "program", "");
+                          set(index, "yearOfStudy", "");
+                        }}
+                      >
+                        <option value="" disabled>
+                          Select Graduation
+                        </option>
+                        {GRADUATION_OPTIONS.map((g) => (
+                          <option key={g} value={g}>
+                            {g}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+
+                    <FormField label="Program" required error={memberErrors?.program?.message}>
+                      <select
+                        className={fieldInputClass}
+                        aria-invalid={!!memberErrors?.program}
+                        value={m.program}
+                        disabled={!m.graduation}
+                        onChange={(e) => {
+                          set(index, "program", e.target.value);
+                          set(index, "yearOfStudy", "");
+                        }}
+                      >
+                        <option value="" disabled>
+                          Select Program
+                        </option>
+                        {programsFor(m.graduation).map((p) => (
+                          <option key={p} value={p}>
+                            {p}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+
                     <FormField label="Year of Study" required error={memberErrors?.yearOfStudy?.message}>
                       <select
                         className={fieldInputClass}
                         aria-invalid={!!memberErrors?.yearOfStudy}
-                        {...register(`members.${index}.yearOfStudy`)}
+                        value={m.yearOfStudy}
+                        disabled={!m.program}
+                        onChange={(e) => set(index, "yearOfStudy", e.target.value)}
                       >
-                        {YEAR_OF_STUDY_OPTIONS.map((y) => (
+                        <option value="" disabled>
+                          Select Year of Study
+                        </option>
+                        {yearsFor(m.program).map((y) => (
                           <option key={y} value={y}>
                             {y}
                           </option>
@@ -158,63 +194,75 @@ export function MemberDetailsStep() {
                       <select
                         className={fieldInputClass}
                         aria-invalid={!!memberErrors?.school}
-                        {...register(`members.${index}.school`)}
+                        value={m.school}
+                        onChange={(e) => {
+                          set(index, "school", e.target.value);
+                          set(index, "department", "");
+                          set(index, "branch", "");
+                        }}
                       >
-                        {SCHOOL_VALUES.map((s) => (
+                        <option value="" disabled>
+                          Select School
+                        </option>
+                        {SCHOOL_OPTIONS.map((s) => (
                           <option key={s} value={s}>
-                            {SCHOOL_LABELS[s]}
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </FormField>
+
+                    <FormField label="Department" required error={memberErrors?.department?.message}>
+                      <select
+                        className={fieldInputClass}
+                        aria-invalid={!!memberErrors?.department}
+                        value={m.department}
+                        disabled={!m.school}
+                        onChange={(e) => {
+                          set(index, "department", e.target.value);
+                          set(index, "branch", "");
+                        }}
+                      >
+                        <option value="" disabled>
+                          Select Department
+                        </option>
+                        {departmentsFor(m.school).map((d) => (
+                          <option key={d} value={d}>
+                            {d}
                           </option>
                         ))}
                       </select>
                     </FormField>
 
                     <FormField label="Branch" required error={memberErrors?.branch?.message}>
-                      {customBranchIds.has(field.id) ? (
-                        <div className="flex flex-col gap-2">
-                          <input
-                            className={fieldInputClass}
-                            placeholder="Enter your branch"
-                            aria-invalid={!!memberErrors?.branch}
-                            {...register(`members.${index}.branch`)}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => resetBranchToList(index, field.id)}
-                            className="self-start font-mono text-xs text-gold underline underline-offset-2"
-                          >
-                            Choose from list instead
-                          </button>
-                        </div>
-                      ) : (
-                        <select
-                          className={fieldInputClass}
-                          aria-invalid={!!memberErrors?.branch}
-                          value={
-                            BRANCH_OPTIONS.includes(memberValues?.[index]?.branch as (typeof BRANCH_OPTIONS)[number])
-                              ? (memberValues?.[index]?.branch ?? "")
-                              : ""
-                          }
-                          onChange={(e) => selectBranch(index, field.id, e.target.value)}
-                        >
-                          <option value="" disabled>
-                            Select branch
+                      <select
+                        className={fieldInputClass}
+                        aria-invalid={!!memberErrors?.branch}
+                        value={m.branch}
+                        disabled={!m.department}
+                        onChange={(e) => set(index, "branch", e.target.value)}
+                      >
+                        <option value="" disabled>
+                          Select Branch
+                        </option>
+                        {branchesFor(m.department).map((b) => (
+                          <option key={b} value={b}>
+                            {b}
                           </option>
-                          {BRANCH_OPTIONS.map((b) => (
-                            <option key={b} value={b}>
-                              {b}
-                            </option>
-                          ))}
-                          <option value="Other">Other</option>
-                        </select>
-                      )}
+                        ))}
+                      </select>
                     </FormField>
 
                     <FormField label="Gender" required error={memberErrors?.gender?.message}>
                       <select
                         className={fieldInputClass}
                         aria-invalid={!!memberErrors?.gender}
-                        {...register(`members.${index}.gender`)}
+                        value={m.gender}
+                        onChange={(e) => set(index, "gender", e.target.value)}
                       >
+                        <option value="" disabled>
+                          Select Gender
+                        </option>
                         {GENDER_OPTIONS.map((g) => (
                           <option key={g} value={g}>
                             {g}
@@ -227,8 +275,12 @@ export function MemberDetailsStep() {
                       <select
                         className={fieldInputClass}
                         aria-invalid={!!memberErrors?.stay}
-                        {...register(`members.${index}.stay`)}
+                        value={m.stay}
+                        onChange={(e) => set(index, "stay", e.target.value)}
                       >
+                        <option value="" disabled>
+                          Select Stay
+                        </option>
                         {STAY_OPTIONS.map((s) => (
                           <option key={s} value={s}>
                             {s}

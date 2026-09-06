@@ -30,6 +30,8 @@ export interface ProfileRow {
   gitam_email: string;
   phone: string;
   reg_no: string;
+  graduation: string | null;
+  program: string | null;
   year_of_study: string;
   school: string;
   department: string;

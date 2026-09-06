@@ -1,32 +1,26 @@
 import { z } from "zod";
+import {
+  GENDER_OPTIONS,
+  GRADUATION_OPTIONS,
+  SCHOOL_OPTIONS,
+  STAY_OPTIONS,
+  academicIssues,
+  regNoHasValidPrefix,
+} from "./academic";
+
+// Re-exported so existing importers can keep pulling academic constants from
+// "@/lib/registration/schema".
+export * from "./academic";
 
 // GITAM email restriction is a permanent business rule (SPEC.md §12, §16).
-// This is UX-layer validation only — the authoritative check happens server-side at auth time.
+// This is UX-layer validation only — the authoritative check happens server-side.
 const GITAM_EMAIL_PATTERN = /^[a-zA-Z0-9._%+-]+@(student\.gitam\.edu|gitam\.in)$/i;
 
-export const YEAR_OF_STUDY_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year"] as const;
-export const GENDER_OPTIONS = ["Male", "Female"] as const;
-export const STAY_OPTIONS = ["Hosteller", "Day Scholar"] as const;
-
-// CSE and its allied branches. "Other" lets a member outside this list type
-// their branch manually — see MemberDetailsStep's custom-branch toggle.
-export const BRANCH_OPTIONS = [
-  "CSE",
-  "AIML",
-  "DS",
-  "CS",
-  "IOT",
-  "CSBS",
-  "Biotech",
-  "ECE",
-  "ECE-AIML",
-  "ECE-VLSI",
-] as const;
-
-export const SCHOOL_VALUES = ["GSCSE", "GSCE"] as const;
-export const SCHOOL_LABELS: Record<(typeof SCHOOL_VALUES)[number], string> = {
-  GSCSE: "GSCSE — Gitam School of Computers and System Engineering (CSE & Allied Branches)",
-  GSCE: "GSCE — Gitam School of Core Engineering (ECE, EEE, MECH, CIVIL)",
+// Display labels for the school codes (Registration Page Restructuring §9 — the
+// UI shows the plain code).
+export const SCHOOL_LABELS: Record<(typeof SCHOOL_OPTIONS)[number], string> = {
+  GSCSE: "GSCSE",
+  GSCE: "GSCE",
 };
 
 // SPEC.md §11 — permanent business rule, never configurable.
@@ -43,24 +37,44 @@ export const CAMPUS_OPTIONS = [
 
 export type CampusCode = (typeof CAMPUS_OPTIONS)[number]["code"];
 
-export const memberSchema = z.object({
-  name: z.string().trim().min(2, "Enter the participant's full name"),
-  regNo: z.string().trim().min(3, "Enter a valid registration number"),
-  gitamEmail: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .refine((val) => GITAM_EMAIL_PATTERN.test(val), "Must be a valid @student.gitam.edu or gitam.in address"),
-  phone: z
-    .string()
-    .trim()
-    .regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
-  yearOfStudy: z.enum(YEAR_OF_STUDY_OPTIONS, { error: "Select a year of study" }),
-  school: z.enum(SCHOOL_VALUES, { error: "Select a school" }),
-  branch: z.string().trim().min(2, "Enter the participant's branch"),
-  gender: z.enum(GENDER_OPTIONS, { error: "Select a gender" }),
-  stay: z.enum(STAY_OPTIONS, { error: "Select hosteller or day scholar" }),
-});
+// Every select starts blank ("Select …") — the enum-ish fields are typed as
+// plain strings so the empty state is representable; a refine gives the message.
+export const memberSchema = z
+  .object({
+    name: z.string().trim().min(2, "Enter the participant's full name"),
+    regNo: z
+      .string()
+      .trim()
+      .min(1, "Enter a registration number")
+      .refine(regNoHasValidPrefix, "Registration number must start with 2023, 2024, 2025, or 2026"),
+    gitamEmail: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .refine((v) => GITAM_EMAIL_PATTERN.test(v), "Must be a @gitam.in or @student.gitam.edu address"),
+    phone: z.string().trim().regex(/^[6-9]\d{9}$/, "Enter a valid 10-digit mobile number"),
+    graduation: z
+      .string()
+      .refine((v) => (GRADUATION_OPTIONS as readonly string[]).includes(v), "Select a graduation"),
+    program: z.string().min(1, "Select a program"),
+    yearOfStudy: z.string().min(1, "Select a year of study"),
+    school: z
+      .string()
+      .refine((v) => (SCHOOL_OPTIONS as readonly string[]).includes(v), "Select a school"),
+    department: z.string().min(1, "Select a department"),
+    branch: z.string().min(1, "Select a branch"),
+    gender: z
+      .string()
+      .refine((v) => (GENDER_OPTIONS as readonly string[]).includes(v), "Select a gender"),
+    stay: z
+      .string()
+      .refine((v) => (STAY_OPTIONS as readonly string[]).includes(v), "Select day scholar or hostel"),
+  })
+  .superRefine((m, ctx) => {
+    for (const [path, message] of Object.entries(academicIssues(m))) {
+      ctx.addIssue({ code: "custom", path: [path], message });
+    }
+  });
 
 export type MemberFormValues = z.infer<typeof memberSchema>;
 
@@ -88,10 +102,13 @@ export function emptyMember(): MemberFormValues {
     regNo: "",
     gitamEmail: "",
     phone: "",
-    yearOfStudy: "1st Year",
-    school: SCHOOL_VALUES[0],
+    graduation: "",
+    program: "",
+    yearOfStudy: "",
+    school: "",
+    department: "",
     branch: "",
-    gender: "Male",
-    stay: "Hosteller",
+    gender: "",
+    stay: "",
   };
 }

@@ -13,6 +13,8 @@ export interface MemberFilters {
   campus: string;
   position: string; // "" | "lead" | "member"
   teamSize: string;
+  graduation: string;
+  program: string;
   year: string;
   school: string;
   department: string;
@@ -28,6 +30,8 @@ export const EMPTY_MEMBER_FILTERS: MemberFilters = {
   campus: "",
   position: "",
   teamSize: "",
+  graduation: "",
+  program: "",
   year: "",
   school: "",
   department: "",
@@ -49,6 +53,8 @@ export function filterMembers(rows: MemberRow[], filters: MemberFilters): Member
     if (filters.campus && member.campus !== filters.campus) return false;
     if (filters.position && (filters.position === "lead") !== member.is_lead) return false;
     if (filters.teamSize && String(team.member_count) !== filters.teamSize) return false;
+    if (filters.graduation && member.graduation !== filters.graduation) return false;
+    if (filters.program && member.program !== filters.program) return false;
     if (filters.year && member.year_of_study !== filters.year) return false;
     if (filters.school && member.school !== filters.school) return false;
     if (filters.department && member.department !== filters.department) return false;
@@ -89,6 +95,8 @@ export function MembersFilterBar({
   }
 
   const campusOptions = useMemo(() => uniqueOptions(rows, (m) => m.campus), [rows]);
+  const graduationOptions = useMemo(() => uniqueOptions(rows, (m) => m.graduation ?? ""), [rows]);
+  const programOptions = useMemo(() => uniqueOptions(rows, (m) => m.program ?? ""), [rows]);
   const schoolOptions = useMemo(() => uniqueOptions(rows, (m) => m.school), [rows]);
   const departmentOptions = useMemo(() => uniqueOptions(rows, (m) => m.department), [rows]);
   const branchOptions = useMemo(() => uniqueOptions(rows, (m) => m.branch), [rows]);
@@ -116,6 +124,8 @@ export function MembersFilterBar({
           valueOptions={["lead", "member"]}
         />
         <FilterSelect label="Team Size" value={filters.teamSize} onChange={(v) => set("teamSize", v)} options={["3", "4"]} />
+        <FilterSelect label="Graduation" value={filters.graduation} onChange={(v) => set("graduation", v)} options={graduationOptions} />
+        <FilterSelect label="Program" value={filters.program} onChange={(v) => set("program", v)} options={programOptions} />
         <FilterSelect label="Year" value={filters.year} onChange={(v) => set("year", v)} options={YEAR_OPTIONS} />
         <FilterSelect label="School" value={filters.school} onChange={(v) => set("school", v)} options={schoolOptions} />
         <FilterSelect label="Department" value={filters.department} onChange={(v) => set("department", v)} options={departmentOptions} />

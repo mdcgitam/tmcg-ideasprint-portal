@@ -32,6 +32,15 @@ function friendlyError(raw: string): string {
   if (raw.includes("INVALID_BROADCAST")) return "Title and message can't be empty.";
   if (raw.includes("INVALID_PS_NUMBER")) return "That problem statement number wasn't found or isn't live yet.";
   if (raw.includes("CROSS_CAMPUS")) return "That record belongs to another campus.";
+  // validate_member_academics (supabase/migrations/0026) raises
+  // `CODE: <member> — <field-specific sentence>` — show the sentence.
+  const academic = raw.match(
+    /(?:MISSING_FIELD|INVALID_NAME|INVALID_REGNO_PREFIX|INVALID_EMAIL_DOMAIN|INVALID_PHONE|INVALID_GRADUATION|INVALID_PROGRAM_FOR_GRADUATION|INVALID_YEAR_FOR_PROGRAM|INVALID_SCHOOL|INVALID_DEPARTMENT_FOR_SCHOOL|INVALID_BRANCH_FOR_DEPARTMENT|INVALID_GENDER|INVALID_STAY):\s*([^]+)/,
+  );
+  if (academic) {
+    const detail = academic[1].trim();
+    return detail ? detail.charAt(0).toUpperCase() + detail.slice(1) : "One or more fields are invalid.";
+  }
   return "Something went wrong. Please try again.";
 }
 
@@ -187,6 +196,8 @@ export interface UpdateMemberInput {
   gitam_email: string;
   phone: string;
   reg_no: string;
+  graduation: string;
+  program: string;
   year_of_study: string;
   school: string;
   department: string;
@@ -202,6 +213,8 @@ export function updateMember(profileId: string, input: UpdateMemberInput) {
     p_gitam_email: input.gitam_email,
     p_phone: input.phone,
     p_reg_no: input.reg_no,
+    p_graduation: input.graduation,
+    p_program: input.program,
     p_year_of_study: input.year_of_study,
     p_school: input.school,
     p_department: input.department,

@@ -4,15 +4,23 @@ import { useState } from "react";
 import type { ProfileRow, TeamRow, ApprovalRequestRow, RoomRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "../TeamDashboardShell";
 import { submitTeamEditRequest, DashboardActionError } from "@/lib/dashboard/team-actions";
-
-const YEAR_OPTIONS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
-const GENDER_OPTIONS = ["Male", "Female", "Other", "Prefer not to say"];
-const STAY_OPTIONS = ["Hosteller", "Day Scholar"];
+import {
+  GENDER_OPTIONS,
+  GRADUATION_OPTIONS,
+  SCHOOL_OPTIONS,
+  STAY_OPTIONS,
+  branchesFor,
+  departmentsFor,
+  programsFor,
+  yearsFor,
+} from "@/lib/registration/academic";
 
 interface EditableMember {
   profileId: string;
   name: string;
   phone: string;
+  graduation: string;
+  program: string;
   yearOfStudy: string;
   school: string;
   department: string;
@@ -26,6 +34,8 @@ function toEditable(members: TeamMemberProfile[]): EditableMember[] {
     profileId: m.id,
     name: m.name,
     phone: m.phone,
+    graduation: m.graduation ?? "",
+    program: m.program ?? "",
     yearOfStudy: m.year_of_study,
     school: m.school,
     department: m.department,
@@ -162,29 +172,64 @@ export function ProfileSection({
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Full Name" value={m.name} onChange={(v) => updateMember(m.profileId, { name: v })} />
                 <Field label="Phone" value={m.phone} onChange={(v) => updateMember(m.profileId, { phone: v })} />
-                <SelectField
+                <DepSelect
+                  label="Graduation"
+                  value={m.graduation}
+                  placeholder="Select Graduation"
+                  options={[...GRADUATION_OPTIONS]}
+                  onChange={(v) => updateMember(m.profileId, { graduation: v, program: "", yearOfStudy: "" })}
+                />
+                <DepSelect
+                  label="Program"
+                  value={m.program}
+                  placeholder="Select Program"
+                  options={programsFor(m.graduation)}
+                  disabled={!m.graduation}
+                  onChange={(v) => updateMember(m.profileId, { program: v, yearOfStudy: "" })}
+                />
+                <DepSelect
                   label="Year of Study"
                   value={m.yearOfStudy}
-                  options={YEAR_OPTIONS}
+                  placeholder="Select Year of Study"
+                  options={yearsFor(m.program)}
+                  disabled={!m.program}
                   onChange={(v) => updateMember(m.profileId, { yearOfStudy: v })}
                 />
-                <Field label="School" value={m.school} onChange={(v) => updateMember(m.profileId, { school: v })} />
-                <Field
+                <DepSelect
+                  label="School"
+                  value={m.school}
+                  placeholder="Select School"
+                  options={[...SCHOOL_OPTIONS]}
+                  onChange={(v) => updateMember(m.profileId, { school: v, department: "", branch: "" })}
+                />
+                <DepSelect
                   label="Department"
                   value={m.department}
-                  onChange={(v) => updateMember(m.profileId, { department: v })}
+                  placeholder="Select Department"
+                  options={departmentsFor(m.school)}
+                  disabled={!m.school}
+                  onChange={(v) => updateMember(m.profileId, { department: v, branch: "" })}
                 />
-                <Field label="Branch" value={m.branch} onChange={(v) => updateMember(m.profileId, { branch: v })} />
-                <SelectField
+                <DepSelect
+                  label="Branch"
+                  value={m.branch}
+                  placeholder="Select Branch"
+                  options={branchesFor(m.department)}
+                  disabled={!m.department}
+                  onChange={(v) => updateMember(m.profileId, { branch: v })}
+                />
+                <DepSelect
                   label="Gender"
                   value={m.gender}
-                  options={GENDER_OPTIONS}
+                  placeholder="Select Gender"
+                  options={[...GENDER_OPTIONS]}
                   onChange={(v) => updateMember(m.profileId, { gender: v })}
                 />
-                <SelectField
+                <DepSelect
                   label="Stay"
                   value={m.stay}
-                  options={STAY_OPTIONS}
+                  placeholder="Select Stay"
+                  options={[...STAY_OPTIONS]}
                   onChange={(v) => updateMember(m.profileId, { stay: v })}
                 />
               </div>
@@ -223,6 +268,8 @@ export function ProfileSection({
                 <Info label="Reg No" value={m.reg_no} />
                 <Info label="GITAM Mail" value={m.gitam_email} />
                 <Info label="Phone" value={m.phone} />
+                <Info label="Graduation" value={m.graduation ?? "—"} />
+                <Info label="Program" value={m.program ?? "—"} />
                 <Info label="Year" value={m.year_of_study} />
                 <Info label="School" value={m.school} />
                 <Info label="Department" value={m.department} />
@@ -260,25 +307,36 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
   );
 }
 
-function SelectField({
+function DepSelect({
   label,
   value,
   options,
+  placeholder,
+  disabled,
   onChange,
 }: {
   label: string;
   value: string;
-  options: string[];
+  options: readonly string[];
+  placeholder: string;
+  disabled?: boolean;
   onChange: (v: string) => void;
 }) {
+  // Show a legacy/out-of-list value so the Team Lead can see and change it.
+  const isLegacy = value !== "" && !options.includes(value);
   return (
     <label className="flex flex-col gap-1.5">
       <span className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">{label}</span>
       <select
         value={value}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
-        className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+        className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold disabled:opacity-50"
       >
+        <option value="" disabled>
+          {placeholder}
+        </option>
+        {isLegacy && <option value={value}>{value} (current — not in list)</option>}
         {options.map((o) => (
           <option key={o} value={o}>
             {o}
