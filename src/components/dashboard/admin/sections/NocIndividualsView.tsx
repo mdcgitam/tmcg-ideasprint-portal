@@ -308,7 +308,7 @@ export function NocIndividualsView({
                 <th className="px-4 py-3">Position</th>
                 <th className="px-4 py-3">Reg No</th>
                 <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Phone</th>
+                <th className="px-4 py-3">Phone No</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">File Status</th>

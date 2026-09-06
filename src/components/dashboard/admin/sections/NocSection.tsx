@@ -60,8 +60,8 @@ export function NocSection({
         value={view}
         onChange={setView}
         options={[
-          { value: "teams", label: "Teams" },
-          { value: "individuals", label: "Individuals" },
+          { value: "teams", label: "View by Team" },
+          { value: "individuals", label: "View by Participants" },
         ]}
       />
 

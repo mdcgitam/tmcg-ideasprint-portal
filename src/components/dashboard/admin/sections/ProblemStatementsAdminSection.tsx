@@ -327,8 +327,8 @@ export function ProblemStatementsAdminSection({
         return {
           Campus: lead?.campus ?? "—",
           "Team Name": team.team_name,
-          "Team Lead Name": lead?.name ?? "—",
-          "Team Lead Phone": lead?.phone ?? "—",
+          "Team Lead": lead?.name ?? "—",
+          "Lead Phone No": lead?.phone ?? "—",
           "Team Size": String(team.member_count),
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",

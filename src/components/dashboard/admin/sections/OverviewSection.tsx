@@ -57,7 +57,7 @@ export function OverviewSection({
         onChange={setView}
         options={[
           { value: "aggregate", label: "Summary" },
-          { value: "by-team", label: "By Team" },
+          { value: "by-team", label: "View by Team" },
         ]}
       />
 

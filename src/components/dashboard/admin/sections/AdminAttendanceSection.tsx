@@ -228,7 +228,7 @@ export function AdminAttendanceSection({
           Campus: lead?.campus ?? "—",
           "Team Name": team.team_name,
           "Team Lead Name": lead?.name ?? "—",
-          "Team Lead Phone": lead?.phone ?? "—",
+          "Lead Phone No": lead?.phone ?? "—",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
           Session: s.name,
@@ -282,7 +282,7 @@ export function AdminAttendanceSection({
           "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Size": String(team.member_count),
-          "Member ID": m.user_id,
+          "User ID": m.user_id,
           Name: m.name,
           Position: m.is_lead ? "Team Lead" : "Member",
           "Reg No": m.reg_no,
@@ -337,8 +337,8 @@ export function AdminAttendanceSection({
             value={view}
             onChange={setView}
             options={[
-              { value: "teams", label: "Teams" },
-              { value: "members", label: "Members" },
+              { value: "teams", label: "View by Team" },
+              { value: "members", label: "View by Participants" },
             ]}
           />
 
@@ -406,8 +406,8 @@ export function AdminAttendanceSection({
                         <th className="px-2 py-3" />
                         <th className="px-4 py-3">Campus</th>
                         <th className="px-4 py-3">Team Name</th>
-                        <th className="px-4 py-3">Team Lead Name</th>
-                        <th className="px-4 py-3">Team Lead Phone</th>
+                        <th className="px-4 py-3">Team Lead</th>
+                        <th className="px-4 py-3">Lead Phone No</th>
                         <th className="px-4 py-3">SPOC</th>
                         <th className="px-4 py-3">Venue</th>
                         {localSessions.map((s) => (
@@ -612,7 +612,7 @@ export function AdminAttendanceSection({
                         <th className="px-4 py-3">Campus</th>
                         <th className="px-4 py-3">Team Name</th>
                         <th className="px-4 py-3">Team Size</th>
-                        <th className="px-4 py-3">Member ID</th>
+                        <th className="px-4 py-3">User ID</th>
                         <th className="px-4 py-3">Name</th>
                         <th className="px-4 py-3">Position</th>
                         <th className="px-4 py-3">Stay</th>

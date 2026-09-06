@@ -68,7 +68,7 @@ export function TeamsByTeamView({
           "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
-          "Lead Phone": lead?.phone ?? "—",
+          "Lead Phone No": lead?.phone ?? "—",
           Size: String(members.length),
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
@@ -126,7 +126,7 @@ export function TeamsByTeamView({
                 <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Team Lead</th>
                 <th className="px-4 py-3">Lead Phone</th>
-                <th className="px-4 py-3">Size</th>
+                <th className="px-4 py-3">Team Size</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">Status</th>

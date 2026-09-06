@@ -147,7 +147,7 @@ export function TeamsByMembersView({
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Position</th>
                 <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Reg Number</th>
+                <th className="px-4 py-3">Reg No</th>
                 <th className="px-4 py-3">Phone No</th>
                 <th className="px-4 py-3">Year</th>
                 <th className="px-4 py-3">School</th>
