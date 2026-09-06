@@ -39,7 +39,7 @@ const SENDER_CONFIG: Partial<
 };
 
 const ROLE_LABEL: Record<BroadcastRoleFilter, string> = {
-  "": "Anyone",
+  "": "All roles",
   "Campus Admin": "Campus Admins",
   SPOC: "SPOCs",
   "Zone Manager": "Zone Managers",
