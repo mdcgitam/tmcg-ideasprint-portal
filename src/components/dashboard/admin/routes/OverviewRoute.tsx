@@ -3,9 +3,12 @@ import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { OverviewSection } from "@/components/dashboard/admin/sections/OverviewSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
-export async function OverviewRoute({ profile }: { profile: ProfileRow }) {
-  const { teams, membersByTeam, pendingApprovals, nocs, exitRequests } = await fetchAdminDashboardData(profile);
-  const scope = profile.role === "SPOC" ? "spoc" : "admin";
+export async function OverviewRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
+  const { teams, membersByTeam, pendingApprovals, nocs, exitRequests } = await fetchAdminDashboardData(
+    profile,
+    roomId ? { roomId } : undefined,
+  );
+  const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
 
   return (
     <SectionPageShell title="Overview" scope={scope}>

@@ -55,6 +55,7 @@ expected_functions(name, expected_arg_count) as (
     ('is_own_or_led_profile', 1), ('is_led_profile', 1),
     ('is_own_team', 1), ('is_led_team', 1),
     ('is_assigned_spoc_of_profile', 1), ('is_assigned_spoc_of_team', 1),
+    ('is_zone_manager_of_profile', 1), ('is_zone_manager_of_team', 1),
     ('next_user_id', 1), ('next_team_id', 0),
     ('register_team', 1),
     ('check_team_name_available', 1),

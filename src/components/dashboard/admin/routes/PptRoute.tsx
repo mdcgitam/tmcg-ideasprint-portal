@@ -3,7 +3,7 @@ import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { PptSection } from "@/components/dashboard/admin/sections/PptSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
-export async function PptRoute({ profile }: { profile: ProfileRow }) {
+export async function PptRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
   const {
     teams,
     membersByTeam,
@@ -13,8 +13,8 @@ export async function PptRoute({ profile }: { profile: ProfileRow }) {
     staffAccounts,
     problemStatements,
     config,
-  } = await fetchAdminDashboardData(profile);
-  const scope = profile.role === "SPOC" ? "spoc" : "admin";
+  } = await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
+  const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
 
   return (
     <SectionPageShell title="PPT" scope={scope}>

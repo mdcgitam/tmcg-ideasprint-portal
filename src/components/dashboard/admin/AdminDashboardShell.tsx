@@ -20,10 +20,14 @@ import { LogoutButton } from "@/components/dashboard/LogoutButton";
 
 export interface AdminDashboardShellProps {
   profile: ProfileRow;
-  scope: "spoc" | "admin";
+  scope: "spoc" | "admin" | "zone";
   counts: DashboardCardCounts;
   /** Set for the global Super Admin: which campus module is active ("all" = every campus). */
   superCampus?: "VSP" | "BLR" | "HYD" | "all";
+  /** Zone Manager only: the venues of the zone(s) they manage, rendered as tabs. */
+  zoneRooms?: Array<{ id: string; name: string }>;
+  /** Zone Manager only: the venue tab currently selected (undefined = all venues). */
+  activeRoomId?: string;
 }
 
 const CAMPUS_TABS: Array<{ code: "VSP" | "BLR" | "HYD" | "all"; label: string }> = [
@@ -87,19 +91,38 @@ const ADMIN_ONLY_CARDS: CardDef[] = [
  * swap here anymore, that logic now lives per-section under
  * src/app/dashboard/{admin,spoc}/<slug>/page.tsx.
  */
-export function AdminDashboardShell({ profile, scope, counts, superCampus }: AdminDashboardShellProps) {
+export function AdminDashboardShell({
+  profile,
+  scope,
+  counts,
+  superCampus,
+  zoneRooms,
+  activeRoomId,
+}: AdminDashboardShellProps) {
   const cards: CardDef[] = scope === "admin" ? [...BASE_CARDS, ...ADMIN_ONLY_CARDS] : BASE_CARDS;
   const isSuper = profile.role === "Super Admin";
-  const q = isSuper && superCampus ? `?campus=${superCampus}` : "";
+  const roleLabel = isSuper
+    ? "Super Admin"
+    : scope === "admin"
+      ? "Campus Admin"
+      : scope === "zone"
+        ? "Zone Manager"
+        : "SPOC";
+  const q =
+    scope === "zone"
+      ? activeRoomId
+        ? `?room=${activeRoomId}`
+        : ""
+      : isSuper && superCampus
+        ? `?campus=${superCampus}`
+        : "";
 
   return (
     <main className="min-h-screen bg-void px-6 pt-12 pb-16 sm:px-10 sm:pt-14 lg:px-16">
       <div className="mx-auto max-w-7xl">
         <Reveal className="mb-8 flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border bg-surface px-6 py-6 sm:px-8 sm:py-7">
           <div>
-            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">
-              {isSuper ? "Super Admin" : scope === "admin" ? "Campus Admin" : "SPOC"}
-            </span>
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">{roleLabel}</span>
             <h1 className="mt-3 font-display text-4xl text-ink sm:text-5xl">{profile.name}</h1>
           </div>
           <LogoutButton />
@@ -125,6 +148,35 @@ export function AdminDashboardShell({ profile, scope, counts, superCampus }: Adm
                 }`}
               >
                 {c.label}
+              </Link>
+            ))}
+          </Reveal>
+        )}
+
+        {scope === "zone" && zoneRooms && zoneRooms.length > 0 && (
+          <Reveal className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3">
+            <span className="mr-1 font-mono text-xs tracking-[0.2em] text-ink-faint uppercase">Venue</span>
+            <Link
+              href="/dashboard/zone"
+              className={`rounded-full px-3 py-1 font-heading text-xs transition-colors ${
+                activeRoomId
+                  ? "border border-border text-ink-muted hover:border-gold hover:text-gold"
+                  : "bg-gold text-void"
+              }`}
+            >
+              All venues
+            </Link>
+            {zoneRooms.map((r) => (
+              <Link
+                key={r.id}
+                href={`/dashboard/zone?room=${r.id}`}
+                className={`rounded-full px-3 py-1 font-heading text-xs transition-colors ${
+                  activeRoomId === r.id
+                    ? "bg-gold text-void"
+                    : "border border-border text-ink-muted hover:border-gold hover:text-gold"
+                }`}
+              >
+                {r.name}
               </Link>
             ))}
           </Reveal>

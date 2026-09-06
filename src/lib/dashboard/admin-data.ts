@@ -60,7 +60,7 @@ export interface AdminDashboardData {
  */
 export async function fetchAdminDashboardData(
   profile: ProfileRow,
-  opts?: { campus?: CampusCode | "all" },
+  opts?: { campus?: CampusCode | "all"; roomId?: string },
 ): Promise<AdminDashboardData> {
   const supabase = await createClient();
 
@@ -168,10 +168,32 @@ export async function fetchAdminDashboardData(
   const inCampus = <T extends { campus?: string | null }>(rows: T[]) =>
     selectedCampus == null ? rows : rows.filter((r) => r.campus === selectedCampus);
 
+  // Zone Manager: every collection is scoped to the venues of the zone(s)
+  // they manage (zones.zone_manager_profile_id -> rooms.zone_id -> teams.room_id).
+  const zmZoneIds =
+    profile.role === "Zone Manager"
+      ? new Set(
+          ((zones ?? []) as ZoneRow[]).filter((z) => z.zone_manager_profile_id === profile.id).map((z) => z.id),
+        )
+      : null;
+  const zmRoomIds =
+    zmZoneIds != null
+      ? new Set(
+          ((rooms ?? []) as RoomRow[]).filter((r) => r.zone_id != null && zmZoneIds.has(r.zone_id)).map((r) => r.id),
+        )
+      : null;
+
   if (profile.role === "SPOC") {
     scopedTeams = scopedTeams.filter((t) => t.spoc_profile_id === profile.id);
+  } else if (zmRoomIds != null) {
+    scopedTeams = scopedTeams.filter((t) => t.room_id != null && zmRoomIds.has(t.room_id));
   } else if (selectedCampus != null) {
     scopedTeams = scopedTeams.filter((t) => t.campus === selectedCampus);
+  }
+
+  // Room-tab filter (Zone Manager dashboard) — narrow to a single venue.
+  if (opts?.roomId) {
+    scopedTeams = scopedTeams.filter((t) => t.room_id === opts.roomId);
   }
   {
     const teamIds = new Set(scopedTeams.map((t) => t.id));
@@ -202,8 +224,14 @@ export async function fetchAdminDashboardData(
     zoneManagers: inCampus((zoneManagers ?? []) as ProfileRow[]),
     staffAccounts: inCampus((staffAccounts ?? []) as ProfileRow[]),
     notifications: (notifications ?? []) as NotificationRow[],
-    rooms: inCampus((rooms ?? []) as RoomRow[]),
-    zones: inCampus((zones ?? []) as ZoneRow[]),
+    rooms:
+      zmRoomIds != null
+        ? ((rooms ?? []) as RoomRow[]).filter((r) => zmRoomIds.has(r.id))
+        : inCampus((rooms ?? []) as RoomRow[]),
+    zones:
+      zmZoneIds != null
+        ? ((zones ?? []) as ZoneRow[]).filter((z) => zmZoneIds.has(z.id))
+        : inCampus((zones ?? []) as ZoneRow[]),
   };
 }
 
