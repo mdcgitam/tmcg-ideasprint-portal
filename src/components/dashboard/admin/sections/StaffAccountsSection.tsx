@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ProfileRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
+import type { CampusCode, ProfileRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
 import { createStaffProfile, updateUserRole, deleteSpoc, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
@@ -19,10 +19,12 @@ type View = "all" | "by-assignment";
  * exactly like a participant profile.
  */
 export function StaffAccountsSection({
+  campus,
   staffAccounts,
   rooms,
   zones,
 }: {
+  campus: CampusCode;
   staffAccounts: ProfileRow[];
   rooms: RoomRow[];
   zones: ZoneRow[];
@@ -45,7 +47,7 @@ export function StaffAccountsSection({
     try {
       const id = await createStaffProfile({ name: name.trim(), email: email.trim(), role: role as "SPOC" | "Super Admin" });
       setLocal((prev) => [
-        { id, auth_user_id: null, user_id: "", campus: "VSP", role, name: name.trim(), gitam_email: email.trim().toLowerCase(), phone: "", reg_no: "", year_of_study: "", school: "", department: "", branch: "", gender: "", stay: "", is_active: true, deactivated_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id, auth_user_id: null, user_id: "", campus, role, name: name.trim(), gitam_email: email.trim().toLowerCase(), phone: "", reg_no: "", year_of_study: "", school: "", department: "", branch: "", gender: "", stay: "", is_active: true, deactivated_at: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
         ...prev,
       ]);
       setName("");
@@ -134,7 +136,7 @@ export function StaffAccountsSection({
             onClick={() =>
               downloadCsv(
                 "staff-accounts",
-                local.map((s) => ({ Name: s.name, Email: s.gitam_email, Role: s.role, "User ID": s.user_id })),
+                local.map((s) => ({ Name: s.name, Email: s.gitam_email, Campus: s.campus, Role: s.role, "User ID": s.user_id })),
               )
             }
             className="w-fit rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
@@ -166,7 +168,7 @@ export function StaffAccountsSection({
                     >
                       <div>
                         <p className="font-heading text-sm text-ink">{s.name}</p>
-                        <p className="mt-1 font-heading text-xs text-ink-muted">{s.gitam_email}</p>
+                        <p className="mt-1 font-heading text-xs text-ink-muted">{s.gitam_email} · {s.campus}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <select

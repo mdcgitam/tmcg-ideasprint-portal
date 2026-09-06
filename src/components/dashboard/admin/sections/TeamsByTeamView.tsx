@@ -64,7 +64,7 @@ export function TeamsByTeamView({
           (m) => exitRequests.find((r) => r.profile_id === m.id)?.status === "Approved",
         ).length;
         return {
-          Campus: lead?.campus ?? "—",
+          Campus: team.campus,
           "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
@@ -144,7 +144,7 @@ export function TeamsByTeamView({
 
                 return (
                   <tr key={team.id} className="border-b border-border align-top last:border-0">
-                    <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{team.campus}</td>
                     <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                     <td className="px-4 py-3 text-ink">{team.team_name}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>

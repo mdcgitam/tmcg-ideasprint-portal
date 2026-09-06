@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormContext } from "react-hook-form";
-import { SCHOOL_LABELS, type RegistrationFormValues } from "@/lib/registration/schema";
+import { CAMPUS_OPTIONS, SCHOOL_LABELS, type RegistrationFormValues } from "@/lib/registration/schema";
 
 export function ReviewStep() {
   const { getValues } = useFormContext<RegistrationFormValues>();
@@ -20,6 +20,10 @@ export function ReviewStep() {
       <div className="rounded-xl border border-border bg-surface p-6">
         <h2 className="font-heading text-xs tracking-[0.3em] text-gold uppercase">Team</h2>
         <dl className="mt-4 grid gap-3 sm:grid-cols-2">
+          <ReviewRow
+            label="Campus"
+            value={CAMPUS_OPTIONS.find((c) => c.code === values.team.campus)?.label ?? values.team.campus}
+          />
           <ReviewRow label="Team Name" value={values.team.teamName} />
           <ReviewRow label="Team Size" value={`${values.team.memberCount} members`} />
         </dl>

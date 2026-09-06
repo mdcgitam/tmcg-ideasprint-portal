@@ -33,6 +33,16 @@ export const SCHOOL_LABELS: Record<(typeof SCHOOL_VALUES)[number], string> = {
 export const MIN_TEAM_SIZE = 3;
 export const MAX_TEAM_SIZE = 4;
 
+// The three GITAM campuses the portal now spans. Codes are what's stored/submitted;
+// labels are display-only (registration UI).
+export const CAMPUS_OPTIONS = [
+  { code: "VSP", label: "Visakhapatnam" },
+  { code: "BLR", label: "Bangalore" },
+  { code: "HYD", label: "Hyderabad" },
+] as const;
+
+export type CampusCode = (typeof CAMPUS_OPTIONS)[number]["code"];
+
 export const memberSchema = z.object({
   name: z.string().trim().min(2, "Enter the participant's full name"),
   regNo: z.string().trim().min(3, "Enter a valid registration number"),
@@ -55,6 +65,7 @@ export const memberSchema = z.object({
 export type MemberFormValues = z.infer<typeof memberSchema>;
 
 export const teamDetailsSchema = z.object({
+  campus: z.enum(["VSP", "BLR", "HYD"], { error: "Select a campus" }),
   teamName: z.string().trim().min(3, "Team name must be at least 3 characters"),
   memberCount: z.union([z.literal(MIN_TEAM_SIZE), z.literal(MAX_TEAM_SIZE)]),
 });

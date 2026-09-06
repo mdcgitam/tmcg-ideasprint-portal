@@ -31,6 +31,7 @@ function friendlyError(raw: string): string {
   if (raw.includes("INVALID_AUDIENCE")) return "Choose an audience to notify.";
   if (raw.includes("INVALID_BROADCAST")) return "Title and message can't be empty.";
   if (raw.includes("INVALID_PS_NUMBER")) return "That problem statement number wasn't found or isn't live yet.";
+  if (raw.includes("CROSS_CAMPUS")) return "That record belongs to another campus.";
   return "Something went wrong. Please try again.";
 }
 
