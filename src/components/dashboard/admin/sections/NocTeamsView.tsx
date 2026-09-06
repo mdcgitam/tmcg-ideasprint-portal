@@ -67,8 +67,8 @@ export function NocTeamsView({
 
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
-  // Live roster length — the stored teams.member_count can lag a member deletion.
-  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
+  // Displayed team size = active members only (an approved exit deactivates the profile).
+  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 

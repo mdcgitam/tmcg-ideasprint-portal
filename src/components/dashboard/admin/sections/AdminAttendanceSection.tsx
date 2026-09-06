@@ -8,6 +8,7 @@ import { recordAttendance, createAttendanceSession, DashboardActionError } from 
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { FilterSelect } from "@/components/dashboard/admin/sections/TeamFormFields";
+import { activeMemberCount, TEAM_MIN_ACTIVE } from "@/components/dashboard/admin/sections/ExitStatusBadge";
 import { useTabFade } from "@/hooks/useTabFade";
 
 type View = "teams" | "members";
@@ -85,8 +86,8 @@ export function AdminAttendanceSection({
 
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
-  // Live roster length — the stored teams.member_count can lag a member deletion.
-  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
+  // Displayed team size = active members only (an approved exit deactivates the profile).
+  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
   const latestSession = localSessions[localSessions.length - 1] ?? null;
 
   function toggleExpanded(teamId: string) {
@@ -154,7 +155,7 @@ export function AdminAttendanceSection({
   }
 
   async function handleMarkTeam(teamId: string, sessionId: string, status: "Present" | "Absent") {
-    const members = membersByTeam[teamId] ?? [];
+    const members = (membersByTeam[teamId] ?? []).filter((m) => m.is_active);
     if (members.length === 0) return;
     const key = `team:${teamId}:${sessionId}`;
     setBusyKey(key);
@@ -177,7 +178,7 @@ export function AdminAttendanceSection({
 
   /** A team is "Present" only if every member has a Present record for that session; any explicit Absent or unmarked member (once at least one member has been touched) makes it "Absent". Zero records at all = "Not Marked". */
   function teamStatus(team: TeamRow, session: AttendanceSessionRow | null): Status {
-    const members = membersByTeam[team.id] ?? [];
+    const members = (membersByTeam[team.id] ?? []).filter((m) => m.is_active);
     if (!session || members.length === 0) return "Not Marked";
     const records = members.map((m) => localAttendance.find((a) => a.session_id === session.id && a.profile_id === m.id));
     if (records.every((r) => r?.status === "Present")) return "Present";
@@ -207,6 +208,8 @@ export function AdminAttendanceSection({
       const lead = members.find((m) => m.is_lead);
       const status = teamStatus(team, latestSession);
 
+      // Inactive teams (fewer than 3 active members) are not part of attendance.
+      if (activeMemberCount(members) < TEAM_MIN_ACTIVE) return false;
       if (q) {
         const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
@@ -250,6 +253,8 @@ export function AdminAttendanceSection({
     const q = memberFilters.search.trim().toLowerCase();
     return teams.flatMap((team) => {
       const members = membersByTeam[team.id] ?? [];
+      // Inactive teams (fewer than 3 active members) are not part of attendance.
+      if (activeMemberCount(members) < TEAM_MIN_ACTIVE) return [];
       return members
         .filter((m) => {
           if (q) {
@@ -491,9 +496,13 @@ export function AdminAttendanceSection({
                                         </thead>
                                         <tbody>
                                           {members.map((m) => (
-                                            <tr key={m.id} className="border-b border-border last:border-0">
+                                            <tr
+                                              key={m.id}
+                                              className={`border-b border-border last:border-0 ${m.is_active ? "" : "opacity-50"}`}
+                                            >
                                               <td className="px-4 py-2 text-ink">
                                                 {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
+                                                {!m.is_active && <span className="ml-1 text-xs text-danger">(Exited)</span>}
                                               </td>
                                               <td className="px-4 py-2 text-ink-muted">{m.gitam_email}</td>
                                               <td className="px-4 py-2 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
@@ -505,11 +514,11 @@ export function AdminAttendanceSection({
                                                   <td key={s.id} className="px-4 py-2">
                                                     <button
                                                       type="button"
-                                                      disabled={mBusy}
+                                                      disabled={mBusy || !m.is_active}
                                                       onClick={() => handleToggleMember(s.id, m.id, team.id, mStatus)}
                                                       className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-60 ${statusClassName(mStatus)}`}
                                                     >
-                                                      {mStatus}
+                                                      {m.is_active ? mStatus : "—"}
                                                     </button>
                                                   </td>
                                                 );
@@ -636,12 +645,18 @@ export function AdminAttendanceSection({
                         </tr>
                       ) : (
                         filteredMembers.map(({ member: m, team }) => (
-                          <tr key={m.id} className="border-b border-border align-top last:border-0">
+                          <tr
+                            key={m.id}
+                            className={`border-b border-border align-top last:border-0 ${m.is_active ? "" : "opacity-50"}`}
+                          >
                             <td className="px-4 py-3 text-ink-muted">{m.campus}</td>
                             <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
                             <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                             <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
-                            <td className="px-4 py-3 text-ink">{m.name}</td>
+                            <td className="px-4 py-3 text-ink">
+                              {m.name}
+                              {!m.is_active && <span className="ml-1 text-xs text-danger">(Exited)</span>}
+                            </td>
                             <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
                             <td className="px-4 py-3 text-ink-muted">{m.stay}</td>
                             <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
@@ -653,11 +668,11 @@ export function AdminAttendanceSection({
                                 <td key={s.id} className="px-4 py-3">
                                   <button
                                     type="button"
-                                    disabled={busy}
+                                    disabled={busy || !m.is_active}
                                     onClick={() => handleToggleMember(s.id, m.id, team.id, status)}
                                     className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-60 ${statusClassName(status)}`}
                                   >
-                                    {status}
+                                    {m.is_active ? status : "—"}
                                   </button>
                                 </td>
                               );

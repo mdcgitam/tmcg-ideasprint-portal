@@ -14,7 +14,7 @@ import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { downloadCsv } from "@/lib/csv";
 import { TeamDetailModal } from "./TeamDetailModal";
 import { TeamFilterBar, filterTeams, EMPTY_TEAM_FILTERS, type TeamFilters } from "./TeamFilterBar";
-import { teamActiveStatus } from "./ExitStatusBadge";
+import { activeMemberCount, teamActiveStatus } from "./ExitStatusBadge";
 
 /** "View by Teams" — one row per team, matching "View by Participants"' table styling. Actions opens the full team detail view. */
 export function TeamsByTeamView({
@@ -51,8 +51,8 @@ export function TeamsByTeamView({
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
   const filteredTeams = useMemo(
-    () => filterTeams(teams, membersByTeam, filters, exitRequests),
-    [teams, membersByTeam, filters, exitRequests],
+    () => filterTeams(teams, membersByTeam, filters),
+    [teams, membersByTeam, filters],
   );
 
   function handleExportCsv() {
@@ -67,10 +67,10 @@ export function TeamsByTeamView({
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
-          "Team Size": String(members.length),
+          "Team Size": String(activeMemberCount(members) || members.length),
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
-          Status: teamActiveStatus(members, exitRequests),
+          Status: teamActiveStatus(members),
         };
       }),
     );
@@ -145,10 +145,10 @@ export function TeamsByTeamView({
                     <td className="px-4 py-3 text-ink">{team.team_name}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-muted">{members.length}</td>
+                    <td className="px-4 py-3 text-ink-muted">{activeMemberCount(members) || members.length}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
-                    <td className="px-4 py-3 text-ink-muted">{teamActiveStatus(members, exitRequests)}</td>
+                    <td className="px-4 py-3 text-ink-muted">{teamActiveStatus(members)}</td>
                     <td className="px-4 py-3">
                       <button type="button" onClick={() => setOpenTeamId(team.id)} className="text-gold underline">
                         View

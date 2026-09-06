@@ -91,7 +91,7 @@ export function RoomsZonesSection({
   const campusOf = (team: TeamRow): CampusCode =>
     (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.campus ?? team.campus;
   const leadOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).find((m) => m.is_lead) ?? null;
-  const sizeOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
+  const sizeOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
 
   /** All the Zone/Manager/Venue/SPOC context for one team. */
   function teamContext(team: TeamRow) {

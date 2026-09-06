@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { TeamRow, ApprovalRequestRow, NocRow, ExitRequestRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
+import { activeMemberCount, teamActiveStatus } from "@/components/dashboard/admin/sections/ExitStatusBadge";
 import { useTabFade } from "@/hooks/useTabFade";
 
 type View = "aggregate" | "by-team";
@@ -90,14 +91,18 @@ export function OverviewSection({
                     (m) => nocs.find((n) => n.profile_id === m.id)?.status !== "Uploaded",
                   ).length;
                   const exitedCount = members.filter((m) => isExited(m.id)).length;
+                  const teamStatusLabel = teamActiveStatus(members);
                   return (
                     <tr key={team.id} className="border-b border-border last:border-0">
                       <td className="px-4 py-3 text-ink">
                         {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
                       </td>
-                      <td className="px-4 py-3 text-ink-muted">{members.length}</td>
+                      <td className="px-4 py-3 text-ink-muted">{activeMemberCount(members) || members.length}</td>
                       <td className="px-4 py-3 text-ink-muted">{teamMissingNocs}</td>
-                      <td className="px-4 py-3 text-ink-muted">{exitedCount > 0 ? `${exitedCount} Exited` : "Active"}</td>
+                      <td className="px-4 py-3 text-ink-muted">
+                        {teamStatusLabel}
+                        {teamStatusLabel === "Active" && exitedCount > 0 && ` · ${exitedCount} exited`}
+                      </td>
                       <td className="px-4 py-3 text-ink-muted">{team.room_id ? "Yes" : "No"}</td>
                     </tr>
                   );

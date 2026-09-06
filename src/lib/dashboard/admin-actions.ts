@@ -9,6 +9,10 @@ function friendlyError(raw: string): string {
   if (raw.includes("NOT_ALLOWED")) return "You don't have permission to do this.";
   if (raw.includes("ALREADY_RESOLVED")) return "This request was already resolved.";
   if (raw.includes("REQUEST_NOT_FOUND")) return "That request couldn't be found.";
+  if (raw.includes("TEAM_MIN_SIZE"))
+    return "A team can't drop below 3 members — every remaining member must also submit an exit form before this can be approved.";
+  if (raw.includes("MEMBER_EXITED")) return "That member has exited the event — they're no longer marked for attendance.";
+  if (raw.includes("TEAM_INACTIVE")) return "This team is inactive (fewer than 3 active members) and isn't part of attendance.";
   if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant couldn't be found.";
   if (raw.includes("NOT_A_SPOC")) return "That account isn't a SPOC — assign the SPOC role first.";
   if (raw.includes("NOT_A_ZONE_MANAGER")) return "Only a Zone Manager account can manage a zone.";

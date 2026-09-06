@@ -259,9 +259,13 @@ export function ProfileSection({
       ) : (
         <div className="flex flex-col gap-4">
           {members.map((m) => (
-            <div key={m.id} className="rounded-xl border border-border bg-surface p-6">
+            <div
+              key={m.id}
+              className={`rounded-xl border border-border bg-surface p-6 ${m.is_active ? "" : "opacity-50"}`}
+            >
               <p className="mb-3 font-heading text-sm text-gold">
                 {m.is_lead ? "Team Lead" : "Member"} · {m.user_id}
+                {!m.is_active && <span className="ml-2 text-xs text-danger">Exited</span>}
               </p>
               <div className="grid gap-3 font-heading text-sm text-ink sm:grid-cols-3">
                 <Info label="Name" value={m.name} />

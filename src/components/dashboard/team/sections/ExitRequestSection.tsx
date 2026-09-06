@@ -37,6 +37,7 @@ export function ExitRequestSection({
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const visibleMembers = isLead ? members : members.filter((m) => m.id === profile.id);
+  const activeCount = members.filter((m) => m.is_active).length;
 
   function requestFor(profileId: string) {
     return localRequests.find((r) => r.profile_id === profileId) ?? null;
@@ -97,8 +98,15 @@ export function ExitRequestSection({
     <div className="flex flex-col gap-4">
       <p className="max-w-2xl font-heading text-xs text-ink-muted">
         Not a mandatory submission — only for participants who want to exit the event partway through. Upload the
-        already-signed, physical exit form; a SPOC or Super Admin will review it.
+        already-signed, physical exit form; a SPOC or Super Admin will review it. A member can exit only while the
+        team keeps at least 3 active members.
       </p>
+      {activeCount <= 3 && (
+        <p className="max-w-2xl rounded-lg border border-gold/40 bg-gold/5 px-4 py-3 font-heading text-xs text-gold">
+          This team is at the 3-member minimum. A single member can&rsquo;t exit on their own — all {activeCount}{" "}
+          members must each submit an exit form. Once those are approved the whole team becomes inactive.
+        </p>
+      )}
       {error && (
         <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 font-heading text-sm text-danger">
           {error}
@@ -113,10 +121,16 @@ export function ExitRequestSection({
         const canWithdraw = isLead && request?.status === "Requested";
 
         return (
-          <div key={m.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface p-5">
+          <div
+            key={m.id}
+            className={`flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface p-5 ${
+              m.is_active ? "" : "opacity-60"
+            }`}
+          >
             <div>
               <p className="font-heading text-sm text-ink">
                 {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
+                {!m.is_active && <span className="ml-1 text-xs text-danger">(Exited)</span>}
               </p>
               <p
                 className={`mt-1 font-heading text-xs ${

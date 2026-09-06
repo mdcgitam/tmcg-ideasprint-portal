@@ -25,8 +25,21 @@ export function isExited(request: ExitRequestRow | undefined): boolean {
 export const TEAM_STATUS_OPTIONS = ["Active", "Inactive"] as const;
 export type TeamStatusLabel = (typeof TEAM_STATUS_OPTIONS)[number];
 
-/** A team's display status — "Inactive" once any member's exit request has been approved. This is the one status system for the team-level Status column/filter (no separate source of truth). */
-export function teamActiveStatus(members: TeamMemberProfile[], exitRequests: ExitRequestRow[]): TeamStatusLabel {
-  const hasExited = members.some((m) => isExited(exitRequests.find((r) => r.profile_id === m.id)));
-  return hasExited ? "Inactive" : "Active";
+/** Minimum viable team. Below this many active members the team is Inactive. */
+export const TEAM_MIN_ACTIVE = 3;
+
+/** Active roster size — members whose registration is still active (an
+ *  approved exit sets profiles.is_active = false). */
+export function activeMemberCount(members: TeamMemberProfile[]): number {
+  return members.filter((m) => m.is_active).length;
+}
+
+/**
+ * A team's display status. Exiting one member from a 4-person team leaves 3
+ * active and the team stays Active; a 3-person team only dissolves when all
+ * three exit, dropping active members below the minimum → Inactive. One
+ * status system for the team-level Status column/filter.
+ */
+export function teamActiveStatus(members: TeamMemberProfile[]): TeamStatusLabel {
+  return activeMemberCount(members) < TEAM_MIN_ACTIVE ? "Inactive" : "Active";
 }

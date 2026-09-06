@@ -86,8 +86,8 @@ export function PptSection({
   const [bulkError, setBulkError] = useState<string | null>(null);
 
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
-  // Live roster length — the stored teams.member_count can lag a member deletion.
-  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
+  // Displayed team size = active members only (an approved exit deactivates the profile).
+  const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
@@ -281,7 +281,7 @@ export function PptSection({
         if (!haystack.includes(q)) return false;
       }
       if (filters.campus && lead?.campus !== filters.campus) return false;
-      if (filters.teamSize && String(members.length || team.member_count) !== filters.teamSize) return false;
+      if (filters.teamSize && String(members.filter((m) => m.is_active).length || team.member_count) !== filters.teamSize) return false;
       if (filters.room && team.room_id !== filters.room) return false;
       if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
       if (filters.status && status !== filters.status) return false;

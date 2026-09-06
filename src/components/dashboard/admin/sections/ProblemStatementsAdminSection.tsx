@@ -139,8 +139,8 @@ export function ProblemStatementsAdminSection({
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const psNumberOf = (team: TeamRow) => local.find((p) => p.id === team.current_problem_statement_id)?.number ?? "";
-  // Live roster length — the stored teams.member_count can lag a member deletion.
-  const sizeOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).length || team.member_count;
+  // Displayed team size = active members only (an approved exit deactivates the profile).
+  const sizeOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
   const extensionOf = (teamId: string) => localExtensions.find((e) => e.team_id === teamId);
   // A team's effective deadline: its own extension, else the general selection end.
   const deadlineOf = (teamId: string) => extensionOf(teamId)?.extended_until ?? selectionEnd;

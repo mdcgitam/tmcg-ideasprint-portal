@@ -127,7 +127,8 @@ export function TeamDetailModal({
           <div>
             <h2 className="font-display text-2xl text-ink">{team.team_name}</h2>
             <p className="mt-1 font-heading text-xs text-ink-muted">
-              {team.team_id} · Campus: {team.campus} · Members: {members.length}
+              {team.team_id} · Campus: {team.campus} · Members: {members.filter((m) => m.is_active).length}
+              {members.some((m) => !m.is_active) && ` (+${members.filter((m) => !m.is_active).length} exited)`}
             </p>
           </div>
           <button
@@ -164,11 +165,12 @@ export function TeamDetailModal({
                   onClick={() => setSelectedMemberId(m.id)}
                   className={`rounded-xl border p-3 text-left transition-colors ${
                     selectedMemberId === m.id ? "border-gold bg-gold/5" : "border-border hover:border-border-strong"
-                  }`}
+                  } ${m.is_active ? "" : "opacity-50"}`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-heading text-sm text-ink">
                       {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
+                      {!m.is_active && <span className="ml-1 text-xs text-danger">(Exited)</span>}
                     </p>
                     <ExitStatusBadge request={exitRequests.find((r) => r.profile_id === m.id)} />
                   </div>

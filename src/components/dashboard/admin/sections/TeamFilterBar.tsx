@@ -2,7 +2,7 @@ import { type ReactNode, useMemo } from "react";
 import type { ExitRequestRow, RoomRow, TeamRow, ProfileRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { FilterSelect } from "./TeamFormFields";
-import { TEAM_STATUS_OPTIONS, teamActiveStatus } from "./ExitStatusBadge";
+import { TEAM_STATUS_OPTIONS, activeMemberCount, teamActiveStatus } from "./ExitStatusBadge";
 
 export interface TeamFilters {
   search: string;
@@ -27,7 +27,6 @@ export function filterTeams(
   teams: TeamRow[],
   membersByTeam: Record<string, TeamMemberProfile[]>,
   filters: TeamFilters,
-  exitRequests: ExitRequestRow[],
 ): TeamRow[] {
   const q = filters.search.trim().toLowerCase();
   return teams.filter((team) => {
@@ -39,10 +38,10 @@ export function filterTeams(
       if (!haystack.includes(q)) return false;
     }
     if (filters.campus && lead?.campus !== filters.campus) return false;
-    if (filters.teamSize && String(team.member_count) !== filters.teamSize) return false;
+    if (filters.teamSize && String(activeMemberCount(members) || team.member_count) !== filters.teamSize) return false;
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
-    if (filters.status && teamActiveStatus(members, exitRequests) !== filters.status) return false;
+    if (filters.status && teamActiveStatus(members) !== filters.status) return false;
     return true;
   });
 }
