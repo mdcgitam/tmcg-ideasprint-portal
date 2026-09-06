@@ -182,36 +182,6 @@ export function RoomsZonesSection({
     }
   }
 
-  async function handleAssignRoomZone(roomId: string, zoneId: string) {
-    setBusy(`room-zone:${roomId}`);
-    setError(null);
-    try {
-      const value = zoneId || null;
-      await assignRoomToZone(roomId, value);
-      setLocalRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, zone_id: value } : r)));
-    } catch (err) {
-      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  async function handleAssignRoomSpoc(roomId: string, spocProfileId: string) {
-    setBusy(`room-spoc:${roomId}`);
-    setError(null);
-    try {
-      const value = spocProfileId || null;
-      await assignSpocToRoom(roomId, value);
-      setLocalRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, spoc_profile_id: value } : r)));
-      // The server cascades this venue's SPOC onto every team already in it.
-      setLocalTeams((prev) => prev.map((t) => (t.room_id === roomId ? { ...t, spoc_profile_id: value } : t)));
-    } catch (err) {
-      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setBusy(null);
-    }
-  }
-
   function startEditRoom(room: RoomRow) {
     setEditZoneId(null);
     setEditRoomId(room.id);
@@ -331,9 +301,6 @@ export function RoomsZonesSection({
                     {creatingZone ? "Adding…" : "Add Zone"}
                   </button>
                 </form>
-                <p className="mt-3 font-heading text-xs text-ink-faint">
-                  Set the Zone&rsquo;s manager later, in the Assign tab.
-                </p>
 
                 {localZones.length > 0 && (
                   <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
@@ -355,7 +322,21 @@ export function RoomsZonesSection({
                       ) : (
                         <div key={z.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-4 py-2">
                           <span className="font-heading text-sm text-ink">{z.name}</span>
-                          <div className="flex items-center gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <select
+                              value={z.zone_manager_profile_id ?? ""}
+                              disabled={busy === `zone-manager:${z.id}`}
+                              onChange={(e) => handleAssignZoneManager(z.id, e.target.value)}
+                              className={selectClass}
+                              aria-label={`Zone manager for ${z.name}`}
+                            >
+                              <option value="">No zone manager</option>
+                              {staffAccounts.map((s) => (
+                                <option key={s.id} value={s.id}>
+                                  {s.name} ({s.role})
+                                </option>
+                              ))}
+                            </select>
                             <button type="button" onClick={() => { setEditZoneId(z.id); setZoneDraft(z.name); }} className="text-xs text-gold underline">
                               Edit
                             </button>
@@ -540,79 +521,6 @@ export function RoomsZonesSection({
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            {/* Zone managers */}
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Zone Managers</span>
-              <div className="mt-3 flex flex-col gap-2">
-                {localZones.length === 0 ? (
-                  <p className="font-heading text-xs text-ink-muted">No zones yet — create one first.</p>
-                ) : (
-                  localZones.map((zone) => (
-                    <div key={zone.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-4 py-2.5">
-                      <span className="font-heading text-sm text-ink">{zone.name}</span>
-                      <select
-                        value={zone.zone_manager_profile_id ?? ""}
-                        disabled={busy === `zone-manager:${zone.id}`}
-                        onChange={(e) => handleAssignZoneManager(zone.id, e.target.value)}
-                        className={selectClass}
-                      >
-                        <option value="">No zone manager</option>
-                        {staffAccounts.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name} ({s.role})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Venue → Zone / SPOC */}
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Venue Zone &amp; SPOC</span>
-              <div className="mt-3 flex flex-col gap-2">
-                {localRooms.length === 0 ? (
-                  <p className="font-heading text-xs text-ink-muted">No venues yet — create one first.</p>
-                ) : (
-                  localRooms.map((room) => (
-                    <div key={room.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-4 py-2.5">
-                      <span className="font-heading text-sm text-ink">{room.name}</span>
-                      <div className="flex flex-wrap gap-2">
-                        <select
-                          value={room.zone_id ?? ""}
-                          disabled={busy === `room-zone:${room.id}`}
-                          onChange={(e) => handleAssignRoomZone(room.id, e.target.value)}
-                          className={selectClass}
-                        >
-                          <option value="">No zone</option>
-                          {localZones.map((z) => (
-                            <option key={z.id} value={z.id}>
-                              {z.name}
-                            </option>
-                          ))}
-                        </select>
-                        <select
-                          value={room.spoc_profile_id ?? ""}
-                          disabled={busy === `room-spoc:${room.id}` || spocs.length === 0}
-                          onChange={(e) => handleAssignRoomSpoc(room.id, e.target.value)}
-                          className={selectClass}
-                        >
-                          <option value="">No SPOC</option>
-                          {spocs.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
             {/* Teams → Venues */}
             <div className="rounded-xl border border-border bg-surface p-6">
               <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Add Teams Into Venues</span>
