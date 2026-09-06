@@ -15,6 +15,8 @@ function toDatetimeLocal(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+const GENERAL_DEADLINE_KEY = "noc.general_deadline";
+
 /** "Teams" view of the NOC page (NOC1/NOC2 reference) — one row per team. Attendance lives on the Attendance page only, not duplicated here. */
 export function NocTeamsView({
   teams,
@@ -25,6 +27,7 @@ export function NocTeamsView({
   staffAccounts,
   problemStatements,
   exitRequests,
+  config,
   scope,
   onTeamRenamed,
   onTeamDeleted,
@@ -37,10 +40,13 @@ export function NocTeamsView({
   staffAccounts: ProfileRow[];
   problemStatements: ProblemStatementRow[];
   exitRequests: ExitRequestRow[];
+  config: Record<string, unknown>;
   scope: "spoc" | "admin";
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
 }) {
+  const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
+  const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
   const [localNocs, setLocalNocs] = useState(nocs);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeadline, setBulkDeadline] = useState("");
@@ -69,21 +75,29 @@ export function NocTeamsView({
     return members.filter((m) => localNocs.find((n) => n.profile_id === m.id)?.status === "Uploaded").length;
   }
 
-  /** A team's deadline is only well-defined when every member shares the same value — otherwise shown as "Mixed" so nobody mistakes one member's deadline for the whole team's. */
-  function teamDeadline(team: TeamRow): { display: string; iso: string | null; mixed: boolean; expired: boolean } {
+  /**
+   * A team's deadline is only well-defined when every member's effective
+   * deadline (their own override, or the General NOC Deadline as fallback)
+   * shares the same value — otherwise shown as "Mixed" so nobody mistakes
+   * one member's deadline for the whole team's.
+   */
+  function teamDeadline(team: TeamRow): { display: string; iso: string | null; mixed: boolean; expired: boolean; isGeneral: boolean } {
     const members = membersByTeam[team.id] ?? [];
-    const deadlines = members.map((m) => localNocs.find((n) => n.profile_id === m.id)?.deadline ?? null);
-    const allSame = deadlines.every((d) => d === deadlines[0]);
-    const anyExpired = deadlines.some((d) => d && new Date(d) < new Date());
-    if (members.length === 0) return { display: "—", iso: null, mixed: false, expired: false };
-    if (!allSame) return { display: "Mixed", iso: null, mixed: true, expired: anyExpired };
-    const iso = deadlines[0];
-    if (!iso) return { display: "Not set", iso: null, mixed: false, expired: false };
+    if (members.length === 0) return { display: "—", iso: null, mixed: false, expired: false, isGeneral: false };
+    const overrides = members.map((m) => localNocs.find((n) => n.profile_id === m.id)?.deadline ?? null);
+    const effective = overrides.map((d) => d ?? generalDeadline);
+    const allSame = effective.every((d) => d === effective[0]);
+    const anyExpired = effective.some((d) => d && new Date(d) < new Date());
+    const isGeneral = overrides.every((d) => !d) && !!generalDeadline;
+    if (!allSame) return { display: "Mixed", iso: null, mixed: true, expired: anyExpired, isGeneral: false };
+    const iso = effective[0];
+    if (!iso) return { display: "Not set", iso: null, mixed: false, expired: false, isGeneral: false };
     return {
       display: new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
       iso,
       mixed: false,
       expired: anyExpired,
+      isGeneral,
     };
   }
 
@@ -300,7 +314,7 @@ export function NocTeamsView({
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">No. of Uploads</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Open</th>
+                <th className="px-4 py-3">File</th>
                 <th className="px-4 py-3">Deadline</th>
               </tr>
             </thead>
@@ -345,6 +359,7 @@ export function NocTeamsView({
                       <div className="flex flex-col gap-1">
                         <span className={`font-heading text-[11px] ${deadline.expired ? "text-danger" : "text-ink-muted"}`}>
                           {deadline.display}
+                          {deadline.isGeneral && " (General)"}
                           {deadline.expired && " — Time exceeded"}
                         </span>
                         <input

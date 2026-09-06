@@ -28,6 +28,7 @@ export function NocSection({
   staffAccounts,
   problemStatements,
   exitRequests,
+  config,
   scope,
 }: {
   teams: TeamRow[];
@@ -38,6 +39,7 @@ export function NocSection({
   staffAccounts: ProfileRow[];
   problemStatements: ProblemStatementRow[];
   exitRequests: ExitRequestRow[];
+  config: Record<string, unknown>;
   scope: "spoc" | "admin";
 }) {
   const [localTeams, setLocalTeams] = useState(teams);
@@ -76,6 +78,7 @@ export function NocSection({
             staffAccounts={staffAccounts}
             problemStatements={problemStatements}
             exitRequests={exitRequests}
+            config={config}
             scope={scope}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={onTeamDeleted}
@@ -87,6 +90,7 @@ export function NocSection({
             nocs={nocs}
             rooms={rooms}
             staffAccounts={staffAccounts}
+            config={config}
             scope={scope}
           />
         )}

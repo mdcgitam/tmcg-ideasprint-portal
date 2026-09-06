@@ -15,6 +15,13 @@ import {
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 
+const GENERAL_DEADLINE_KEY = "noc.general_deadline";
+
+/** Same Completed/Pending vocabulary as the Teams tab's Status column — "Uploaded"/"Not Uploaded" stays the underlying stored value. */
+function statusLabel(raw: "Uploaded" | "Not Uploaded" | "Verified" | "Missing"): "Completed" | "Pending" {
+  return raw === "Uploaded" ? "Completed" : "Pending";
+}
+
 interface Row {
   member: TeamMemberProfile;
   team: TeamRow;
@@ -27,6 +34,7 @@ export function NocIndividualsView({
   nocs,
   rooms,
   staffAccounts,
+  config,
   scope,
 }: {
   teams: TeamRow[];
@@ -34,8 +42,12 @@ export function NocIndividualsView({
   nocs: NocRow[];
   rooms: RoomRow[];
   staffAccounts: ProfileRow[];
+  config: Record<string, unknown>;
   scope: "spoc" | "admin";
 }) {
+  const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
+  const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
+
   const [localNocs, setLocalNocs] = useState(nocs);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeadline, setBulkDeadline] = useState("");
@@ -48,6 +60,7 @@ export function NocIndividualsView({
   const uploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const [campusFilter, setCampusFilter] = useState("");
+  const [positionFilter, setPositionFilter] = useState(""); // "" | "lead" | "member"
   const [venueFilter, setVenueFilter] = useState("");
   const [spocFilter, setSpocFilter] = useState("");
   const [fileStatusFilter, setFileStatusFilter] = useState("");
@@ -79,17 +92,19 @@ export function NocIndividualsView({
     const q = search.trim().toLowerCase();
     return allRows.filter(({ member, team }) => {
       if (q) {
-        const haystack = `${team.team_name} ${member.reg_no} ${member.gitam_email} ${member.phone}`.toLowerCase();
+        const haystack =
+          `${team.team_name} ${member.name} ${member.reg_no} ${member.gitam_email} ${member.phone}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       if (campusFilter && member.campus !== campusFilter) return false;
+      if (positionFilter && (positionFilter === "lead") !== member.is_lead) return false;
       if (venueFilter && team.room_id !== venueFilter) return false;
       if (spocFilter && team.spoc_profile_id !== spocFilter) return false;
       if (fileStatusFilter && (nocOf(member.id)?.status ?? "Not Uploaded") !== fileStatusFilter) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allRows, search, campusFilter, venueFilter, spocFilter, fileStatusFilter, localNocs]);
+  }, [allRows, search, campusFilter, positionFilter, venueFilter, spocFilter, fileStatusFilter, localNocs]);
 
   function toggleSelected(profileId: string) {
     setSelected((prev) => {
@@ -120,7 +135,7 @@ export function NocIndividualsView({
   }
 
   async function handleRowExtend(profileId: string) {
-    const value = rowDeadlines[profileId] ?? toDatetimeLocal(nocOf(profileId)?.deadline);
+    const value = rowDeadlines[profileId] ?? toDatetimeLocal(nocOf(profileId)?.deadline ?? generalDeadline);
     if (!value) return;
     setRowBusy(profileId);
     setRowErrors((prev) => ({ ...prev, [profileId]: "" }));
@@ -207,13 +222,14 @@ export function NocIndividualsView({
       filteredRows.map(({ member, team }) => ({
         Campus: member.campus ?? "—",
         "Team Name": team.team_name,
-        Name: member.name,
+        "Participant Name": member.name,
+        Position: member.is_lead ? "Team Lead" : "Member",
         "Reg No": member.reg_no,
         Email: member.gitam_email,
         Phone: member.phone,
         Venue: roomOf(team)?.name ?? "Unassigned",
         SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
-        "File Status": nocOf(member.id)?.status ?? "Not Uploaded",
+        "File Status": statusLabel(nocOf(member.id)?.status ?? "Not Uploaded"),
       })),
     );
   }
@@ -262,11 +278,18 @@ export function NocIndividualsView({
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by team name, reg no, email, or phone…"
+          placeholder="Search by team name, participant name, reg no, email, or phone…"
           className="min-w-[180px] w-full rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
         <div className="flex flex-wrap items-center gap-2">
           <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} />
+          <FilterSelect
+            label="Position"
+            value={positionFilter}
+            onChange={setPositionFilter}
+            options={["Team Lead", "Member"]}
+            valueOptions={["lead", "member"]}
+          />
           <FilterSelect
             label="Venue"
             value={venueFilter}
@@ -285,7 +308,8 @@ export function NocIndividualsView({
             label="File Status"
             value={fileStatusFilter}
             onChange={setFileStatusFilter}
-            options={["Uploaded", "Not Uploaded"]}
+            options={["Completed", "Pending"]}
+            valueOptions={["Uploaded", "Not Uploaded"]}
           />
         </div>
       </div>
@@ -314,7 +338,7 @@ export function NocIndividualsView({
                 <th className="px-4 py-3">File Status</th>
                 <th className="px-4 py-3">File</th>
                 {scope === "admin" && <th className="px-4 py-3">Admin Upload</th>}
-                <th className="px-4 py-3">Extend Deadline</th>
+                <th className="px-4 py-3">Deadline</th>
               </tr>
             </thead>
             <tbody>
@@ -342,7 +366,7 @@ export function NocIndividualsView({
                     <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                     <td className="px-4 py-3">
-                      <span className={uploaded ? "text-gitam" : "text-gold"}>{noc?.status ?? "Not Uploaded"}</span>
+                      <span className={uploaded ? "text-gitam" : "text-gold"}>{statusLabel(noc?.status ?? "Not Uploaded")}</span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap items-center gap-2">
@@ -393,7 +417,8 @@ export function NocIndividualsView({
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         {(() => {
-                          const currentDeadline = noc?.deadline ?? null;
+                          const currentDeadline = noc?.deadline ?? generalDeadline;
+                          const isGeneral = !noc?.deadline && !!generalDeadline;
                           const expired = !!currentDeadline && new Date(currentDeadline) < new Date();
                           return (
                             <span className={`font-heading text-[11px] ${expired ? "text-danger" : "text-ink-muted"}`}>
@@ -404,23 +429,24 @@ export function NocIndividualsView({
                                     timeStyle: "short",
                                   })
                                 : "Not set"}
+                              {isGeneral && " (General)"}
                               {expired && " — Time exceeded"}
                             </span>
                           );
                         })()}
                         <input
                           type="datetime-local"
-                          value={rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline)}
+                          value={rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline)}
                           onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [member.id]: e.target.value }))}
                           className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
                         />
                         <button
                           type="button"
-                          disabled={busy || !(rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline))}
+                          disabled={busy || !(rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline))}
                           onClick={() => handleRowExtend(member.id)}
                           className="w-fit rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
                         >
-                          {noc?.deadline ? "Update" : "Extend"}
+                          {noc?.deadline ?? generalDeadline ? "Update" : "Extend"}
                         </button>
                         {rowError && <span className="font-heading text-[11px] text-danger">{rowError}</span>}
                       </div>

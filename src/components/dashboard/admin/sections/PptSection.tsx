@@ -78,6 +78,11 @@ export function PptSection({
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
   const uploadInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeadline, setBulkDeadline] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
+
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
@@ -166,6 +171,52 @@ export function PptSection({
     }
   }
 
+  function toggleSelected(teamId: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(teamId)) next.delete(teamId);
+      else next.add(teamId);
+      return next;
+    });
+  }
+
+  async function handleBulkExtend() {
+    if (!bulkDeadline || selected.size === 0) return;
+    setBulkBusy(true);
+    setBulkError(null);
+    try {
+      const deadlineIso = new Date(bulkDeadline).toISOString();
+      const teamIds = Array.from(selected);
+      await Promise.all(teamIds.map((teamId) => extendPresentationDeadline(teamId, deadlineIso)));
+      setLocalPresentations((prev) => {
+        const touched = new Set(teamIds);
+        const updated = prev.map((p) => (touched.has(p.team_id) ? { ...p, deadline: deadlineIso } : p));
+        const missing = teamIds.filter((id) => !prev.some((p) => p.team_id === id));
+        return [
+          ...updated,
+          ...missing.map(
+            (id) =>
+              ({
+                id: crypto.randomUUID(),
+                team_id: id,
+                file_path: null,
+                status: "Not Uploaded",
+                uploaded_by: null,
+                uploaded_at: null,
+                deadline: deadlineIso,
+              }) as PresentationRow,
+          ),
+        ];
+      });
+      setSelected(new Set());
+      setBulkDeadline("");
+    } catch (err) {
+      setBulkError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function handleView(teamId: string) {
     const presentation = localPresentations.find((p) => p.team_id === teamId);
     if (!presentation?.file_path) return;
@@ -243,6 +294,35 @@ export function PptSection({
         PPT files must be a PDF, 2 MB or less. Uploadable by the Team Lead, or by an Admin on the team's behalf.
       </p>
 
+      <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Bulk Extend Deadline (selected teams)</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="datetime-local"
+            value={bulkDeadline}
+            onChange={(e) => setBulkDeadline(e.target.value)}
+            className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            disabled={bulkBusy || !bulkDeadline || selected.size === 0}
+            onClick={handleBulkExtend}
+            className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+          >
+            {bulkBusy ? "Applying…" : "Apply Bulk Extend"}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
+          >
+            Clear
+          </button>
+          <span className="font-heading text-xs text-ink-muted">Selected: {selected.size} team(s)</span>
+        </div>
+        {bulkError && <p className="font-heading text-xs text-danger">{bulkError}</p>}
+      </div>
+
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
         <FilterSelect label="Campus" value={filters.campus} onChange={(v) => setFilters((f) => ({ ...f, campus: v }))} options={campusOptions} />
         <FilterSelect
@@ -291,6 +371,7 @@ export function PptSection({
             <table className="w-full text-left font-heading text-sm">
               <thead>
                 <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+                  <th className="px-2 py-3" />
                   <th className="px-4 py-3">Campus</th>
                   <th className="px-4 py-3">Team Name</th>
                   <th className="px-4 py-3">Team Lead</th>
@@ -324,6 +405,13 @@ export function PptSection({
 
                   return (
                     <tr key={team.id} className="border-b border-border bg-surface align-top last:border-0">
+                      <td className="px-2 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(team.id)}
+                          onChange={() => toggleSelected(team.id)}
+                        />
+                      </td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>
                       <td className="px-4 py-3 text-ink">
                         {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
