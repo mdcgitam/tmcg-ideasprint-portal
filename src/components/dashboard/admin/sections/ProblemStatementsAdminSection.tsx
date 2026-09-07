@@ -13,7 +13,6 @@ import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import {
   adminSetProblemStatement,
   extendProblemStatementDeadline,
-  upsertProblemStatement,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
@@ -45,9 +44,9 @@ function configString(config: Record<string, unknown>, key: string): string | nu
 /**
  * Problem Statements are catalogued in our DB only as bare number+status
  * rows (1–50) — the actual titles/content live in an admin-provided Google
- * Sheet, browsed externally by Team Leads. "Go Live" bulk-releases PS 1–50
- * for selection. The sheet link and the selection window (start & end) are
- * owned by Configuration → Problem Statement Settings, not this module.
+ * Sheet, browsed externally by Team Leads. Releasing them ("Go Live"), the
+ * sheet link, and the selection window (start & end) are all owned by
+ * Configuration → Problem Statement Settings, not this module.
  */
 export function ProblemStatementsAdminSection({
   problemStatements,
@@ -77,64 +76,9 @@ export function ProblemStatementsAdminSection({
   const [view, setView] = useState<View>("team");
   const fadeRef = useTabFade(view);
 
-  // ── Go Live ────────────────────────────────────────────────────────────
-  const [goingLive, setGoingLive] = useState(false);
-  const [setupError, setSetupError] = useState<string | null>(null);
-  const [setupMessage, setSetupMessage] = useState<string | null>(null);
-
   // Selection window is configured in Configuration → Problem Statement
   // Settings; read-only here.
-  const selectionStart = configString(config, "problem_statement.selection_start");
   const selectionEnd = configString(config, "problem_statement.selection_end");
-
-  async function handleGoLive() {
-    if (!selectionStart || !selectionEnd) {
-      setSetupError("Set the selection window (start & end) in Configuration → Problem Statement Settings before going live.");
-      return;
-    }
-    setGoingLive(true);
-    setSetupError(null);
-    setSetupMessage(null);
-    try {
-      const results = await Promise.all(
-        Array.from({ length: PS_MAX - PS_MIN + 1 }, (_, i) => String(PS_MIN + i)).map(async (number) => {
-          const existing = local.find((p) => p.number === number);
-          const id = await upsertProblemStatement({
-            id: existing?.id ?? null,
-            number,
-            title: existing?.title || `Problem Statement ${number}`,
-            description: existing?.description ?? "",
-            status: "Released",
-          });
-          return { id, number, existing };
-        }),
-      );
-
-      setLocal((prev) => {
-        const next = [...prev];
-        for (const { id, number, existing } of results) {
-          const row: ProblemStatementRow = {
-            id,
-            number,
-            title: existing?.title || `Problem Statement ${number}`,
-            description: existing?.description ?? null,
-            status: "Released",
-            created_at: existing?.created_at ?? new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          const idx = next.findIndex((p) => p.id === id);
-          if (idx >= 0) next[idx] = row;
-          else next.push(row);
-        }
-        return next;
-      });
-      setSetupMessage("Live — problem statements 1–50 are released.");
-    } catch (err) {
-      setSetupError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setGoingLive(false);
-    }
-  }
 
   // ── Team view: inline PS edit + per-team/bulk deadline ─────────────────
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
@@ -309,31 +253,6 @@ export function ProblemStatementsAdminSection({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-6">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Release Problem Statements</span>
-        <p className="font-heading text-xs text-ink-muted">
-          Releases problem statements 1–50 for selection. The sheet link and the selection window (start &amp; end)
-          are set in <span className="text-ink">Configuration → Problem Statement Settings</span>.
-        </p>
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled={goingLive}
-            onClick={handleGoLive}
-            className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-          >
-            {goingLive ? "Going Live…" : "Go Live Now"}
-          </button>
-          <span className="font-heading text-xs text-ink-muted">
-            {selectionStart && selectionEnd
-              ? `Selection window: ${fmtDateTime(selectionStart)} → ${fmtDateTime(selectionEnd)}`
-              : "Selection window not configured"}
-          </span>
-        </div>
-        {setupError && <p className="font-heading text-xs text-danger">{setupError}</p>}
-        {setupMessage && <p className="font-heading text-xs text-gitam">{setupMessage}</p>}
-      </div>
-
       <ViewToggle
         value={view}
         onChange={setView}

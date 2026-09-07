@@ -1,9 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { setConfiguration, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import type { ProblemStatementRow } from "@/types/database";
+import { setConfiguration, upsertProblemStatement, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
+
+const PS_MIN = 1;
+const PS_MAX = 50;
 
 type View = "all" | "by-category";
 
@@ -84,7 +88,18 @@ function toDatetimeLocal(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function ConfigurationSection({ config }: { config: Record<string, unknown> }) {
+function fmtDateTime(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+}
+
+export function ConfigurationSection({
+  config,
+  problemStatements,
+}: {
+  config: Record<string, unknown>;
+  problemStatements: ProblemStatementRow[];
+}) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     for (const { key } of [...KNOWN_KEYS, ...GRAND_FINALE_KEYS]) {
@@ -105,6 +120,64 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
   const [message, setMessage] = useState<Record<string, string>>({});
   const [view, setView] = useState<View>("all");
   const fadeRef = useTabFade(view);
+
+  // ── Go Live (Problem Statements) ────────────────────────────────────────
+  const [localProblemStatements, setLocalProblemStatements] = useState(problemStatements);
+  const [goingLive, setGoingLive] = useState(false);
+  const [goLiveError, setGoLiveError] = useState<string | null>(null);
+  const [goLiveMessage, setGoLiveMessage] = useState<string | null>(null);
+
+  const selectionStart = typeof config["problem_statement.selection_start"] === "string" ? config["problem_statement.selection_start"] : null;
+  const selectionEnd = typeof config["problem_statement.selection_end"] === "string" ? config["problem_statement.selection_end"] : null;
+
+  async function handleGoLive() {
+    if (!selectionStart || !selectionEnd) {
+      setGoLiveError("Set the selection window (start & end) above before going live.");
+      return;
+    }
+    setGoingLive(true);
+    setGoLiveError(null);
+    setGoLiveMessage(null);
+    try {
+      const results = await Promise.all(
+        Array.from({ length: PS_MAX - PS_MIN + 1 }, (_, i) => String(PS_MIN + i)).map(async (number) => {
+          const existing = localProblemStatements.find((p) => p.number === number);
+          const id = await upsertProblemStatement({
+            id: existing?.id ?? null,
+            number,
+            title: existing?.title || `Problem Statement ${number}`,
+            description: existing?.description ?? "",
+            status: "Released",
+          });
+          return { id, number, existing };
+        }),
+      );
+
+      setLocalProblemStatements((prev) => {
+        const next = [...prev];
+        for (const { id, number, existing } of results) {
+          const row: ProblemStatementRow = {
+            id,
+            number,
+            title: existing?.title || `Problem Statement ${number}`,
+            description: existing?.description ?? null,
+            status: "Released",
+            created_at: existing?.created_at ?? new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          const idx = next.findIndex((p) => p.id === id);
+          if (idx >= 0) next[idx] = row;
+          else next.push(row);
+        }
+        return next;
+      });
+      setGoLiveMessage("Live — problem statements 1–50 are released.");
+    } catch (err) {
+      setGoLiveError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setGoingLive(false);
+    }
+  }
 
   async function handleSave(key: string) {
     setSavingKey(key);
@@ -224,6 +297,34 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     );
   }
 
+  function goLiveField() {
+    return (
+      <div className="rounded-xl border border-border bg-surface p-6">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Release Problem Statements</span>
+        <p className="mt-1 font-heading text-xs text-ink-muted">
+          Releases problem statements 1–50 for selection, using the spreadsheet URL and selection window above.
+        </p>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            disabled={goingLive}
+            onClick={handleGoLive}
+            className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+          >
+            {goingLive ? "Going Live…" : "Go Live Now"}
+          </button>
+          <span className="font-heading text-xs text-ink-muted">
+            {selectionStart && selectionEnd
+              ? `Selection window: ${fmtDateTime(selectionStart)} → ${fmtDateTime(selectionEnd)}`
+              : "Selection window not configured"}
+          </span>
+        </div>
+        {goLiveError && <p className="mt-2 font-heading text-xs text-danger">{goLiveError}</p>}
+        {goLiveMessage && <p className="mt-2 font-heading text-xs text-gitam">{goLiveMessage}</p>}
+      </div>
+    );
+  }
+
   function tncField() {
     return (
       <div className="rounded-xl border border-border bg-surface p-6">
@@ -268,6 +369,7 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
           <div className="flex flex-col gap-4">
             {simpleFields(KNOWN_KEYS)}
             {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
+            {goLiveField()}
             {DEADLINE_KEYS.map((d) => deadlineField(d))}
             {simpleFields(GRAND_FINALE_KEYS)}
             {tncField()}
@@ -282,6 +384,7 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
               <div className="flex flex-col gap-4">
                 {simpleFields(KNOWN_KEYS)}
                 {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
+                {goLiveField()}
               </div>
             </div>
             <div>
