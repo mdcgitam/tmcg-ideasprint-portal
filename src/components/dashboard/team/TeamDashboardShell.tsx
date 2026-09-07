@@ -18,6 +18,7 @@ import type {
 import { Reveal } from "@/components/motion/Reveal";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
 import { useTabFade } from "@/hooks/useTabFade";
+import { teamActiveStatus } from "@/lib/dashboard/team-status";
 import { ProfileSection } from "./sections/ProfileSection";
 import { ProblemStatementSection } from "./sections/ProblemStatementSection";
 import { AttendanceSection } from "./sections/AttendanceSection";
@@ -64,7 +65,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
           <div>
             {/* font-heading (Geist), not font-mono — JetBrains Mono renders a dotted zero, which reads badly in Team IDs. */}
             <span className="font-heading text-xs font-medium tracking-[0.3em] text-gold uppercase">
-              {props.team.team_id} · {props.team.status}
+              {props.team.team_id} · {teamActiveStatus(props.members)}
             </span>
             <h1 className="mt-3 font-display text-4xl text-ink sm:text-5xl">{props.team.team_name}</h1>
             <p className="mt-2 font-heading text-sm text-ink-muted">

@@ -423,9 +423,7 @@ export function ProblemStatementsAdminSection({
                             <input type="checkbox" checked={selected.has(team.id)} onChange={() => toggleSelected(team.id)} />
                           </td>
                           {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
-                          <td className="px-4 py-3 text-ink">
-                            {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
-                          </td>
+                          <td className="px-4 py-3 text-ink">{team.team_name}</td>
                           <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                           <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                           <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>

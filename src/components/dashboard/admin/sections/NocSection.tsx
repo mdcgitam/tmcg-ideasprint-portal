@@ -1,15 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type {
-  ExitRequestRow,
-  NocRow,
-  ProblemStatementRow,
-  ProfileRow,
-  RoomRow,
-  TeamRow,
-  ZoneRow,
-} from "@/types/database";
+import type { NocRow, ProblemStatementRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -27,7 +19,6 @@ export function NocSection({
   zones,
   staffAccounts,
   problemStatements,
-  exitRequests,
   config,
   scope,
   singleCampus = false,
@@ -40,7 +31,6 @@ export function NocSection({
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
   problemStatements: ProblemStatementRow[];
-  exitRequests: ExitRequestRow[];
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
   singleCampus?: boolean;
@@ -81,7 +71,6 @@ export function NocSection({
             zones={zones}
             staffAccounts={staffAccounts}
             problemStatements={problemStatements}
-            exitRequests={exitRequests}
             config={config}
             scope={scope}
             singleCampus={singleCampus}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { ProfileRow, TeamRow, ApprovalRequestRow, RoomRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "../TeamDashboardShell";
 import { submitTeamEditRequest, DashboardActionError } from "@/lib/dashboard/team-actions";
+import { memberStatusLabel, teamActiveStatus } from "@/lib/dashboard/team-status";
 import {
   GENDER_OPTIONS,
   GRADUATION_OPTIONS,
@@ -113,7 +114,9 @@ export function ProfileSection({
         </div>
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Status</span>
-          <p className="mt-2 font-heading text-ink">{team.status}</p>
+          <p className={`mt-2 font-heading ${teamActiveStatus(members) === "Inactive" ? "text-danger" : "text-ink"}`}>
+            {teamActiveStatus(members)}
+          </p>
         </div>
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Room</span>
@@ -265,7 +268,9 @@ export function ProfileSection({
             >
               <p className="mb-3 font-heading text-sm text-gold">
                 {m.is_lead ? "Team Lead" : "Member"} · {m.user_id}
-                {!m.is_active && <span className="ml-2 text-xs text-danger">Exited</span>}
+                <span className={`ml-2 text-xs ${m.is_active ? "text-ink-muted" : "text-danger"}`}>
+                  {memberStatusLabel(m)}
+                </span>
               </p>
               <div className="grid gap-3 font-heading text-sm text-ink sm:grid-cols-3">
                 <Info label="Name" value={m.name} />

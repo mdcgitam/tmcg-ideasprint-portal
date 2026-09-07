@@ -179,7 +179,6 @@ export function TeamsByTeamView({
           room={roomOf(openTeam)}
           zone={zoneOf(roomOf(openTeam))}
           ps={psOf(openTeam)}
-          exitRequests={exitRequests}
           nocs={nocs}
           spocName={spocName(openTeam.spoc_profile_id)}
           scope={scope}

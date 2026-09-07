@@ -433,9 +433,7 @@ export function PptSection({
                         />
                       </td>
                       {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
-                      <td className="px-4 py-3 text-ink">
-                        {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
-                      </td>
+                      <td className="px-4 py-3 text-ink">{team.team_name}</td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>

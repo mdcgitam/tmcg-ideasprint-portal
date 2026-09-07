@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ExitRequestRow, NocRow, ProblemStatementRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { NocRow, ProblemStatementRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { extendNocDeadline, DashboardActionError } from "@/lib/dashboard/team-actions";
 import { downloadCsv } from "@/lib/csv";
@@ -26,7 +26,6 @@ export function NocTeamsView({
   zones,
   staffAccounts,
   problemStatements,
-  exitRequests,
   config,
   scope,
   singleCampus = false,
@@ -41,7 +40,6 @@ export function NocTeamsView({
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
   problemStatements: ProblemStatementRow[];
-  exitRequests: ExitRequestRow[];
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
   singleCampus?: boolean;
@@ -218,6 +216,7 @@ export function NocTeamsView({
           ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
+          "Lead Phone No": lead?.phone ?? "—",
           "Team Size": String(teamSize(team)),
           Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
@@ -367,9 +366,7 @@ export function NocTeamsView({
                       />
                     </td>
                     {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
-                    <td className="px-4 py-3 text-ink">
-                      {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
-                    </td>
+                    <td className="px-4 py-3 text-ink">{team.team_name}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
@@ -428,7 +425,6 @@ export function NocTeamsView({
           room={roomOf(openTeam)}
           zone={zoneOf(roomOf(openTeam))}
           ps={psOf(openTeam)}
-          exitRequests={exitRequests}
           nocs={localNocs}
           spocName={spocName(openTeam.spoc_profile_id)}
           scope={scope}

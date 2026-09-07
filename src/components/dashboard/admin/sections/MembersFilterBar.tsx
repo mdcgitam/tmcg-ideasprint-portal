@@ -1,8 +1,8 @@
 import { type ReactNode, useMemo } from "react";
-import type { ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { FilterSelect, YEAR_OPTIONS } from "./TeamFormFields";
-import { MEMBER_STATUS_OPTIONS, exitStatusLabel } from "./ExitStatusBadge";
+import { MEMBER_STATUS_OPTIONS, memberStatusLabel } from "./ExitStatusBadge";
 
 export interface MemberRow {
   member: TeamMemberProfile;
@@ -48,12 +48,7 @@ export const EMPTY_MEMBER_FILTERS: MemberFilters = {
 };
 
 /** "View by Participants"' filter set — one row per member. Search matches User ID, Team Name, Participant Name, Reg No, Email, Phone No. */
-export function filterMembers(
-  rows: MemberRow[],
-  filters: MemberFilters,
-  exitRequests: ExitRequestRow[],
-  rooms: RoomRow[],
-): MemberRow[] {
+export function filterMembers(rows: MemberRow[], filters: MemberFilters, rooms: RoomRow[]): MemberRow[] {
   const q = filters.search.trim().toLowerCase();
   return rows.filter(({ member, team }) => {
     if (q) {
@@ -78,7 +73,7 @@ export function filterMembers(
     }
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
-    if (filters.status && exitStatusLabel(exitRequests.find((r) => r.profile_id === member.id)) !== filters.status) return false;
+    if (filters.status && memberStatusLabel(member) !== filters.status) return false;
     return true;
   });
 }

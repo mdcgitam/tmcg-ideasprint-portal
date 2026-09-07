@@ -555,7 +555,7 @@ export function AdminAttendanceSection({
                                             >
                                               <td className="px-4 py-2 text-ink">
                                                 {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
-                                                {!m.is_active && <span className="ml-1 text-xs text-danger">(Exited)</span>}
+                                                {!m.is_active && <span className="ml-1 text-xs text-danger">(Inactive)</span>}
                                               </td>
                                               <td className="px-4 py-2 text-ink-muted">{m.gitam_email}</td>
                                               <td className="px-4 py-2 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
@@ -599,7 +599,7 @@ export function AdminAttendanceSection({
                     <input
                       value={memberFilters.search}
                       onChange={(e) => setMemberFilters((f) => ({ ...f, search: e.target.value }))}
-                      placeholder="Search by team name or member name…"
+                      placeholder="Search by team name or participant name…"
                       className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
                     />
                     <button
@@ -715,7 +715,7 @@ export function AdminAttendanceSection({
                             <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                             <td className="px-4 py-3 text-ink">
                               {m.name}
-                              {!m.is_active && <span className="ml-1 text-xs text-danger">(Exited)</span>}
+                              {!m.is_active && <span className="ml-1 text-xs text-danger">(Inactive)</span>}
                             </td>
                             <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
                             <td className="px-4 py-3 text-ink-muted">{zoneOf(roomOf(team))?.name ?? "Unassigned"}</td>

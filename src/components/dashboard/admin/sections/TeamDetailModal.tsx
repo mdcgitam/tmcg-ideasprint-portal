@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import type { ExitRequestRow, NocRow, ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { NocRow, ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import {
   addTeamMember,
@@ -43,7 +43,6 @@ export function TeamDetailModal({
   room,
   zone,
   ps,
-  exitRequests,
   nocs,
   spocName,
   scope,
@@ -56,7 +55,6 @@ export function TeamDetailModal({
   room: RoomRow | null;
   zone: ZoneRow | null;
   ps: ProblemStatementRow | null;
-  exitRequests: ExitRequestRow[];
   nocs: NocRow[];
   spocName: string | null;
   scope: "spoc" | "admin";
@@ -175,7 +173,7 @@ export function TeamDetailModal({
             <h2 className="font-display text-2xl text-ink">{team.team_name}</h2>
             <p className="mt-1 font-heading text-xs text-ink-muted">
               {team.team_id} · Campus: {team.campus} · Members: {members.filter((m) => m.is_active).length}
-              {members.some((m) => !m.is_active) && ` (+${members.filter((m) => !m.is_active).length} exited)`}
+              {members.some((m) => !m.is_active) && ` (+${members.filter((m) => !m.is_active).length} inactive)`}
             </p>
           </div>
           <button
@@ -194,6 +192,7 @@ export function TeamDetailModal({
             room={room}
             zone={zone}
             ps={ps}
+            nocs={localNocs}
             spocName={spocName}
             scope={scope}
             onTeamRenamed={onTeamRenamed}
@@ -220,9 +219,9 @@ export function TeamDetailModal({
                   <div className="flex items-center justify-between gap-2">
                     <p className="font-heading text-sm text-ink">
                       {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
-                      {!m.is_active && <span className="ml-1 text-xs text-danger">(Exited)</span>}
+                      {!m.is_active && <span className="ml-1 text-xs text-danger">(Inactive)</span>}
                     </p>
-                    <ExitStatusBadge request={exitRequests.find((r) => r.profile_id === m.id)} />
+                    <ExitStatusBadge member={m} />
                   </div>
                   <p className="mt-0.5 font-heading text-xs text-ink-muted">{m.reg_no}</p>
                   <p className="mt-0.5 font-heading text-xs text-ink-muted">{m.gitam_email}</p>
@@ -281,7 +280,7 @@ export function TeamDetailModal({
                       {selectedMember.name} {selectedMember.is_lead && <span className="text-xs text-gold">(Lead)</span>}
                     </h3>
                     <div className="flex items-center gap-3 text-xs">
-                      <ExitStatusBadge request={exitRequests.find((r) => r.profile_id === selectedMember.id)} />
+                      <ExitStatusBadge member={selectedMember} />
                       {scope === "admin" && (
                         <button
                           type="button"

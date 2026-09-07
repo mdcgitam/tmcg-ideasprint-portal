@@ -19,7 +19,9 @@ import { cn } from "@/lib/utils";
 export function NavBar() {
   const [scrolled, setScrolled] = useState(false);
   const navRef = useRef<HTMLElement>(null);
-  const isHome = usePathname() === "/";
+  const pathname = usePathname();
+  const isHome = pathname === "/";
+  const hideAuthButtons = pathname === "/login" || pathname.startsWith("/register");
 
   useEffect(() => {
     function onScroll() {
@@ -88,22 +90,24 @@ export function NavBar() {
           />
         </Link>
 
-        <div data-nav-reveal className="flex shrink-0 items-center gap-6">
-          <Link
-            href="/login"
-            data-cursor="interactive"
-            className="hidden font-heading text-sm text-ink-muted transition-colors hover:text-ink sm:block"
-          >
-            Login
-          </Link>
-          <Link
-            href="/register"
-            data-cursor="cta"
-            className="rounded-full bg-gold px-5 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light"
-          >
-            Register
-          </Link>
-        </div>
+        {!hideAuthButtons && (
+          <div data-nav-reveal className="flex shrink-0 items-center gap-6">
+            <Link
+              href="/login"
+              data-cursor="interactive"
+              className="hidden font-heading text-sm text-ink-muted transition-colors hover:text-ink sm:block"
+            >
+              Login
+            </Link>
+            <Link
+              href="/register"
+              data-cursor="cta"
+              className="rounded-full bg-gold px-5 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light"
+            >
+              Register
+            </Link>
+          </div>
+        )}
       </nav>
     </header>
   );

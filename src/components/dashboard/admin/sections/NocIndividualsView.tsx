@@ -236,6 +236,16 @@ export function NocIndividualsView({
     }
   }
 
+  function deadlineDisplay(profileId: string): string {
+    const noc = nocOf(profileId);
+    const currentDeadline = noc?.deadline ?? generalDeadline;
+    if (!currentDeadline) return "Not set";
+    const isGeneral = !noc?.deadline && !!generalDeadline;
+    const expired = new Date(currentDeadline) < new Date();
+    const formatted = new Date(currentDeadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+    return `${formatted}${isGeneral ? " (General)" : ""}${expired ? " — Time exceeded" : ""}`;
+  }
+
   function handleExportCsv() {
     downloadCsv(
       "noc-individuals",
@@ -251,6 +261,7 @@ export function NocIndividualsView({
         Venue: roomOf(team)?.name ?? "Unassigned",
         SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
         "File Status": statusLabel(nocOf(member.id)?.status ?? "Not Uploaded"),
+        Deadline: deadlineDisplay(member.id),
       })),
     );
   }

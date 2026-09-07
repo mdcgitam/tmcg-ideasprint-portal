@@ -5,7 +5,7 @@ import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPag
 import { ZoneVenueTabs } from "@/components/dashboard/zone/ZoneVenueTabs";
 
 export async function NocRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
-  const { teams, membersByTeam, nocs, rooms, zones, staffAccounts, problemStatements, exitRequests, config } =
+  const { teams, membersByTeam, nocs, rooms, zones, staffAccounts, problemStatements, config } =
     await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
@@ -26,7 +26,6 @@ export async function NocRoute({ profile, roomId }: { profile: ProfileRow; roomI
         zones={zones}
         staffAccounts={staffAccounts}
         problemStatements={problemStatements}
-        exitRequests={exitRequests}
         config={config}
         scope={scope}
       />

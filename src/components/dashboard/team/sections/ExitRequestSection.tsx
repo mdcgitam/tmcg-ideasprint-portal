@@ -130,7 +130,7 @@ export function ExitRequestSection({
             <div>
               <p className="font-heading text-sm text-ink">
                 {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
-                {!m.is_active && <span className="ml-1 text-xs text-danger">(Exited)</span>}
+                {!m.is_active && <span className="ml-1 text-xs text-danger">(Inactive)</span>}
               </p>
               <p
                 className={`mt-1 font-heading text-xs ${

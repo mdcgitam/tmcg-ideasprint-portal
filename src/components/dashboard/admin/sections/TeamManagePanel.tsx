@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { NocRow, ProblemStatementRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { changeTeamLead, deleteTeam, updateTeamName, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
+import { memberStatusLabel } from "./ExitStatusBadge";
 
 /** The "Manage Team" panel — rename, delete, change lead, roster CSV. Shared by TeamsByTeamView and TeamsByMembersView so both views reuse one implementation. */
 export function TeamManagePanel({
@@ -13,6 +14,7 @@ export function TeamManagePanel({
   room,
   zone,
   ps,
+  nocs,
   spocName,
   scope,
   onTeamRenamed,
@@ -23,6 +25,7 @@ export function TeamManagePanel({
   room: RoomRow | null;
   zone: ZoneRow | null;
   ps: ProblemStatementRow | null;
+  nocs: NocRow[];
   spocName: string | null;
   scope: "spoc" | "admin";
   onTeamRenamed: (teamId: string, name: string) => void;
@@ -46,13 +49,26 @@ export function TeamManagePanel({
     downloadCsv(
       `${team.team_name}-roster`,
       members.map((m) => ({
+        "User ID": m.user_id,
         "Participant Name": m.name,
+        Position: m.is_lead ? "Team Lead" : "Member",
+        Campus: m.campus,
         "Reg No": m.reg_no,
+        Email: m.gitam_email,
+        Phone: m.phone,
         Year: m.year_of_study,
+        School: m.school,
+        Department: m.department,
+        Branch: m.branch,
+        Gender: m.gender,
+        Stay: m.stay,
         "Team Name": team.team_name,
         "Team Lead": lead?.name ?? "—",
+        Zone: zone?.name ?? "Unassigned",
+        Venue: room?.name ?? "Unassigned",
         SPOC: spocName ?? "Unassigned",
-        "Room Number": room?.name ?? "Unassigned",
+        "NOC Status": nocs.find((n) => n.profile_id === m.id)?.status ?? "Not Uploaded",
+        Status: memberStatusLabel(m),
       })),
     );
   }
@@ -156,7 +172,7 @@ export function TeamManagePanel({
       )}
 
       <p className="font-heading text-xs text-ink-muted">
-        Room: {room?.name ?? "Unassigned"} {zone && `· Zone: ${zone.name}`} · SPOC: {spocName ?? "Unassigned"}
+        Venue: {room?.name ?? "Unassigned"} {zone && `· Zone: ${zone.name}`} · SPOC: {spocName ?? "Unassigned"}
         {scope === "admin" && <span className="text-ink-faint"> — change this from Zones and Venues</span>}
       </p>
 

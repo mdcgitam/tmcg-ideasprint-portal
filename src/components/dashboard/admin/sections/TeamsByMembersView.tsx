@@ -1,10 +1,10 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import type { TeamRow, NocRow, ExitRequestRow, ProfileRow, RoomRow, ZoneRow, ProblemStatementRow } from "@/types/database";
+import type { TeamRow, NocRow, ProfileRow, RoomRow, ZoneRow, ProblemStatementRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { downloadCsv } from "@/lib/csv";
-import { ExitStatusBadge } from "./ExitStatusBadge";
+import { ExitStatusBadge, memberStatusLabel } from "./ExitStatusBadge";
 import { MembersFilterBar, filterMembers, EMPTY_MEMBER_FILTERS, type MemberFilters, type MemberRow } from "./MembersFilterBar";
 import { TeamDetailModal } from "./TeamDetailModal";
 
@@ -18,7 +18,6 @@ export function TeamsByMembersView({
   teams,
   membersByTeam,
   nocs,
-  exitRequests,
   scope,
   staffAccounts,
   rooms,
@@ -32,7 +31,6 @@ export function TeamsByMembersView({
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   nocs: NocRow[];
-  exitRequests: ExitRequestRow[];
   scope: "spoc" | "admin";
   staffAccounts: ProfileRow[];
   rooms: RoomRow[];
@@ -59,8 +57,8 @@ export function TeamsByMembersView({
   );
 
   const filteredRows = useMemo(
-    () => filterMembers(allRows, filters, exitRequests, rooms),
-    [allRows, filters, exitRequests, rooms],
+    () => filterMembers(allRows, filters, rooms),
+    [allRows, filters, rooms],
   );
 
   const groups = useMemo(() => {
@@ -76,19 +74,28 @@ export function TeamsByMembersView({
   function handleDownloadAllMembers() {
     downloadCsv(
       "all-members",
-      filteredRows.map(({ member, team }) => ({
-        "Participant Name": member.name,
-        Email: member.gitam_email,
-        "Reg No": member.reg_no,
-        Graduation: member.graduation ?? "",
-        Program: member.program ?? "",
-        Year: member.year_of_study,
+      filteredRows.map(({ member: m, team }) => ({
+        ...(singleCampus ? {} : { Campus: m.campus }),
+        "User ID": m.user_id,
         "Team Name": team.team_name,
         "Team Size": String(teamSize(team)),
-        "Team Lead": (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.name ?? "—",
-        SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
+        "Participant Name": m.name,
+        Position: m.is_lead ? "Team Lead" : "Member",
+        "Reg No": m.reg_no,
+        Email: m.gitam_email,
+        Phone: m.phone,
+        Graduation: m.graduation ?? "",
+        Program: m.program ?? "",
+        Year: m.year_of_study,
+        School: m.school,
+        Department: m.department,
+        Branch: m.branch,
+        Gender: m.gender,
+        Stay: m.stay,
         Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
-        "Room Number": roomOf(team)?.name ?? "Unassigned",
+        Venue: roomOf(team)?.name ?? "Unassigned",
+        SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
+        Status: memberStatusLabel(m),
       })),
     );
   }
@@ -170,15 +177,11 @@ export function TeamsByMembersView({
                 return (
                   <Fragment key={team.id}>
                     {groupRows.map(({ member: m }) => {
-                      const exitRequest = exitRequests.find((r) => r.profile_id === m.id);
-
                       return (
                         <tr key={m.id} className="border-b border-border align-top last:border-0">
                           {!singleCampus && <td className="px-4 py-3 text-ink-muted">{m.campus}</td>}
                           <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
-                          <td className="px-4 py-3 text-ink-muted">
-                            {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
-                          </td>
+                          <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
                           <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                           <td className="px-4 py-3 text-ink">{m.name}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
@@ -197,7 +200,7 @@ export function TeamsByMembersView({
                           <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                           <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                           <td className="px-4 py-3">
-                            <ExitStatusBadge request={exitRequest} />
+                            <ExitStatusBadge member={m} />
                           </td>
                           <td className="px-4 py-3">
                             <button
@@ -226,7 +229,6 @@ export function TeamsByMembersView({
           room={roomOf(openTeam)}
           zone={zoneOf(roomOf(openTeam))}
           ps={psOf(openTeam)}
-          exitRequests={exitRequests}
           nocs={nocs}
           spocName={spocName(openTeam.spoc_profile_id)}
           scope={scope}

@@ -88,7 +88,6 @@ export function TeamsPage({
             teams={localTeams}
             membersByTeam={membersByTeam}
             nocs={nocs}
-            exitRequests={exitRequests}
             scope={scope}
             staffAccounts={staffAccounts}
             rooms={rooms}

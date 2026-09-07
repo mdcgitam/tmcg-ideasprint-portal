@@ -128,7 +128,7 @@ export function TimelineSection({
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-border bg-void/60 px-5 py-4">
             <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Campus Level — Campus Round</span>
-            <p className="mt-2 font-heading text-sm text-ink-muted">
+            <p className="mt-2 font-heading text-sm font-semibold text-gold">
               {formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)} · Reporting{" "}
               {eventConfig.reportingTime}
             </p>
@@ -136,7 +136,7 @@ export function TimelineSection({
           </div>
           <div className="rounded-xl border border-border bg-void/60 px-5 py-4">
             <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">University Level — Grand Finale</span>
-            <p className="mt-2 font-heading text-sm text-ink-muted">{grandFinaleDate ?? "Date to be announced"}</p>
+            <p className="mt-2 font-heading text-sm font-semibold text-gold">{grandFinaleDate ?? "Date to be announced"}</p>
             <p className="mt-1 font-heading text-sm text-ink-muted">{grandFinaleVenue ?? "Venue to be announced"}</p>
           </div>
         </div>

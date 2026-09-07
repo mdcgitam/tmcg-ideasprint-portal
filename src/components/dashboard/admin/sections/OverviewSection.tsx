@@ -48,7 +48,7 @@ export function OverviewSection({
     { label: "Pending Approvals", value: String(pendingApprovals.length) },
     { label: "Missing NOCs", value: String(missingNocs) },
     { label: "Pending Exit Requests", value: String(pendingExits) },
-    { label: "Teams Unassigned To A Room", value: String(unassignedRoom) },
+    { label: "Teams Unassigned To A Venue", value: String(unassignedRoom) },
   ];
 
   return (
@@ -81,7 +81,7 @@ export function OverviewSection({
                   <th className="px-4 py-3">Members</th>
                   <th className="px-4 py-3">Missing NOCs</th>
                   <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Room Assigned</th>
+                  <th className="px-4 py-3">Venue Assigned</th>
                 </tr>
               </thead>
               <tbody>
@@ -94,14 +94,12 @@ export function OverviewSection({
                   const teamStatusLabel = teamActiveStatus(members);
                   return (
                     <tr key={team.id} className="border-b border-border last:border-0">
-                      <td className="px-4 py-3 text-ink">
-                        {team.team_name} <span className="text-ink-faint">· {team.team_id}</span>
-                      </td>
+                      <td className="px-4 py-3 text-ink">{team.team_name}</td>
                       <td className="px-4 py-3 text-ink-muted">{activeMemberCount(members) || members.length}</td>
                       <td className="px-4 py-3 text-ink-muted">{teamMissingNocs}</td>
                       <td className="px-4 py-3 text-ink-muted">
                         {teamStatusLabel}
-                        {teamStatusLabel === "Active" && exitedCount > 0 && ` · ${exitedCount} exited`}
+                        {teamStatusLabel === "Active" && exitedCount > 0 && ` · ${exitedCount} inactive`}
                       </td>
                       <td className="px-4 py-3 text-ink-muted">{team.room_id ? "Yes" : "No"}</td>
                     </tr>
