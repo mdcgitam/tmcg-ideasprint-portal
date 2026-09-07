@@ -460,20 +460,22 @@ export function ProblemStatementsAdminSection({
                                 Current: {fmtDateTime(extension?.extended_until ?? selectionEnd)}
                                 {!extension && selectionEnd && " (general)"}
                               </span>
-                              <input
-                                type="datetime-local"
-                                value={deadlineFieldValue}
-                                onChange={(e) => setDeadlineDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                                className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
-                              />
-                              <button
-                                type="button"
-                                disabled={extendBusyHere || !deadlineFieldValue}
-                                onClick={() => handleRowExtend(team)}
-                                className="w-fit rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
-                              >
-                                {extendBusyHere ? "Saving…" : "Save"}
-                              </button>
+                              <div className="flex items-center gap-1">
+                                <input
+                                  type="datetime-local"
+                                  value={deadlineFieldValue}
+                                  onChange={(e) => setDeadlineDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
+                                  className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={extendBusyHere || !deadlineFieldValue}
+                                  onClick={() => handleRowExtend(team)}
+                                  className="w-fit shrink-0 rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
+                                >
+                                  {extendBusyHere ? "Saving…" : "Save"}
+                                </button>
+                              </div>
                               {extendErrors[team.id] && (
                                 <span className="font-heading text-[11px] text-danger">{extendErrors[team.id]}</span>
                               )}

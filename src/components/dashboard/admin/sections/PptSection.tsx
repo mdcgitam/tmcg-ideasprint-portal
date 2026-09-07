@@ -26,12 +26,13 @@ interface PptFilters {
   search: string;
   campus: string;
   teamSize: string;
+  zone: string;
   room: string;
   spoc: string;
   status: string; // "" | "Uploaded" | "Not Uploaded"
 }
 
-const EMPTY_PPT_FILTERS: PptFilters = { search: "", campus: "", teamSize: "", room: "", spoc: "", status: "" };
+const EMPTY_PPT_FILTERS: PptFilters = { search: "", campus: "", teamSize: "", zone: "", room: "", spoc: "", status: "" };
 
 function toDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -286,6 +287,7 @@ export function PptSection({
       }
       if (filters.campus && lead?.campus !== filters.campus) return false;
       if (filters.teamSize && String(members.filter((m) => m.is_active).length || team.member_count) !== filters.teamSize) return false;
+      if (filters.zone && zoneOf(roomOf(team))?.id !== filters.zone) return false;
       if (filters.room && team.room_id !== filters.room) return false;
       if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
       if (filters.status && status !== filters.status) return false;
@@ -350,13 +352,22 @@ export function PptSection({
           options={["3", "4"]}
         />
         {!hideVenue && (
-        <FilterSelect
-          label="Venue"
-          value={filters.room}
-          onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
-          options={rooms.map((r) => r.name)}
-          valueOptions={rooms.map((r) => r.id)}
-        />
+          <>
+            <FilterSelect
+              label="Zone"
+              value={filters.zone}
+              onChange={(v) => setFilters((f) => ({ ...f, zone: v }))}
+              options={zones.map((z) => z.name)}
+              valueOptions={zones.map((z) => z.id)}
+            />
+            <FilterSelect
+              label="Venue"
+              value={filters.room}
+              onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
+              options={rooms.map((r) => r.name)}
+              valueOptions={rooms.map((r) => r.id)}
+            />
+          </>
         )}
         <FilterSelect
           label="SPOC"
@@ -397,6 +408,7 @@ export function PptSection({
                   <th className="px-4 py-3">Team Lead</th>
                   <th className="px-4 py-3">Lead Phone No</th>
                   <th className="px-4 py-3">Team Size</th>
+                  <th className="px-4 py-3">Zone</th>
                   <th className="px-4 py-3">Venue</th>
                   <th className="px-4 py-3">SPOC</th>
                   <th className="px-4 py-3">PS Code</th>
@@ -413,7 +425,6 @@ export function PptSection({
                   const presentation = localPresentations.find((p) => p.team_id === team.id);
                   const room = roomOf(team);
                   const zone = zoneOf(room);
-                  const venue = room ? (zone ? `${room.name} (${zone.name})` : room.name) : "Unassigned";
                   const ps = psOf(team);
                   const uploaded = presentation?.status === "Uploaded" && presentation.file_path;
                   const { iso: currentDeadline, isOverride } = effectiveDeadline(team.id);
@@ -437,7 +448,8 @@ export function PptSection({
                       <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
-                      <td className="px-4 py-3 text-ink-muted">{venue}</td>
+                      <td className="px-4 py-3 text-ink-muted">{zone?.name ?? "Unassigned"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{ps?.number ?? "—"}</td>
                       <td className="px-4 py-3">
@@ -511,20 +523,22 @@ export function PptSection({
                             {currentDeadline && !isOverride && " (General)"}
                             {expired && " — Time exceeded"}
                           </span>
-                          <input
-                            type="datetime-local"
-                            value={deadlineDrafts[team.id] ?? toDatetimeLocal(currentDeadline)}
-                            onChange={(e) => setDeadlineDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                            className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
-                          />
-                          <button
-                            type="button"
-                            disabled={deadlineBusyHere || !(deadlineDrafts[team.id] ?? toDatetimeLocal(currentDeadline))}
-                            onClick={() => handleExtendDeadline(team.id)}
-                            className="w-fit rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
-                          >
-                            {deadlineBusyHere ? "Saving…" : currentDeadline ? "Update" : "Set Deadline"}
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <input
+                              type="datetime-local"
+                              value={deadlineDrafts[team.id] ?? toDatetimeLocal(currentDeadline)}
+                              onChange={(e) => setDeadlineDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
+                              className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
+                            />
+                            <button
+                              type="button"
+                              disabled={deadlineBusyHere || !(deadlineDrafts[team.id] ?? toDatetimeLocal(currentDeadline))}
+                              onClick={() => handleExtendDeadline(team.id)}
+                              className="w-fit shrink-0 rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
+                            >
+                              {deadlineBusyHere ? "Saving…" : currentDeadline ? "Update" : "Set Deadline"}
+                            </button>
+                          </div>
                           {deadlineError && <span className="font-heading text-[11px] text-danger">{deadlineError}</span>}
                         </div>
                       </td>
