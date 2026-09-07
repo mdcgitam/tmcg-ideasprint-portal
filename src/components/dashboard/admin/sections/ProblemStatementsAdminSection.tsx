@@ -18,11 +18,22 @@ import {
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
+import { FilterSelect } from "./TeamFormFields";
 
 const PS_MIN = 1;
 const PS_MAX = 50;
 
 type View = "team" | "analytics";
+
+interface PsFilters {
+  search: string;
+  teamSize: string;
+  zone: string;
+  room: string;
+  spoc: string;
+}
+
+const EMPTY_PS_FILTERS: PsFilters = { search: "", teamSize: "", zone: "", room: "", spoc: "" };
 
 function toDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -104,6 +115,28 @@ export function ProblemStatementsAdminSection({
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
+  // Once a PS code is saved the field freezes into a plain value + "Edit" button, rather than staying an always-open input.
+  const [editingPs, setEditingPs] = useState<Set<string>>(new Set());
+
+  const [filters, setFilters] = useState<PsFilters>(EMPTY_PS_FILTERS);
+
+  const visibleTeams = useMemo(() => {
+    const q = filters.search.trim().toLowerCase();
+    return localTeams.filter((team) => {
+      const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
+      if (q) {
+        const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""} ${psNumberOf(team)}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
+      if (filters.teamSize && String(sizeOf(team)) !== filters.teamSize) return false;
+      if (filters.zone && zoneOf(roomOf(team))?.id !== filters.zone) return false;
+      if (filters.room && team.room_id !== filters.room) return false;
+      if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
+      return true;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localTeams, membersByTeam, filters, local]);
+
   function toggleSelected(teamId: string) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -130,6 +163,12 @@ export function ProblemStatementsAdminSection({
         },
       ];
     });
+  }
+
+  function startEditPs(team: TeamRow) {
+    setPsDrafts((prev) => ({ ...prev, [team.id]: psNumberOf(team) }));
+    setPsErrors((prev) => ({ ...prev, [team.id]: "" }));
+    setEditingPs((prev) => new Set(prev).add(team.id));
   }
 
   async function handlePsSave(team: TeamRow) {
@@ -160,6 +199,11 @@ export function ProblemStatementsAdminSection({
                 updated_at: new Date().toISOString(),
               },
             ];
+      });
+      setEditingPs((prev) => {
+        const next = new Set(prev);
+        next.delete(team.id);
+        return next;
       });
     } catch (err) {
       setPsErrors((prev) => ({
@@ -211,7 +255,7 @@ export function ProblemStatementsAdminSection({
   function handleExportTeamView() {
     downloadCsv(
       "problem-statement-teams",
-      localTeams.map((team) => {
+      visibleTeams.map((team) => {
         const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
         const room = roomOf(team);
         return {
@@ -303,9 +347,51 @@ export function ProblemStatementsAdminSection({
               {bulkError && <p className="font-heading text-xs text-danger">{bulkError}</p>}
             </div>
 
-            {localTeams.length === 0 ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
+              <FilterSelect
+                label="Team Size"
+                value={filters.teamSize}
+                onChange={(v) => setFilters((f) => ({ ...f, teamSize: v }))}
+                options={Array.from(new Set(localTeams.map((t) => sizeOf(t))))
+                  .sort((a, b) => a - b)
+                  .map(String)}
+              />
+              <FilterSelect
+                label="Zone"
+                value={filters.zone}
+                onChange={(v) => setFilters((f) => ({ ...f, zone: v }))}
+                options={zones.map((z) => z.name)}
+                valueOptions={zones.map((z) => z.id)}
+              />
+              <FilterSelect
+                label="Venue"
+                value={filters.room}
+                onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
+                options={rooms.map((r) => r.name)}
+                valueOptions={rooms.map((r) => r.id)}
+              />
+              <FilterSelect
+                label="SPOC"
+                value={filters.spoc}
+                onChange={(v) => setFilters((f) => ({ ...f, spoc: v }))}
+                options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
+                valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
+              />
+              <input
+                value={filters.search}
+                onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+                placeholder="Team name / team lead / lead phone / PS code…"
+                className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+              />
+            </div>
+
+            <p className="font-heading text-xs text-ink-muted">Showing {visibleTeams.length} teams</p>
+
+            {visibleTeams.length === 0 ? (
               <div className="rounded-xl border border-border bg-surface p-8 text-center">
-                <p className="font-heading text-sm text-ink-muted">No teams registered yet.</p>
+                <p className="font-heading text-sm text-ink-muted">
+                  {localTeams.length === 0 ? "No teams registered yet." : "No teams match the current filters."}
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto rounded-xl border border-border bg-surface">
@@ -326,7 +412,7 @@ export function ProblemStatementsAdminSection({
                     </tr>
                   </thead>
                   <tbody>
-                    {localTeams.map((team) => {
+                    {visibleTeams.map((team) => {
                       const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
                       const room = roomOf(team);
                       const zone = zoneOf(room);
@@ -351,25 +437,38 @@ export function ProblemStatementsAdminSection({
                           <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <input
-                                  type="number"
-                                  min={PS_MIN}
-                                  max={PS_MAX}
-                                  value={psDrafts[team.id] ?? psNumberOf(team)}
-                                  onChange={(e) => setPsDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                                  placeholder="1–50"
-                                  className="w-20 rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
-                                />
-                                <button
-                                  type="button"
-                                  disabled={psBusyHere}
-                                  onClick={() => handlePsSave(team)}
-                                  className="w-fit rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
-                                >
-                                  {psBusyHere ? "Saving…" : "Save"}
-                                </button>
-                              </div>
+                              {psNumberOf(team) && !editingPs.has(team.id) ? (
+                                <div className="flex items-center gap-2">
+                                  <span className="font-heading text-xs text-ink">{psNumberOf(team)}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditPs(team)}
+                                    className="w-fit rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10"
+                                  >
+                                    Edit
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="number"
+                                    min={PS_MIN}
+                                    max={PS_MAX}
+                                    value={psDrafts[team.id] ?? psNumberOf(team)}
+                                    onChange={(e) => setPsDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
+                                    placeholder="1–50"
+                                    className="w-20 rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
+                                  />
+                                  <button
+                                    type="button"
+                                    disabled={psBusyHere}
+                                    onClick={() => handlePsSave(team)}
+                                    className="w-fit shrink-0 rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
+                                  >
+                                    {psBusyHere ? "Saving…" : "Save"}
+                                  </button>
+                                </div>
+                              )}
                               {psErrors[team.id] && <span className="font-heading text-[11px] text-danger">{psErrors[team.id]}</span>}
                             </div>
                           </td>
@@ -438,7 +537,7 @@ export function ProblemStatementsAdminSection({
                 <tbody>
                   {analytics.rows.map((row) => (
                     <tr key={row.number} className="border-b border-border align-top last:border-0">
-                      <td className="px-4 py-3 text-ink">#{row.number}</td>
+                      <td className="px-4 py-3 text-ink">{row.number}</td>
                       <td className="px-4 py-3 text-ink-muted">{row.count}</td>
                       <td className="px-4 py-3 text-ink-muted">{row.teamNames.length === 0 ? "—" : row.teamNames.join(", ")}</td>
                     </tr>
