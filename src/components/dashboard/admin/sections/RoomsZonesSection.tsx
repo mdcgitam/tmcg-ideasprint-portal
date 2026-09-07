@@ -713,7 +713,7 @@ export function RoomsZonesSection({
                 </select>
               )}
               <select value={fSize} onChange={(e) => setFSize(e.target.value)} className={selectClass}>
-                <option value="">All team sizes</option>
+                <option value="">Team Size</option>
                 {sizeFilterOptions.map((s) => (
                   <option key={s} value={s}>
                     {s} {s === 1 ? "member" : "members"}

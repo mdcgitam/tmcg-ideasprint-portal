@@ -53,8 +53,8 @@ export function StaffAccountsSection({
   const fadeRef = useTabFade(view);
 
   const roleChangeOptions: UserRole[] = canManageCampusAdmins
-    ? ["SPOC", "Zone Manager", "Campus Admin"]
-    : ["SPOC", "Zone Manager"];
+    ? ["Zone Manager", "SPOC", "Campus Admin"]
+    : ["Zone Manager", "SPOC"];
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -134,8 +134,8 @@ export function StaffAccountsSection({
             onChange={(e) => setRole(e.target.value as NewRole)}
             className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
           >
-            <option value="SPOC">SPOC</option>
             <option value="Zone Manager">Zone Manager</option>
+            <option value="SPOC">SPOC</option>
             {canManageCampusAdmins && <option value="Campus Admin">Campus Admin</option>}
           </select>
         </div>
