@@ -1,11 +1,11 @@
 import type { ProfileRow } from "@/types/database";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
-import { OverviewSection } from "@/components/dashboard/admin/sections/OverviewSection";
+import { ExitSubmissionsSection } from "@/components/dashboard/admin/sections/ExitSubmissionsSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 import { ZoneVenueTabs } from "@/components/dashboard/zone/ZoneVenueTabs";
 
-export async function OverviewRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
-  const { teams, membersByTeam, pendingApprovals, nocs, rooms } = await fetchAdminDashboardData(
+export async function ExitSubmissionsRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
+  const { exitRequests, teams, membersByTeam, rooms, zones, staffAccounts } = await fetchAdminDashboardData(
     profile,
     roomId ? { roomId } : undefined,
   );
@@ -16,13 +16,14 @@ export async function OverviewRoute({ profile, roomId }: { profile: ProfileRow; 
     ) : undefined;
 
   return (
-    <SectionPageShell title="Overview" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
-      <OverviewSection
-        scope={scope}
+    <SectionPageShell title="Exit Form Submissions" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
+      <ExitSubmissionsSection
+        exitRequests={exitRequests}
         teams={teams}
         membersByTeam={membersByTeam}
-        pendingApprovals={pendingApprovals}
-        nocs={nocs}
+        rooms={rooms}
+        zones={zones}
+        staffAccounts={staffAccounts}
       />
     </SectionPageShell>
   );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { TeamRow, ApprovalRequestRow, NocRow, ExitRequestRow } from "@/types/database";
+import type { TeamRow, ApprovalRequestRow, NocRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { activeMemberCount, teamActiveStatus } from "@/components/dashboard/admin/sections/ExitStatusBadge";
@@ -16,39 +16,36 @@ export function OverviewSection({
   membersByTeam,
   pendingApprovals,
   nocs,
-  exitRequests,
 }: {
   scope: "spoc" | "admin";
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   pendingApprovals: ApprovalRequestRow[];
   nocs: NocRow[];
-  exitRequests: ExitRequestRow[];
 }) {
   const [view, setView] = useState<View>("aggregate");
   const fadeRef = useTabFade(view);
   const allMembers = Object.values(membersByTeam).flat();
 
-  function isExited(profileId: string) {
-    return exitRequests.find((r) => r.profile_id === profileId)?.status === "Approved";
-  }
-
   const totalParticipants = allMembers.length;
-  const totalActiveMembers = allMembers.filter((m) => !isExited(m.id)).length;
+  // Missing NOCs counts only active members — an exited member's missing NOC isn't the team's problem anymore.
   const missingNocs = allMembers.filter(
-    (m) => nocs.find((n) => n.profile_id === m.id)?.status !== "Uploaded",
+    (m) => m.is_active && nocs.find((n) => n.profile_id === m.id)?.status !== "Uploaded",
   ).length;
-  const pendingExits = exitRequests.filter((r) => r.status === "Requested").length;
-  const unassignedRoom = teams.filter((t) => !t.room_id).length;
+  const maleCount = allMembers.filter((m) => m.gender === "Male").length;
+  const femaleCount = allMembers.filter((m) => m.gender === "Female").length;
+  const gscseCount = allMembers.filter((m) => m.school === "GSCSE").length;
+  const gsceCount = allMembers.filter((m) => m.school === "GSCE").length;
 
   const cards = [
     { label: scope === "admin" ? "Total Teams" : "Assigned Teams", value: String(teams.length) },
-    { label: scope === "admin" ? "Total Registrations" : "Team Members", value: String(totalParticipants) },
-    { label: "Total Members", value: String(totalActiveMembers) },
-    { label: "Pending Approvals", value: String(pendingApprovals.length) },
+    { label: "Total Participants", value: String(totalParticipants) },
     { label: "Missing NOCs", value: String(missingNocs) },
-    { label: "Pending Exit Requests", value: String(pendingExits) },
-    { label: "Teams Unassigned To A Venue", value: String(unassignedRoom) },
+    { label: "No. of Male", value: String(maleCount) },
+    { label: "No. of Female", value: String(femaleCount) },
+    { label: "Pending Approvals", value: String(pendingApprovals.length) },
+    { label: "No. of Students — GSCSE", value: String(gscseCount) },
+    { label: "No. of Students — GSCE", value: String(gsceCount) },
   ];
 
   return (
@@ -88,9 +85,9 @@ export function OverviewSection({
                 {teams.map((team) => {
                   const members = membersByTeam[team.id] ?? [];
                   const teamMissingNocs = members.filter(
-                    (m) => nocs.find((n) => n.profile_id === m.id)?.status !== "Uploaded",
+                    (m) => m.is_active && nocs.find((n) => n.profile_id === m.id)?.status !== "Uploaded",
                   ).length;
-                  const exitedCount = members.filter((m) => isExited(m.id)).length;
+                  const inactiveCount = members.filter((m) => !m.is_active).length;
                   const teamStatusLabel = teamActiveStatus(members);
                   return (
                     <tr key={team.id} className="border-b border-border last:border-0">
@@ -99,7 +96,7 @@ export function OverviewSection({
                       <td className="px-4 py-3 text-ink-muted">{teamMissingNocs}</td>
                       <td className="px-4 py-3 text-ink-muted">
                         {teamStatusLabel}
-                        {teamStatusLabel === "Active" && exitedCount > 0 && ` · ${exitedCount} inactive`}
+                        {teamStatusLabel === "Active" && inactiveCount > 0 && ` · ${inactiveCount} inactive`}
                       </td>
                       <td className="px-4 py-3 text-ink-muted">{team.room_id ? "Yes" : "No"}</td>
                     </tr>

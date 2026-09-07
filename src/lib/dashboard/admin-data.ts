@@ -238,6 +238,7 @@ export async function fetchAdminDashboardData(
 export interface DashboardCardCounts {
   teams: number;
   pendingApprovals: number;
+  pendingExits: number;
   unreadNotifications: number;
   missingNocs: number;
   missingPpt: number;
@@ -260,7 +261,8 @@ export function computeDashboardCardCounts(data: AdminDashboardData): DashboardC
 
   return {
     teams: data.teams.length,
-    pendingApprovals: data.pendingApprovals.length + pendingExitRequests,
+    pendingApprovals: data.pendingApprovals.length,
+    pendingExits: pendingExitRequests,
     unreadNotifications: data.notifications.filter((n) => !n.read).length,
     missingNocs,
     missingPpt,

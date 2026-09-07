@@ -1,14 +1,11 @@
 import type { ProfileRow } from "@/types/database";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
-import { OverviewSection } from "@/components/dashboard/admin/sections/OverviewSection";
+import { IdCardsSection } from "@/components/dashboard/admin/sections/IdCardsSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 import { ZoneVenueTabs } from "@/components/dashboard/zone/ZoneVenueTabs";
 
-export async function OverviewRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
-  const { teams, membersByTeam, pendingApprovals, nocs, rooms } = await fetchAdminDashboardData(
-    profile,
-    roomId ? { roomId } : undefined,
-  );
+export async function IdCardsRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
+  const { rooms } = await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   const venueTabs =
     profile.role === "Zone Manager" ? (
@@ -16,14 +13,8 @@ export async function OverviewRoute({ profile, roomId }: { profile: ProfileRow; 
     ) : undefined;
 
   return (
-    <SectionPageShell title="Overview" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
-      <OverviewSection
-        scope={scope}
-        teams={teams}
-        membersByTeam={membersByTeam}
-        pendingApprovals={pendingApprovals}
-        nocs={nocs}
-      />
+    <SectionPageShell title="ID Cards & Certificates" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
+      <IdCardsSection />
     </SectionPageShell>
   );
 }

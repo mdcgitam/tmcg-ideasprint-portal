@@ -11,6 +11,8 @@ import {
   UserCog,
   FileCheck2,
   Presentation,
+  LogOut,
+  IdCard,
   type LucideIcon,
 } from "lucide-react";
 import type { ProfileRow } from "@/types/database";
@@ -44,7 +46,7 @@ interface CardDef {
 }
 
 /** Cards whose count is an actionable/needs-attention queue get the red "urgent" badge; pure totals get a neutral gold one. */
-const URGENT_SLUGS = new Set(["notifications", "approvals", "noc", "ppt"]);
+const URGENT_SLUGS = new Set(["notifications", "approvals", "exit-submissions", "noc", "ppt"]);
 
 function countForSlug(slug: string, counts: DashboardCardCounts): number {
   switch (slug) {
@@ -52,6 +54,8 @@ function countForSlug(slug: string, counts: DashboardCardCounts): number {
       return counts.teams;
     case "approvals":
       return counts.pendingApprovals;
+    case "exit-submissions":
+      return counts.pendingExits;
     case "notifications":
       return counts.unreadNotifications;
     case "noc":
@@ -69,20 +73,26 @@ function countForSlug(slug: string, counts: DashboardCardCounts): number {
   }
 }
 
+// Order follows the requested module layout: Overview, Profile, Attendance,
+// NOC, PPT, Approvals, Notifications, Exit Submissions, ID Cards (shared by
+// every role); Zones and Venues, Problem Statements, Staff Accounts,
+// Configuration stay admin-privileged (Super Admin / Campus Admin only).
 const BASE_CARDS: CardDef[] = [
   { key: "Overview", slug: "overview", icon: LayoutDashboard },
   { key: "Profile", slug: "teams", icon: Users },
-  { key: "Approvals", slug: "approvals", icon: ClipboardCheck },
   { key: "Attendance", slug: "attendance", icon: CalendarCheck },
-  { key: "Notifications", slug: "notifications", icon: Bell },
   { key: "NOC", slug: "noc", icon: FileCheck2 },
   { key: "PPT", slug: "ppt", icon: Presentation },
+  { key: "Approvals", slug: "approvals", icon: ClipboardCheck },
+  { key: "Notifications", slug: "notifications", icon: Bell },
+  { key: "Exit Submissions", slug: "exit-submissions", icon: LogOut },
+  { key: "ID Cards & Certificates", slug: "id-cards", icon: IdCard },
 ];
 const ADMIN_ONLY_CARDS: CardDef[] = [
   { key: "Zones and Venues", slug: "rooms-zones", icon: DoorOpen },
   { key: "Problem Statements", slug: "problem-statements", icon: FileQuestion },
-  { key: "Configuration", slug: "configuration", icon: Settings },
   { key: "Staff Accounts", slug: "staff-accounts", icon: UserCog },
+  { key: "Configuration", slug: "configuration", icon: Settings },
 ];
 
 /**
@@ -184,7 +194,8 @@ export function AdminDashboardShell({
 
         <nav aria-label="Dashboard sections" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {cards.map(({ key, slug, icon: Icon }) => {
-            const count = countForSlug(slug, counts);
+            // Super Admin / Campus Admin see a clean launcher grid — no needs-attention counts, unlike SPOC/Zone Manager.
+            const count = scope === "admin" ? 0 : countForSlug(slug, counts);
             const urgent = URGENT_SLUGS.has(slug);
             return (
               <Link

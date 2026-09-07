@@ -26,6 +26,7 @@ import { NocSection } from "./sections/NocSection";
 import { ExitRequestSection } from "./sections/ExitRequestSection";
 import { PresentationSection } from "./sections/PresentationSection";
 import { NotificationsSection } from "./sections/NotificationsSection";
+import { IdCardsSection } from "./sections/IdCardsSection";
 
 export interface TeamMemberProfile extends ProfileRow {
   is_lead: boolean;
@@ -49,7 +50,16 @@ export interface TeamDashboardShellProps {
   spocName: string | null;
 }
 
-const TABS = ["Profile", "Problem Statement", "Attendance", "NOC", "Presentation", "Exit Request", "Notifications"] as const;
+const TABS = [
+  "Profile",
+  "Problem Statement",
+  "Attendance",
+  "NOC",
+  "Presentation",
+  "Exit Request",
+  "Notifications",
+  "ID Cards",
+] as const;
 type Tab = (typeof TABS)[number];
 
 export function TeamDashboardShell(props: TeamDashboardShellProps) {
@@ -144,6 +154,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
           {tab === "Notifications" && (
             <NotificationsSection profileId={props.profile.id} notifications={props.notifications} />
           )}
+          {tab === "ID Cards" && <IdCardsSection />}
         </div>
       </div>
     </main>

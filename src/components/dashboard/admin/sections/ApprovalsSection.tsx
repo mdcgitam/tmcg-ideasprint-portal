@@ -1,10 +1,9 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import type { ApprovalRequestRow, ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { ApprovalRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
-import { resolveApprovalRequest, resolveMemberExit, DashboardActionError } from "@/lib/dashboard/admin-actions";
-import { getSignedUrl } from "@/lib/dashboard/team-actions";
+import { resolveApprovalRequest, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
 
@@ -118,7 +117,6 @@ function DiffRow({ label, from, to }: FieldChange) {
 
 export function ApprovalsSection({
   pendingApprovals,
-  exitRequests,
   teams,
   membersByTeam,
   rooms,
@@ -126,7 +124,6 @@ export function ApprovalsSection({
   staffAccounts,
 }: {
   pendingApprovals: ApprovalRequestRow[];
-  exitRequests: ExitRequestRow[];
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   rooms: RoomRow[];
@@ -134,7 +131,6 @@ export function ApprovalsSection({
   staffAccounts: ProfileRow[];
 }) {
   const [localRequests, setLocalRequests] = useState(pendingApprovals);
-  const [localExitRequests, setLocalExitRequests] = useState(exitRequests.filter((r) => r.status === "Requested"));
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("pending");
@@ -177,38 +173,15 @@ export function ApprovalsSection({
     }
   }
 
-  async function handleResolveExit(requestId: string, decision: "Approved" | "Rejected") {
-    setBusyId(requestId);
-    setError(null);
-    try {
-      await resolveMemberExit(requestId, decision);
-      setLocalExitRequests((prev) => prev.filter((r) => r.id !== requestId));
-    } catch (err) {
-      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleViewExitFile(filePath: string) {
-    const url = await getSignedUrl("exit-requests", filePath);
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
-  }
-
   const byTeam = useMemo(() => {
-    const groups = new Map<string, { edits: ApprovalRequestRow[]; exits: ExitRequestRow[] }>();
+    const groups = new Map<string, ApprovalRequestRow[]>();
     for (const req of localRequests) {
-      const entry = groups.get(req.team_id) ?? { edits: [], exits: [] };
-      entry.edits.push(req);
-      groups.set(req.team_id, entry);
-    }
-    for (const req of localExitRequests) {
-      const entry = groups.get(req.team_id) ?? { edits: [], exits: [] };
-      entry.exits.push(req);
+      const entry = groups.get(req.team_id) ?? [];
+      entry.push(req);
       groups.set(req.team_id, entry);
     }
     return groups;
-  }, [localRequests, localExitRequests]);
+  }, [localRequests]);
 
   function renderRequest(req: ApprovalRequestRow) {
     const team = teams.find((t) => t.id === req.team_id);
@@ -295,46 +268,7 @@ export function ApprovalsSection({
     );
   }
 
-  function renderExitRequest(req: ExitRequestRow) {
-    const team = teams.find((t) => t.id === req.team_id);
-    const member = (membersByTeam[req.team_id] ?? []).find((m) => m.id === req.profile_id);
-    return (
-      <div key={req.id} className="rounded-xl border border-danger/40 bg-danger/5 p-6">
-        <RequestContext team={team} />
-        <p className="mt-2 font-heading text-xs text-ink-muted">Exit request received · {member?.name ?? "Unknown member"}</p>
-        {req.reason && <p className="mt-1 font-heading text-xs text-ink-muted">Reason: {req.reason}</p>}
-        {req.file_path && (
-          <button
-            type="button"
-            onClick={() => handleViewExitFile(req.file_path!)}
-            className="mt-2 font-heading text-sm text-gold underline"
-          >
-            View Exit Form
-          </button>
-        )}
-        <div className="mt-4 flex gap-3">
-          <button
-            type="button"
-            disabled={busyId === req.id}
-            onClick={() => handleResolveExit(req.id, "Approved")}
-            className="rounded-full bg-gitam px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:opacity-90 disabled:opacity-60"
-          >
-            Approve Exit
-          </button>
-          <button
-            type="button"
-            disabled={busyId === req.id}
-            onClick={() => handleResolveExit(req.id, "Rejected")}
-            className="rounded-full border border-danger/40 px-6 py-2.5 font-heading text-sm text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
-          >
-            Reject
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (localRequests.length === 0 && localExitRequests.length === 0) {
+  if (localRequests.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-surface p-8 text-center">
         <p className="font-heading text-sm text-ink-muted">No pending approval requests.</p>
@@ -357,8 +291,8 @@ export function ApprovalsSection({
 
       <div ref={fadeRef} className="flex flex-col gap-4">
         {view === "pending"
-          ? [...localRequests.map(renderRequest), ...localExitRequests.map(renderExitRequest)]
-          : Array.from(byTeam.entries()).map(([teamId, { edits, exits }]) => {
+          ? localRequests.map(renderRequest)
+          : Array.from(byTeam.entries()).map(([teamId, edits]) => {
               const team = teams.find((t) => t.id === teamId);
               return (
                 <Fragment key={teamId}>
@@ -366,7 +300,6 @@ export function ApprovalsSection({
                     {team?.team_name ?? "Unknown team"}
                   </p>
                   {edits.map(renderRequest)}
-                  {exits.map(renderExitRequest)}
                 </Fragment>
               );
             })}
