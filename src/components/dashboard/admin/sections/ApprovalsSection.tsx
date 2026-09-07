@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
-import type { ApprovalRequestRow, ExitRequestRow, TeamRow } from "@/types/database";
+import type { ApprovalRequestRow, ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { resolveApprovalRequest, resolveMemberExit, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { getSignedUrl } from "@/lib/dashboard/team-actions";
@@ -121,11 +121,17 @@ export function ApprovalsSection({
   exitRequests,
   teams,
   membersByTeam,
+  rooms,
+  zones,
+  staffAccounts,
 }: {
   pendingApprovals: ApprovalRequestRow[];
   exitRequests: ExitRequestRow[];
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
+  rooms: RoomRow[];
+  zones: ZoneRow[];
+  staffAccounts: ProfileRow[];
 }) {
   const [localRequests, setLocalRequests] = useState(pendingApprovals);
   const [localExitRequests, setLocalExitRequests] = useState(exitRequests.filter((r) => r.status === "Requested"));
@@ -133,6 +139,30 @@ export function ApprovalsSection({
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("pending");
   const fadeRef = useTabFade(view);
+
+  const leadOf = (team: TeamRow | undefined) => (team ? (membersByTeam[team.id] ?? []).find((m) => m.is_lead) : null) ?? null;
+  const campusOf = (team: TeamRow | undefined) => leadOf(team)?.campus ?? team?.campus ?? "—";
+  const roomOf = (team: TeamRow | undefined) => (team?.room_id ? (rooms.find((r) => r.id === team.room_id) ?? null) : null);
+  const zoneOf = (team: TeamRow | undefined) => {
+    const room = roomOf(team);
+    return room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null;
+  };
+  const spocName = (team: TeamRow | undefined) =>
+    team?.spoc_profile_id ? (staffAccounts.find((s) => s.id === team.spoc_profile_id)?.name ?? null) : null;
+
+  /** Requesting-team identity — the fields a reviewer needs before reading the request itself. */
+  function RequestContext({ team }: { team: TeamRow | undefined }) {
+    return (
+      <div className="flex flex-col gap-1">
+        <p className="font-heading text-sm text-gold">{team?.team_name ?? "Unknown team"}</p>
+        <p className="font-heading text-xs text-ink-muted">
+          Campus: {campusOf(team)} · Zone: {zoneOf(team)?.name ?? "Unassigned"} · Venue:{" "}
+          {roomOf(team)?.name ?? "Unassigned"} · SPOC: {spocName(team) ?? "Unassigned"} · Team Lead:{" "}
+          {leadOf(team)?.name ?? "—"}
+        </p>
+      </div>
+    );
+  }
 
   async function handleResolve(requestId: string, decision: "Approved" | "Rejected") {
     setBusyId(requestId);
@@ -188,12 +218,9 @@ export function ApprovalsSection({
 
     return (
       <div key={req.id} className="rounded-xl border border-gold/40 bg-gold/5 p-6">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <p className="font-heading text-sm text-gold">{team?.team_name ?? "Unknown team"}</p>
-          {team && <p className="font-mono text-xs text-ink-faint">{team.team_id}</p>}
-        </div>
-        <p className="mt-1 font-heading text-xs text-ink-muted">
-          Team edit request · submitted{" "}
+        <RequestContext team={team} />
+        <p className="mt-2 font-heading text-xs text-ink-muted">
+          Team edit request received · submitted{" "}
           {new Date(req.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
         </p>
         <p className="mt-3 font-heading text-xs text-ink-faint">
@@ -273,8 +300,8 @@ export function ApprovalsSection({
     const member = (membersByTeam[req.team_id] ?? []).find((m) => m.id === req.profile_id);
     return (
       <div key={req.id} className="rounded-xl border border-danger/40 bg-danger/5 p-6">
-        <p className="font-heading text-sm text-danger">Exit Request — {team?.team_name ?? "Unknown team"}</p>
-        <p className="mt-2 font-heading text-sm text-ink">{member?.name ?? "Unknown member"}</p>
+        <RequestContext team={team} />
+        <p className="mt-2 font-heading text-xs text-ink-muted">Exit request received · {member?.name ?? "Unknown member"}</p>
         {req.reason && <p className="mt-1 font-heading text-xs text-ink-muted">Reason: {req.reason}</p>}
         {req.file_path && (
           <button

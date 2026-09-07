@@ -5,10 +5,8 @@ import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPag
 import { ZoneVenueTabs } from "@/components/dashboard/zone/ZoneVenueTabs";
 
 export async function ApprovalsRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
-  const { pendingApprovals, exitRequests, teams, membersByTeam, rooms } = await fetchAdminDashboardData(
-    profile,
-    roomId ? { roomId } : undefined,
-  );
+  const { pendingApprovals, exitRequests, teams, membersByTeam, rooms, zones, staffAccounts } =
+    await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   const venueTabs =
     profile.role === "Zone Manager" ? (
@@ -22,6 +20,9 @@ export async function ApprovalsRoute({ profile, roomId }: { profile: ProfileRow;
         exitRequests={exitRequests}
         teams={teams}
         membersByTeam={membersByTeam}
+        rooms={rooms}
+        zones={zones}
+        staffAccounts={staffAccounts}
       />
     </SectionPageShell>
   );
