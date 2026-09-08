@@ -22,6 +22,11 @@ function friendlyError(raw: string): string {
   if (raw.includes("DUPLICATE_ZONE_NAME")) return "A zone with that name already exists.";
   if (raw.includes("ROOM_NOT_FOUND")) return "That venue no longer exists — refresh the page.";
   if (raw.includes("ZONE_NOT_FOUND")) return "That zone no longer exists — refresh the page.";
+  if (raw.includes("ZONE_HAS_VENUES")) return "This zone still has venues in it — move or delete them first.";
+  if (raw.includes("SPOC_ALREADY_ASSIGNED")) {
+    const venue = raw.split(":").slice(1).join(":").trim();
+    return venue ? `That SPOC is already assigned to "${venue}" — unassign them there first.` : "That SPOC is already assigned to another venue.";
+  }
   if (raw.includes("TEAM_NOT_FOUND")) return "That team couldn't be found.";
   if (raw.includes("ALREADY_LEAD")) return "That member is already the Team Lead.";
   if (raw.includes("CANNOT_DELETE_LEAD")) return "This member is the Team Lead — delete the whole team instead.";
@@ -207,6 +212,10 @@ export function updateRoomName(roomId: string, name: string) {
 
 export function updateZoneName(zoneId: string, name: string) {
   return callRpc<null>("update_zone_name", { p_zone_id: zoneId, p_name: name });
+}
+
+export function updateZoneCampus(zoneId: string, campus: "VSP" | "BLR" | "HYD") {
+  return callRpc<null>("update_zone_campus", { p_zone_id: zoneId, p_campus: campus });
 }
 
 export function deleteRoom(roomId: string) {

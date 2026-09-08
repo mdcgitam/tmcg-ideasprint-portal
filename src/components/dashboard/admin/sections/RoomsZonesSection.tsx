@@ -13,6 +13,7 @@ import {
   deleteRoom,
   deleteZone,
   updateRoomName,
+  updateZoneCampus,
   updateZoneName,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
@@ -75,7 +76,7 @@ export function RoomsZonesSection({
   const [editRoomId, setEditRoomId] = useState<string | null>(null);
   const [roomDraft, setRoomDraft] = useState({ name: "", zoneId: "", spocId: "" });
   const [editZoneId, setEditZoneId] = useState<string | null>(null);
-  const [zoneDraft, setZoneDraft] = useState("");
+  const [zoneDraft, setZoneDraft] = useState<{ name: string; campus: CampusCode | "" }>({ name: "", campus: "" });
 
   // View tab
   const [search, setSearch] = useState("");
@@ -371,16 +372,25 @@ export function RoomsZonesSection({
   }
 
   async function handleSaveZone(zone: ZoneRow) {
-    const name = zoneDraft.trim();
-    if (!name || name === zone.name) {
+    const name = zoneDraft.name.trim();
+    const nameChanged = !!name && name !== zone.name;
+    const campusChanged = !singleCampus && !!zoneDraft.campus && zoneDraft.campus !== zone.campus;
+    if (!nameChanged && !campusChanged) {
       setEditZoneId(null);
       return;
     }
     setBusy(`edit-zone:${zone.id}`);
     setError(null);
     try {
-      await updateZoneName(zone.id, name);
-      setLocalZones((prev) => prev.map((z) => (z.id === zone.id ? { ...z, name } : z)));
+      if (nameChanged) await updateZoneName(zone.id, name);
+      if (campusChanged) await updateZoneCampus(zone.id, zoneDraft.campus as CampusCode);
+      setLocalZones((prev) =>
+        prev.map((z) =>
+          z.id === zone.id
+            ? { ...z, name: nameChanged ? name : z.name, campus: campusChanged ? (zoneDraft.campus as CampusCode) : z.campus }
+            : z,
+        ),
+      );
       setEditZoneId(null);
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
@@ -431,12 +441,6 @@ export function RoomsZonesSection({
               <div className="rounded-xl border border-border bg-surface p-6">
                 <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Create Zone</span>
                 <form onSubmit={handleCreateZone} className="mt-3 flex flex-wrap gap-3">
-                  <input
-                    value={zoneName}
-                    onChange={(e) => setZoneName(e.target.value)}
-                    placeholder="e.g. Zone A"
-                    className={`flex-1 ${inputClass}`}
-                  />
                   {!singleCampus && (
                     <select
                       value={zoneCampusDraft}
@@ -450,6 +454,12 @@ export function RoomsZonesSection({
                       <option value="HYD">Hyderabad</option>
                     </select>
                   )}
+                  <input
+                    value={zoneName}
+                    onChange={(e) => setZoneName(e.target.value)}
+                    placeholder="e.g. Zone A"
+                    className={`flex-1 ${inputClass}`}
+                  />
                   <button
                     type="submit"
                     disabled={creatingZone || (!singleCampus && !zoneCampusDraft)}
@@ -465,10 +475,22 @@ export function RoomsZonesSection({
                       editZoneId === z.id ? (
                         <div key={z.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-border px-4 py-2">
                           <input
-                            value={zoneDraft}
-                            onChange={(e) => setZoneDraft(e.target.value)}
+                            value={zoneDraft.name}
+                            onChange={(e) => setZoneDraft((d) => ({ ...d, name: e.target.value }))}
                             className={`flex-1 ${inputClass} py-1 text-sm`}
                           />
+                          {!singleCampus && (
+                            <select
+                              value={zoneDraft.campus}
+                              onChange={(e) => setZoneDraft((d) => ({ ...d, campus: e.target.value as CampusCode | "" }))}
+                              className={selectClass}
+                              aria-label={`Campus for ${z.name}`}
+                            >
+                              <option value="VSP">Visakhapatnam</option>
+                              <option value="BLR">Bangalore</option>
+                              <option value="HYD">Hyderabad</option>
+                            </select>
+                          )}
                           <button type="button" onClick={() => handleSaveZone(z)} disabled={busy === `edit-zone:${z.id}`} className="rounded-full bg-gold px-3 py-1 text-xs font-medium text-void hover:bg-gold-light disabled:opacity-60">
                             Save
                           </button>
@@ -478,7 +500,10 @@ export function RoomsZonesSection({
                         </div>
                       ) : (
                         <div key={z.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-4 py-2">
-                          <span className="font-heading text-sm text-ink">{z.name}</span>
+                          <span className="font-heading text-sm text-ink">
+                            {z.name}
+                            {!singleCampus && <span className="ml-2 font-heading text-xs text-ink-faint">({z.campus})</span>}
+                          </span>
                           <div className="flex flex-wrap items-center gap-2">
                             <select
                               value={z.zone_manager_profile_id ?? ""}
@@ -494,7 +519,7 @@ export function RoomsZonesSection({
                                 </option>
                               ))}
                             </select>
-                            <button type="button" onClick={() => { setEditZoneId(z.id); setZoneDraft(z.name); }} className="text-xs text-gold underline">
+                            <button type="button" onClick={() => { setEditZoneId(z.id); setZoneDraft({ name: z.name, campus: z.campus }); }} className="text-xs text-gold underline">
                               Edit
                             </button>
                             <button type="button" onClick={() => handleDeleteZone(z)} disabled={busy === `del-zone:${z.id}`} className="text-xs text-danger underline disabled:opacity-60">
