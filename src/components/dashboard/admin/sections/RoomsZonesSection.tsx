@@ -57,8 +57,10 @@ export function RoomsZonesSection({
   const [busy, setBusy] = useState<string | null>(null);
 
   const [zoneName, setZoneName] = useState("");
+  const [zoneCampusDraft, setZoneCampusDraft] = useState<CampusCode | "">("");
   const [creatingZone, setCreatingZone] = useState(false);
   const [roomName, setRoomName] = useState("");
+  const [roomCampusDraft, setRoomCampusDraft] = useState<CampusCode | "">("");
   const [roomZoneId, setRoomZoneId] = useState("");
   const [roomSpocId, setRoomSpocId] = useState("");
   const [creatingRoom, setCreatingRoom] = useState(false);
@@ -253,15 +255,18 @@ export function RoomsZonesSection({
   async function handleCreateZone(e: React.FormEvent) {
     e.preventDefault();
     if (!zoneName.trim()) return;
+    const zoneCampus = singleCampus ? campus : zoneCampusDraft || null;
+    if (!zoneCampus) return;
     setCreatingZone(true);
     setError(null);
     try {
-      const id = await createZone(zoneName.trim(), null, campus);
+      const id = await createZone(zoneName.trim(), null, zoneCampus);
       setLocalZones((prev) => [
         ...prev,
-        { id, name: zoneName.trim(), campus: campus ?? "VSP", zone_manager_profile_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
+        { id, name: zoneName.trim(), campus: zoneCampus, zone_manager_profile_id: null, created_at: new Date().toISOString(), updated_at: new Date().toISOString() },
       ]);
       setZoneName("");
+      setZoneCampusDraft("");
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
@@ -272,12 +277,14 @@ export function RoomsZonesSection({
   async function handleCreateRoom(e: React.FormEvent) {
     e.preventDefault();
     if (!roomName.trim()) return;
+    const roomCampus = singleCampus ? campus : roomCampusDraft || null;
+    if (!roomCampus) return;
     setCreatingRoom(true);
     setError(null);
     try {
       const zoneId = roomZoneId || null;
       const spocId = roomSpocId || null;
-      const id = await createRoom(roomName.trim(), zoneId, campus);
+      const id = await createRoom(roomName.trim(), zoneId, roomCampus);
 
       if (spocId) await assignSpocToRoom(id, spocId);
 
@@ -286,7 +293,7 @@ export function RoomsZonesSection({
         {
           id,
           name: roomName.trim(),
-          campus: campus ?? "VSP",
+          campus: roomCampus,
           zone_id: zoneId,
           spoc_profile_id: spocId,
           created_at: new Date().toISOString(),
@@ -294,6 +301,7 @@ export function RoomsZonesSection({
         },
       ]);
       setRoomName("");
+      setRoomCampusDraft("");
       setRoomZoneId("");
       setRoomSpocId("");
     } catch (err) {
@@ -422,16 +430,29 @@ export function RoomsZonesSection({
               {/* Create Zone */}
               <div className="rounded-xl border border-border bg-surface p-6">
                 <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Create Zone</span>
-                <form onSubmit={handleCreateZone} className="mt-3 flex gap-3">
+                <form onSubmit={handleCreateZone} className="mt-3 flex flex-wrap gap-3">
                   <input
                     value={zoneName}
                     onChange={(e) => setZoneName(e.target.value)}
                     placeholder="e.g. Zone A"
                     className={`flex-1 ${inputClass}`}
                   />
+                  {!singleCampus && (
+                    <select
+                      value={zoneCampusDraft}
+                      onChange={(e) => setZoneCampusDraft(e.target.value as CampusCode | "")}
+                      className={`${selectClass} py-2 text-sm`}
+                      aria-label="Campus for this zone"
+                    >
+                      <option value="">Campus…</option>
+                      <option value="VSP">Visakhapatnam</option>
+                      <option value="BLR">Bangalore</option>
+                      <option value="HYD">Hyderabad</option>
+                    </select>
+                  )}
                   <button
                     type="submit"
-                    disabled={creatingZone}
+                    disabled={creatingZone || (!singleCampus && !zoneCampusDraft)}
                     className="rounded-full bg-gold px-5 py-2 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
                   >
                     {creatingZone ? "Adding…" : "Add Zone"}
@@ -498,9 +519,26 @@ export function RoomsZonesSection({
                     className={inputClass}
                   />
                   <div className="flex flex-wrap gap-3">
+                    {!singleCampus && (
+                      <select
+                        value={roomCampusDraft}
+                        onChange={(e) => {
+                          setRoomCampusDraft(e.target.value as CampusCode | "");
+                          setRoomZoneId("");
+                          setRoomSpocId("");
+                        }}
+                        className={`${selectClass} py-2 text-sm`}
+                        aria-label="Campus for this venue"
+                      >
+                        <option value="">Campus…</option>
+                        <option value="VSP">Visakhapatnam</option>
+                        <option value="BLR">Bangalore</option>
+                        <option value="HYD">Hyderabad</option>
+                      </select>
+                    )}
                     <select value={roomZoneId} onChange={(e) => setRoomZoneId(e.target.value)} className={`${selectClass} py-2 text-sm`}>
                       <option value="">No zone</option>
-                      {localZones.map((z) => (
+                      {(singleCampus ? localZones : localZones.filter((z) => z.campus === roomCampusDraft)).map((z) => (
                         <option key={z.id} value={z.id}>
                           {z.name}
                         </option>
@@ -508,7 +546,7 @@ export function RoomsZonesSection({
                     </select>
                     <select value={roomSpocId} onChange={(e) => setRoomSpocId(e.target.value)} className={`${selectClass} py-2 text-sm`}>
                       <option value="">No SPOC</option>
-                      {spocs.map((s) => (
+                      {(singleCampus ? spocs : spocs.filter((s) => s.campus === roomCampusDraft)).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
                         </option>
@@ -517,7 +555,7 @@ export function RoomsZonesSection({
                   </div>
                   <button
                     type="submit"
-                    disabled={creatingRoom}
+                    disabled={creatingRoom || (!singleCampus && !roomCampusDraft)}
                     className="w-fit rounded-full bg-gold px-5 py-2 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
                   >
                     {creatingRoom ? "Adding…" : "Add Venue"}
