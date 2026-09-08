@@ -6,6 +6,7 @@ import type {
   NocRow,
   AttendanceRow,
   AttendanceSessionRow,
+  IdCardCertRecordRow,
   ExitRequestRow,
   PresentationRow,
   ProblemStatementRow,
@@ -27,6 +28,7 @@ export interface AdminDashboardData {
   pendingApprovals: ApprovalRequestRow[];
   attendanceSessions: AttendanceSessionRow[];
   attendance: AttendanceRow[];
+  idCardCertRecords: IdCardCertRecordRow[];
   nocs: NocRow[];
   exitRequests: ExitRequestRow[];
   presentations: PresentationRow[];
@@ -70,6 +72,7 @@ export async function fetchAdminDashboardData(
     { data: pendingApprovals },
     { data: attendanceSessions },
     { data: attendance },
+    { data: idCardCertRecords },
     { data: nocs },
     { data: exitRequests },
     { data: presentations },
@@ -88,6 +91,7 @@ export async function fetchAdminDashboardData(
     supabase.from("approval_requests").select("*").eq("status", "Pending"),
     supabase.from("attendance_sessions").select("*").order("sort_order"),
     supabase.from("attendance").select("*"),
+    supabase.from("id_card_certificate_records").select("*"),
     supabase.from("nocs").select("*"),
     supabase.from("exit_requests").select("*"),
     supabase.from("presentations").select("*"),
@@ -129,6 +133,7 @@ export async function fetchAdminDashboardData(
   let scopedMembersByTeam = membersByTeam;
   let scopedPendingApprovals = (pendingApprovals ?? []) as ApprovalRequestRow[];
   let scopedAttendance = (attendance ?? []) as AttendanceRow[];
+  let scopedIdCardCertRecords = (idCardCertRecords ?? []) as IdCardCertRecordRow[];
   let scopedNocs = (nocs ?? []) as NocRow[];
   let scopedExitRequests = (exitRequests ?? []) as ExitRequestRow[];
   let scopedPresentations = (presentations ?? []) as PresentationRow[];
@@ -147,6 +152,7 @@ export async function fetchAdminDashboardData(
       membersByTeam: sMembersByTeam,
       pendingApprovals: scopedPendingApprovals.filter((a) => teamIds.has(a.team_id)),
       attendance: scopedAttendance.filter((a) => teamIds.has(a.team_id)),
+      idCardCertRecords: scopedIdCardCertRecords.filter((r) => teamIds.has(r.team_id)),
       exitRequests: scopedExitRequests.filter((e) => teamIds.has(e.team_id)),
       presentations: scopedPresentations.filter((p) => teamIds.has(p.team_id)),
       nocs: scopedNocs.filter((n) => memberIds.has(n.profile_id)),
@@ -202,6 +208,7 @@ export async function fetchAdminDashboardData(
     scopedMembersByTeam = n.membersByTeam;
     scopedPendingApprovals = n.pendingApprovals;
     scopedAttendance = n.attendance;
+    scopedIdCardCertRecords = n.idCardCertRecords;
     scopedNocs = n.nocs;
     scopedExitRequests = n.exitRequests;
     scopedPresentations = n.presentations;
@@ -214,6 +221,7 @@ export async function fetchAdminDashboardData(
     pendingApprovals: scopedPendingApprovals,
     attendanceSessions: (attendanceSessions ?? []) as AttendanceSessionRow[],
     attendance: scopedAttendance,
+    idCardCertRecords: scopedIdCardCertRecords,
     nocs: scopedNocs,
     exitRequests: scopedExitRequests,
     presentations: scopedPresentations,

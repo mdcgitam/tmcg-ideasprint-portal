@@ -38,7 +38,7 @@ function friendlyError(raw: string): string {
   if (raw.includes("DUPLICATE_PHONE")) return "That phone number is already in use.";
   if (raw.includes("DUPLICATE_TEAM_NAME")) return "A team with that name already exists.";
   if (raw.includes("INVALID_ROLE")) return "Invalid role.";
-  if (raw.includes("INVALID_STATUS") || raw.includes("INVALID_DECISION")) {
+  if (raw.includes("INVALID_STATUS") || raw.includes("INVALID_DECISION") || raw.includes("INVALID_ITEM")) {
     return "Invalid value submitted.";
   }
   if (raw.includes("INVALID_AUDIENCE")) return "Choose an audience to notify.";
@@ -77,6 +77,10 @@ export function resolveMemberExit(requestId: string, decision: "Approved" | "Rej
 
 export function recordAttendance(sessionId: string, profileId: string, status: "Present" | "Absent") {
   return callRpc<null>("record_attendance", { p_session_id: sessionId, p_profile_id: profileId, p_status: status });
+}
+
+export function recordIdCardCertificate(item: "ID Card" | "Certificate", profileId: string, status: "Completed" | "Pending") {
+  return callRpc<null>("record_id_card_certificate", { p_item: item, p_profile_id: profileId, p_status: status });
 }
 
 export function createAttendanceSession(name: string, startsAt: string | null, endsAt: string | null, sortOrder: number) {

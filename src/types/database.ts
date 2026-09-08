@@ -14,6 +14,8 @@ export type UserRole = "Super Admin" | "Campus Admin" | "Zone Manager" | "SPOC" 
 export type TeamStatus = "Registered" | "Active" | "Pending Approval" | "Qualified for Grand Finale" | "Exited";
 export type PsStatus = "Hidden" | "Released";
 export type AttendanceStatus = "Present" | "Absent";
+export type IdCardCertItem = "ID Card" | "Certificate";
+export type IdCardCertStatus = "Completed" | "Pending";
 export type NocStatus = "Not Uploaded" | "Uploaded" | "Verified" | "Missing";
 export type PresentationStatus = "Not Uploaded" | "Uploaded";
 export type MemberExitStatus = "Requested" | "Approved" | "Rejected";
@@ -137,6 +139,16 @@ export interface AttendanceRow {
   recorded_at: string;
 }
 
+
+export interface IdCardCertRecordRow {
+  id: string;
+  item: IdCardCertItem;
+  profile_id: string;
+  team_id: string;
+  status: IdCardCertStatus;
+  recorded_by: string;
+  recorded_at: string;
+}
 
 export interface NocRow {
   id: string;
