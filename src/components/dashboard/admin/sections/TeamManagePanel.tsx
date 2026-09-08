@@ -16,6 +16,7 @@ export function TeamManagePanel({
   ps,
   nocs,
   spocName,
+  zoneManagerName,
   scope,
   onTeamRenamed,
   onTeamDeleted,
@@ -27,6 +28,7 @@ export function TeamManagePanel({
   ps: ProblemStatementRow | null;
   nocs: NocRow[];
   spocName: string | null;
+  zoneManagerName?: string | null;
   scope: "spoc" | "admin";
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
@@ -65,6 +67,7 @@ export function TeamManagePanel({
         "Team Name": team.team_name,
         "Team Lead": lead?.name ?? "—",
         Zone: zone?.name ?? "Unassigned",
+        "Zone Manager": zoneManagerName ?? "Unassigned",
         Venue: room?.name ?? "Unassigned",
         SPOC: spocName ?? "Unassigned",
         "NOC Status": nocs.find((n) => n.profile_id === m.id)?.status ?? "Not Uploaded",
@@ -129,7 +132,7 @@ export function TeamManagePanel({
           onClick={handleDownloadTeam}
           className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
         >
-          Download Roster (CSV)
+          Download CSV
         </button>
         {scope === "admin" && (
           <>
@@ -172,7 +175,8 @@ export function TeamManagePanel({
       )}
 
       <p className="font-heading text-xs text-ink-muted">
-        Venue: {room?.name ?? "Unassigned"} {zone && `· Zone: ${zone.name}`} · SPOC: {spocName ?? "Unassigned"}
+        {zone && `Zone: ${zone.name} · `}Zone Manager: {zoneManagerName ?? "Unassigned"} · Venue: {room?.name ?? "Unassigned"} · SPOC:{" "}
+        {spocName ?? "Unassigned"}
         {scope === "admin" && <span className="text-ink-faint"> — change this from Zones and Venues</span>}
       </p>
 

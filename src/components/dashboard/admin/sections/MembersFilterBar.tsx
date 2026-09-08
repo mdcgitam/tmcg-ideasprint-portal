@@ -23,6 +23,7 @@ export interface MemberFilters {
   gender: string;
   stay: string;
   zone: string;
+  zoneManager: string;
   room: string;
   spoc: string;
   status: string;
@@ -42,15 +43,18 @@ export const EMPTY_MEMBER_FILTERS: MemberFilters = {
   gender: "",
   stay: "",
   zone: "",
+  zoneManager: "",
   room: "",
   spoc: "",
   status: "",
 };
 
 /** "View by Participants"' filter set — one row per member. Search matches User ID, Team Name, Participant Name, Reg No, Email, Phone No. */
-export function filterMembers(rows: MemberRow[], filters: MemberFilters, rooms: RoomRow[]): MemberRow[] {
+export function filterMembers(rows: MemberRow[], filters: MemberFilters, rooms: RoomRow[], zones: ZoneRow[]): MemberRow[] {
   const q = filters.search.trim().toLowerCase();
   return rows.filter(({ member, team }) => {
+    const room = rooms.find((r) => r.id === team.room_id);
+
     if (q) {
       const haystack =
         `${member.user_id} ${team.team_name} ${member.name} ${member.reg_no} ${member.gitam_email} ${member.phone}`.toLowerCase();
@@ -68,8 +72,11 @@ export function filterMembers(rows: MemberRow[], filters: MemberFilters, rooms: 
     if (filters.gender && member.gender !== filters.gender) return false;
     if (filters.stay && member.stay !== filters.stay) return false;
     if (filters.zone) {
-      const room = rooms.find((r) => r.id === team.room_id);
       if (!room || room.zone_id !== filters.zone) return false;
+    }
+    if (filters.zoneManager) {
+      const zone = room ? zones.find((z) => z.id === room.zone_id) : null;
+      if (!zone || zone.zone_manager_profile_id !== filters.zoneManager) return false;
     }
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
@@ -155,6 +162,13 @@ export function MembersFilterBar({
               onChange={(v) => set("zone", v)}
               options={zones.map((z) => z.name)}
               valueOptions={zones.map((z) => z.id)}
+            />
+            <FilterSelect
+              label="Zone Manager"
+              value={filters.zoneManager}
+              onChange={(v) => set("zoneManager", v)}
+              options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
+              valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
             />
             <FilterSelect
               label="Venue"

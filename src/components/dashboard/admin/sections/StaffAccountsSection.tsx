@@ -171,7 +171,7 @@ export function StaffAccountsSection({
             }
             className="w-fit rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
           >
-            Download Staff / SPOC List (CSV)
+            Download CSV
           </button>
         )}
         {local.length === 0 ? (

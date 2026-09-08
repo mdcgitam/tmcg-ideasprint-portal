@@ -9,6 +9,7 @@ export interface TeamFilters {
   campus: string;
   teamSize: string;
   zone: string;
+  zoneManager: string;
   room: string;
   spoc: string;
   status: string;
@@ -19,22 +20,25 @@ export const EMPTY_TEAM_FILTERS: TeamFilters = {
   campus: "",
   teamSize: "",
   zone: "",
+  zoneManager: "",
   room: "",
   spoc: "",
   status: "",
 };
 
-/** "View by Teams"' filter set — Campus / Team Size / Zone / Venue / SPOC / Status. Search matches Team Name, Team ID, Team Lead, and Lead Phone No only. */
+/** "View by Teams"' filter set — Campus / Team Size / Zone / Zone Manager / Venue / SPOC / Status. Search matches Team Name, Team ID, Team Lead, and Lead Phone No only. */
 export function filterTeams(
   teams: TeamRow[],
   membersByTeam: Record<string, TeamMemberProfile[]>,
   filters: TeamFilters,
   rooms: RoomRow[],
+  zones: ZoneRow[],
 ): TeamRow[] {
   const q = filters.search.trim().toLowerCase();
   return teams.filter((team) => {
     const members = membersByTeam[team.id] ?? [];
     const lead = members.find((m) => m.is_lead);
+    const room = rooms.find((r) => r.id === team.room_id);
 
     if (q) {
       const haystack = `${team.team_name} ${team.team_id} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
@@ -43,8 +47,11 @@ export function filterTeams(
     if (filters.campus && lead?.campus !== filters.campus) return false;
     if (filters.teamSize && String(activeMemberCount(members) || team.member_count) !== filters.teamSize) return false;
     if (filters.zone) {
-      const room = rooms.find((r) => r.id === team.room_id);
       if (!room || room.zone_id !== filters.zone) return false;
+    }
+    if (filters.zoneManager) {
+      const zone = room ? zones.find((z) => z.id === room.zone_id) : null;
+      if (!zone || zone.zone_manager_profile_id !== filters.zoneManager) return false;
     }
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
@@ -119,6 +126,13 @@ export function TeamFilterBar({
               onChange={(v) => set("zone", v)}
               options={zones.map((z) => z.name)}
               valueOptions={zones.map((z) => z.id)}
+            />
+            <FilterSelect
+              label="Zone Manager"
+              value={filters.zoneManager}
+              onChange={(v) => set("zoneManager", v)}
+              options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
+              valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
             />
             <FilterSelect
               label="Venue"

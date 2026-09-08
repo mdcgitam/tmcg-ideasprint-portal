@@ -49,6 +49,8 @@ export function TeamsByMembersView({
   // Displayed team size = active members only (an approved exit deactivates the profile).
   const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
+  const zoneManagerName = (zone: ZoneRow | null) =>
+    zone?.zone_manager_profile_id ? (staffAccounts.find((s) => s.id === zone.zone_manager_profile_id)?.name ?? null) : null;
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
   const allRows: MemberRow[] = useMemo(
@@ -57,8 +59,8 @@ export function TeamsByMembersView({
   );
 
   const filteredRows = useMemo(
-    () => filterMembers(allRows, filters, rooms),
-    [allRows, filters, rooms],
+    () => filterMembers(allRows, filters, rooms, zones),
+    [allRows, filters, rooms, zones],
   );
 
   const groups = useMemo(() => {
@@ -93,6 +95,7 @@ export function TeamsByMembersView({
         Gender: m.gender,
         Stay: m.stay,
         Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
+        "Zone Manager": zoneManagerName(zoneOf(roomOf(team))) ?? "Unassigned",
         Venue: roomOf(team)?.name ?? "Unassigned",
         SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
         Status: memberStatusLabel(m),
@@ -129,7 +132,7 @@ export function TeamsByMembersView({
             onClick={handleDownloadAllMembers}
             className="rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
           >
-            Download All Members (CSV)
+            Download CSV
           </button>
         }
       />
@@ -163,6 +166,7 @@ export function TeamsByMembersView({
                 <th className="px-4 py-3">Gender</th>
                 <th className="px-4 py-3">Stay</th>
                 <th className="px-4 py-3">Zone</th>
+                <th className="px-4 py-3">Zone Manager</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">Status</th>
@@ -197,6 +201,7 @@ export function TeamsByMembersView({
                           <td className="px-4 py-3 text-ink-muted">{m.gender}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.stay}</td>
                           <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                           <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                           <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                           <td className="px-4 py-3">
@@ -231,6 +236,7 @@ export function TeamsByMembersView({
           ps={psOf(openTeam)}
           nocs={nocs}
           spocName={spocName(openTeam.spoc_profile_id)}
+          zoneManagerName={zoneManagerName(zoneOf(roomOf(openTeam)))}
           scope={scope}
           onTeamRenamed={onTeamRenamed}
           onTeamDeleted={(teamId) => {

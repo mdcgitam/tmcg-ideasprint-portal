@@ -340,7 +340,7 @@ export function ProblemStatementsAdminSection({
                   onClick={handleExportTeamView}
                   className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
                 >
-                  Export CSV
+                  Download CSV
                 </button>
                 <span className="font-heading text-xs text-ink-muted">Selected: {selected.size} team(s)</span>
               </div>

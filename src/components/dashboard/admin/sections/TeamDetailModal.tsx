@@ -45,6 +45,7 @@ export function TeamDetailModal({
   ps,
   nocs,
   spocName,
+  zoneManagerName,
   scope,
   onTeamRenamed,
   onTeamDeleted,
@@ -57,6 +58,7 @@ export function TeamDetailModal({
   ps: ProblemStatementRow | null;
   nocs: NocRow[];
   spocName: string | null;
+  zoneManagerName?: string | null;
   scope: "spoc" | "admin";
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
@@ -194,6 +196,7 @@ export function TeamDetailModal({
             ps={ps}
             nocs={localNocs}
             spocName={spocName}
+            zoneManagerName={zoneManagerName}
             scope={scope}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={(teamId) => {
