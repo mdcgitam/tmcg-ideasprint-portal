@@ -20,6 +20,7 @@ import {
   recordPresentation,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
+import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 
 interface PptFilters {
@@ -27,12 +28,22 @@ interface PptFilters {
   campus: string;
   teamSize: string;
   zone: string;
+  zoneManager: string;
   room: string;
   spoc: string;
   status: string; // "" | "Uploaded" | "Not Uploaded"
 }
 
-const EMPTY_PPT_FILTERS: PptFilters = { search: "", campus: "", teamSize: "", zone: "", room: "", spoc: "", status: "" };
+const EMPTY_PPT_FILTERS: PptFilters = {
+  search: "",
+  campus: "",
+  teamSize: "",
+  zone: "",
+  zoneManager: "",
+  room: "",
+  spoc: "",
+  status: "",
+};
 
 function toDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -94,6 +105,8 @@ export function PptSection({
   // Displayed team size = active members only (an approved exit deactivates the profile).
   const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
+  const zoneManagerName = (zone: ZoneRow | null) =>
+    zone?.zone_manager_profile_id ? (staffAccounts.find((s) => s.id === zone.zone_manager_profile_id)?.name ?? null) : null;
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
@@ -288,6 +301,7 @@ export function PptSection({
       if (filters.campus && lead?.campus !== filters.campus) return false;
       if (filters.teamSize && String(members.filter((m) => m.is_active).length || team.member_count) !== filters.teamSize) return false;
       if (filters.zone && zoneOf(roomOf(team))?.id !== filters.zone) return false;
+      if (filters.zoneManager && zoneOf(roomOf(team))?.zone_manager_profile_id !== filters.zoneManager) return false;
       if (filters.room && team.room_id !== filters.room) return false;
       if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
       if (filters.status && status !== filters.status) return false;
@@ -295,6 +309,35 @@ export function PptSection({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teams, membersByTeam, filters, localPresentations]);
+
+  function handleExportCsv() {
+    downloadCsv(
+      "ppt-teams",
+      visibleTeams.map((team) => {
+        const members = membersByTeam[team.id] ?? [];
+        const lead = members.find((m) => m.is_lead);
+        const zone = zoneOf(roomOf(team));
+        const presentation = localPresentations.find((p) => p.team_id === team.id);
+        const { iso: currentDeadline, isOverride } = effectiveDeadline(team.id);
+        return {
+          ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
+          "Team Name": team.team_name,
+          "Team Lead": lead?.name ?? "—",
+          "Lead Phone No": lead?.phone ?? "—",
+          "Team Size": String(teamSize(team)),
+          Zone: zone?.name ?? "Unassigned",
+          "Zone Manager": zoneManagerName(zone) ?? "Unassigned",
+          Venue: roomOf(team)?.name ?? "Unassigned",
+          SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
+          "PS Code": psOf(team)?.number ?? "—",
+          "PPT Status": presentation?.status ?? "Not Uploaded",
+          Deadline: currentDeadline
+            ? `${new Date(currentDeadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}${isOverride ? "" : " (General)"}`
+            : "Not set",
+        };
+      }),
+    );
+  }
 
   if (teams.length === 0) {
     return (
@@ -308,9 +351,18 @@ export function PptSection({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="font-heading text-xs text-ink-muted">
-        PPT files must be a PDF, 2 MB or less. Uploadable by the Team Lead, or by an Admin on the team&rsquo;s behalf.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="font-heading text-xs text-ink-muted">
+          PPT files must be a PDF, 2 MB or less. Uploadable by the Team Lead, or by an Admin on the team&rsquo;s behalf.
+        </p>
+        <button
+          type="button"
+          onClick={() => router.back()}
+          className="rounded-full border border-border px-4 py-2 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
+        >
+          Back
+        </button>
+      </div>
 
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Bulk Extend Deadline (selected teams)</span>
@@ -336,6 +388,13 @@ export function PptSection({
           >
             Clear
           </button>
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+          >
+            Download CSV
+          </button>
           <span className="font-heading text-xs text-ink-muted">Selected: {selected.size} team(s)</span>
         </div>
         {bulkError && <p className="font-heading text-xs text-danger">{bulkError}</p>}
@@ -359,6 +418,13 @@ export function PptSection({
               onChange={(v) => setFilters((f) => ({ ...f, zone: v }))}
               options={zones.map((z) => z.name)}
               valueOptions={zones.map((z) => z.id)}
+            />
+            <FilterSelect
+              label="Zone Manager"
+              value={filters.zoneManager}
+              onChange={(v) => setFilters((f) => ({ ...f, zoneManager: v }))}
+              options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
+              valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
             />
             <FilterSelect
               label="Venue"
@@ -409,6 +475,7 @@ export function PptSection({
                   <th className="px-4 py-3">Lead Phone No</th>
                   <th className="px-4 py-3">Team Size</th>
                   <th className="px-4 py-3">Zone</th>
+                  <th className="px-4 py-3">Zone Manager</th>
                   <th className="px-4 py-3">Venue</th>
                   <th className="px-4 py-3">SPOC</th>
                   <th className="px-4 py-3">PS Code</th>
@@ -449,6 +516,7 @@ export function PptSection({
                       <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                       <td className="px-4 py-3 text-ink-muted">{zone?.name ?? "Unassigned"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zone) ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{ps?.number ?? "—"}</td>

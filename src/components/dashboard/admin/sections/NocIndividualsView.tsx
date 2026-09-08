@@ -70,6 +70,7 @@ export function NocIndividualsView({
   const [campusFilter, setCampusFilter] = useState("");
   const [positionFilter, setPositionFilter] = useState(""); // "" | "lead" | "member"
   const [zoneFilter, setZoneFilter] = useState("");
+  const [zoneManagerFilter, setZoneManagerFilter] = useState("");
   const [venueFilter, setVenueFilter] = useState("");
   const [spocFilter, setSpocFilter] = useState("");
   const [fileStatusFilter, setFileStatusFilter] = useState("");
@@ -78,6 +79,8 @@ export function NocIndividualsView({
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomOf = (team: TeamRow) => rooms.find((r) => r.id === team.room_id) ?? null;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
+  const zoneManagerName = (zone: ZoneRow | null) =>
+    zone?.zone_manager_profile_id ? (staffAccounts.find((s) => s.id === zone.zone_manager_profile_id)?.name ?? null) : null;
 
   function toDatetimeLocal(iso: string | null | undefined): string {
     if (!iso) return "";
@@ -109,13 +112,14 @@ export function NocIndividualsView({
       if (campusFilter && member.campus !== campusFilter) return false;
       if (positionFilter && (positionFilter === "lead") !== member.is_lead) return false;
       if (zoneFilter && zoneOf(roomOf(team))?.id !== zoneFilter) return false;
+      if (zoneManagerFilter && zoneOf(roomOf(team))?.zone_manager_profile_id !== zoneManagerFilter) return false;
       if (venueFilter && team.room_id !== venueFilter) return false;
       if (spocFilter && team.spoc_profile_id !== spocFilter) return false;
       if (fileStatusFilter && (nocOf(member.id)?.status ?? "Not Uploaded") !== fileStatusFilter) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allRows, search, campusFilter, positionFilter, zoneFilter, venueFilter, spocFilter, fileStatusFilter, localNocs]);
+  }, [allRows, search, campusFilter, positionFilter, zoneFilter, zoneManagerFilter, venueFilter, spocFilter, fileStatusFilter, localNocs]);
 
   function toggleSelected(profileId: string) {
     setSelected((prev) => {
@@ -249,20 +253,24 @@ export function NocIndividualsView({
   function handleExportCsv() {
     downloadCsv(
       "noc-individuals",
-      filteredRows.map(({ member, team }) => ({
-        ...(singleCampus ? {} : { Campus: member.campus ?? "—" }),
-        "Team Name": team.team_name,
-        "Participant Name": member.name,
-        Position: member.is_lead ? "Team Lead" : "Member",
-        "Reg No": member.reg_no,
-        Email: member.gitam_email,
-        Phone: member.phone,
-        Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
-        Venue: roomOf(team)?.name ?? "Unassigned",
-        SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
-        "File Status": statusLabel(nocOf(member.id)?.status ?? "Not Uploaded"),
-        Deadline: deadlineDisplay(member.id),
-      })),
+      filteredRows.map(({ member, team }) => {
+        const zone = zoneOf(roomOf(team));
+        return {
+          ...(singleCampus ? {} : { Campus: member.campus ?? "—" }),
+          "Team Name": team.team_name,
+          "Participant Name": member.name,
+          Position: member.is_lead ? "Team Lead" : "Member",
+          "Reg No": member.reg_no,
+          Email: member.gitam_email,
+          Phone: member.phone,
+          Zone: zone?.name ?? "Unassigned",
+          "Zone Manager": zoneManagerName(zone) ?? "Unassigned",
+          Venue: roomOf(team)?.name ?? "Unassigned",
+          SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
+          "File Status": statusLabel(nocOf(member.id)?.status ?? "Not Uploaded"),
+          Deadline: deadlineDisplay(member.id),
+        };
+      }),
     );
   }
 
@@ -334,6 +342,13 @@ export function NocIndividualsView({
                 valueOptions={zones.map((z) => z.id)}
               />
               <FilterSelect
+                label="Zone Manager"
+                value={zoneManagerFilter}
+                onChange={setZoneManagerFilter}
+                options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
+                valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
+              />
+              <FilterSelect
                 label="Venue"
                 value={venueFilter}
                 onChange={setVenueFilter}
@@ -379,6 +394,7 @@ export function NocIndividualsView({
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Phone No</th>
                 <th className="px-4 py-3">Zone</th>
+                <th className="px-4 py-3">Zone Manager</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">File Status</th>
@@ -410,6 +426,7 @@ export function NocIndividualsView({
                     <td className="px-4 py-3 text-ink-muted">{member.gitam_email}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.phone}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneOf(roomOf(team))?.name ?? "Unassigned"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(roomOf(team))) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                     <td className="px-4 py-3">

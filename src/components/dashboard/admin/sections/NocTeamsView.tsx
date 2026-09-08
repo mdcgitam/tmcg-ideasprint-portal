@@ -59,6 +59,7 @@ export function NocTeamsView({
   const [campusFilter, setCampusFilter] = useState("");
   const [teamSizeFilter, setTeamSizeFilter] = useState("");
   const [zoneFilter, setZoneFilter] = useState("");
+  const [zoneManagerFilter, setZoneManagerFilter] = useState("");
   const [venueFilter, setVenueFilter] = useState("");
   const [spocFilter, setSpocFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
@@ -73,6 +74,8 @@ export function NocTeamsView({
   // Displayed team size = active members only (an approved exit deactivates the profile).
   const teamSize = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
   const zoneOf = (room: RoomRow | null) => (room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null);
+  const zoneManagerName = (zone: ZoneRow | null) =>
+    zone?.zone_manager_profile_id ? (staffAccounts.find((s) => s.id === zone.zone_manager_profile_id)?.name ?? null) : null;
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
   function uploadedCount(team: TeamRow) {
@@ -131,6 +134,7 @@ export function NocTeamsView({
       if (campusFilter && lead?.campus !== campusFilter) return false;
       if (teamSizeFilter && String(teamSize(team)) !== teamSizeFilter) return false;
       if (zoneFilter && zoneOf(roomOf(team))?.id !== zoneFilter) return false;
+      if (zoneManagerFilter && zoneOf(roomOf(team))?.zone_manager_profile_id !== zoneManagerFilter) return false;
       if (venueFilter && team.room_id !== venueFilter) return false;
       if (spocFilter && team.spoc_profile_id !== spocFilter) return false;
       if (statusFilter) {
@@ -141,7 +145,7 @@ export function NocTeamsView({
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, search, campusFilter, teamSizeFilter, zoneFilter, venueFilter, spocFilter, statusFilter, localNocs]);
+  }, [teams, membersByTeam, search, campusFilter, teamSizeFilter, zoneFilter, zoneManagerFilter, venueFilter, spocFilter, statusFilter, localNocs]);
 
   function toggleSelected(teamId: string) {
     setSelected((prev) => {
@@ -212,13 +216,15 @@ export function NocTeamsView({
       filteredTeams.map((team) => {
         const members = membersByTeam[team.id] ?? [];
         const lead = members.find((m) => m.is_lead);
+        const zone = zoneOf(roomOf(team));
         return {
           ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
           "Team Name": team.team_name,
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
           "Team Size": String(teamSize(team)),
-          Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
+          Zone: zone?.name ?? "Unassigned",
+          "Zone Manager": zoneManagerName(zone) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
           "No. of Uploads": `${uploadedCount(team)}/${members.length}`,
@@ -291,6 +297,13 @@ export function NocTeamsView({
               valueOptions={zones.map((z) => z.id)}
             />
             <FilterSelect
+              label="Zone Manager"
+              value={zoneManagerFilter}
+              onChange={setZoneManagerFilter}
+              options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
+              valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
+            />
+            <FilterSelect
               label="Venue"
               value={venueFilter}
               onChange={setVenueFilter}
@@ -339,6 +352,7 @@ export function NocTeamsView({
                 <th className="px-4 py-3">Lead Phone No</th>
                 <th className="px-4 py-3">Team Size</th>
                 <th className="px-4 py-3">Zone</th>
+                <th className="px-4 py-3">Zone Manager</th>
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">No. of Uploads</th>
@@ -371,6 +385,7 @@ export function NocTeamsView({
                     <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">
