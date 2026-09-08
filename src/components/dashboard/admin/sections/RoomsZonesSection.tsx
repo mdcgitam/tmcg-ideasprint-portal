@@ -16,6 +16,7 @@ import {
   updateZoneName,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
+import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
 
@@ -134,6 +135,28 @@ export function RoomsZonesSection({
   const campusFilterOptions = Array.from(new Set(localTeams.map((t) => campusOf(t))));
   const sizeFilterOptions = Array.from(new Set(localTeams.map((t) => sizeOf(t)))).sort((a, b) => a - b);
 
+  function handleExportViewCsv() {
+    downloadCsv(
+      "zones-venues-teams",
+      viewRows.map((team) => {
+        const lead = leadOf(team);
+        const { zoneName: zn, zoneManager, venueName, spoc } = teamContext(team);
+        return {
+          ...(singleCampus ? {} : { Campus: campusOf(team) }),
+          "Team Id": team.team_id,
+          "Team Name": team.team_name,
+          "Team Size": String(sizeOf(team)),
+          "Team Lead": lead?.name ?? "—",
+          "Lead Phone Number": lead?.phone ?? "—",
+          Zone: zn ?? "Unassigned",
+          "Zone Manager": zoneManager ?? "Unassigned",
+          Venue: venueName ?? "Unassigned",
+          SPOC: spoc ?? "Unassigned",
+        };
+      }),
+    );
+  }
+
   async function handleSaveTeamVenue(team: TeamRow) {
     const roomId = teamVenueDraft || null;
     setBusy(`edit-team:${team.id}`);
@@ -169,6 +192,34 @@ export function RoomsZonesSection({
     ...localZones.map((zone) => ({ zone, venues: localRooms.filter((r) => r.zone_id === zone.id) })),
     { zone: null, venues: localRooms.filter((r) => !r.zone_id) },
   ].filter((g) => g.zone !== null || g.venues.length > 0);
+
+  function handleExportZonesCsv() {
+    downloadCsv(
+      "zones-venues",
+      zoneGroups.flatMap(({ zone, venues }) => {
+        const rowCampus = zone?.campus ?? venues[0]?.campus ?? "—";
+        const zoneManager = zone ? staffById(zone.zone_manager_profile_id) : null;
+        if (venues.length === 0) {
+          return [
+            {
+              ...(singleCampus ? {} : { Campus: rowCampus }),
+              Zone: zone?.name ?? "Unassigned",
+              "Zone Manager": zoneManager ?? "Unassigned",
+              "Venues in that Zone": "No venues",
+              SPOC: "—",
+            },
+          ];
+        }
+        return venues.map((v) => ({
+          ...(singleCampus ? {} : { Campus: rowCampus }),
+          Zone: zone?.name ?? "Unassigned",
+          "Zone Manager": zoneManager ?? "Unassigned",
+          "Venues in that Zone": v.name,
+          SPOC: staffById(v.spoc_profile_id) ?? "Unassigned",
+        }));
+      }),
+    );
+  }
 
   function toggleTeamSelected(teamId: string) {
     setSelectedTeamIds((prev) => {
@@ -478,13 +529,23 @@ export function RoomsZonesSection({
               </div>
             </div>
 
-            {/* One table below both boxes: Campus / Zone / Venues in that zone / SPOC per venue, each editable + deletable */}
+            {/* One table below both boxes: Campus / Zone / Zone Manager / Venues in that zone / SPOC per venue, each editable + deletable */}
+            <div className="flex flex-wrap items-center justify-end">
+              <button
+                type="button"
+                onClick={handleExportZonesCsv}
+                className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+              >
+                Download CSV
+              </button>
+            </div>
             <div className="overflow-x-auto rounded-xl border border-border bg-surface">
               <table className="w-full text-left font-heading text-sm">
                 <thead>
                   <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                     {!singleCampus && <th className="px-4 py-3">Campus</th>}
                     <th className="px-4 py-3">Zone</th>
+                    <th className="px-4 py-3">Zone Manager</th>
                     <th className="px-4 py-3">Venues in that Zone</th>
                     <th className="px-4 py-3">SPOC</th>
                     <th className="px-4 py-3">Actions</th>
@@ -493,7 +554,7 @@ export function RoomsZonesSection({
                 <tbody>
                   {zoneGroups.length === 0 ? (
                     <tr>
-                      <td colSpan={singleCampus ? 4 : 5} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                      <td colSpan={singleCampus ? 5 : 6} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
                         No zones or venues yet.
                       </td>
                     </tr>
@@ -506,11 +567,17 @@ export function RoomsZonesSection({
                           {zone?.name ?? <span className="text-ink-faint">Unassigned</span>}
                         </td>
                       );
+                      const zoneManagerCell = (
+                        <td rowSpan={span} className="px-4 py-3 align-top text-ink-muted">
+                          {zone ? (staffById(zone.zone_manager_profile_id) ?? "Unassigned") : "—"}
+                        </td>
+                      );
                       if (venues.length === 0) {
                         return (
                           <tr key={zone!.id} className="border-b border-border last:border-0">
                             {!singleCampus && <td className="px-4 py-3 align-top text-ink-muted">{rowCampus}</td>}
                             {zoneCell}
+                            {zoneManagerCell}
                             <td className="px-4 py-3 text-ink-faint">No venues</td>
                             <td className="px-4 py-3 text-ink-faint">—</td>
                             <td className="px-4 py-3 text-ink-faint">—</td>
@@ -531,6 +598,7 @@ export function RoomsZonesSection({
                                       </td>
                                     )}
                                     {zoneCell}
+                                    {zoneManagerCell}
                                   </>
                                 )}
                                 <td className="px-4 py-3 text-ink">
@@ -704,7 +772,7 @@ export function RoomsZonesSection({
               />
               {!singleCampus && (
                 <select value={fCampus} onChange={(e) => setFCampus(e.target.value)} className={selectClass}>
-                  <option value="">All campuses</option>
+                  <option value="">Campus</option>
                   {campusFilterOptions.map((c) => (
                     <option key={c} value={c}>
                       {c}
@@ -721,7 +789,7 @@ export function RoomsZonesSection({
                 ))}
               </select>
               <select value={fZone} onChange={(e) => setFZone(e.target.value)} className={selectClass}>
-                <option value="">All zones</option>
+                <option value="">Zone</option>
                 {localZones.map((z) => (
                   <option key={z.id} value={z.id}>
                     {z.name}
@@ -729,7 +797,7 @@ export function RoomsZonesSection({
                 ))}
               </select>
               <select value={fZoneMgr} onChange={(e) => setFZoneMgr(e.target.value)} className={selectClass}>
-                <option value="">All zone managers</option>
+                <option value="">Zone Manager</option>
                 {zoneManagers.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name}
@@ -737,7 +805,7 @@ export function RoomsZonesSection({
                 ))}
               </select>
               <select value={fVenue} onChange={(e) => setFVenue(e.target.value)} className={selectClass}>
-                <option value="">All venues</option>
+                <option value="">Venue</option>
                 {localRooms.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
@@ -745,7 +813,7 @@ export function RoomsZonesSection({
                 ))}
               </select>
               <select value={fSpoc} onChange={(e) => setFSpoc(e.target.value)} className={selectClass}>
-                <option value="">All SPOCs</option>
+                <option value="">SPOC</option>
                 {spocs.map((s) => (
                   <option key={s.id} value={s.id}>
                     {s.name}
@@ -769,6 +837,13 @@ export function RoomsZonesSection({
                   Clear
                 </button>
               )}
+              <button
+                type="button"
+                onClick={handleExportViewCsv}
+                className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+              >
+                Download CSV
+              </button>
             </div>
 
             <div className="overflow-x-auto rounded-xl border border-border bg-surface">

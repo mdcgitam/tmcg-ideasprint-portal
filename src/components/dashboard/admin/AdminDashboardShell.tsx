@@ -74,25 +74,29 @@ function countForSlug(slug: string, counts: DashboardCardCounts): number {
 }
 
 // Order follows the requested module layout: Overview, Profile, Attendance,
-// NOC, PPT, Approvals, Notifications, Exit Submissions, ID Cards (shared by
-// every role); Zones and Venues, Problem Statements, Staff Accounts,
-// Configuration stay admin-privileged (Super Admin / Campus Admin only).
-const BASE_CARDS: CardDef[] = [
+// NOC, Problem Statements, PPT, ID Cards & Certificates, Zones and Venues,
+// Approvals, Notifications, Exit Submissions, Staff Accounts, Configuration.
+// Problem Statements, Zones and Venues, Staff Accounts, and Configuration
+// stay admin-privileged (Super Admin / Campus Admin only) — everything else
+// is shared by every role.
+interface OrderedCardDef extends CardDef {
+  adminOnly?: boolean;
+}
+
+const ALL_CARDS: OrderedCardDef[] = [
   { key: "Overview", slug: "overview", icon: LayoutDashboard },
   { key: "Profile", slug: "teams", icon: Users },
   { key: "Attendance", slug: "attendance", icon: CalendarCheck },
   { key: "NOC", slug: "noc", icon: FileCheck2 },
+  { key: "Problem Statements", slug: "problem-statements", icon: FileQuestion, adminOnly: true },
   { key: "PPT", slug: "ppt", icon: Presentation },
+  { key: "ID Cards & Certificates", slug: "id-cards", icon: IdCard },
+  { key: "Zones and Venues", slug: "rooms-zones", icon: DoorOpen, adminOnly: true },
   { key: "Approvals", slug: "approvals", icon: ClipboardCheck },
   { key: "Notifications", slug: "notifications", icon: Bell },
   { key: "Exit Submissions", slug: "exit-submissions", icon: LogOut },
-  { key: "ID Cards & Certificates", slug: "id-cards", icon: IdCard },
-];
-const ADMIN_ONLY_CARDS: CardDef[] = [
-  { key: "Zones and Venues", slug: "rooms-zones", icon: DoorOpen },
-  { key: "Problem Statements", slug: "problem-statements", icon: FileQuestion },
-  { key: "Staff Accounts", slug: "staff-accounts", icon: UserCog },
-  { key: "Configuration", slug: "configuration", icon: Settings },
+  { key: "Staff Accounts", slug: "staff-accounts", icon: UserCog, adminOnly: true },
+  { key: "Configuration", slug: "configuration", icon: Settings, adminOnly: true },
 ];
 
 /**
@@ -109,7 +113,7 @@ export function AdminDashboardShell({
   zoneRooms,
   activeRoomId,
 }: AdminDashboardShellProps) {
-  const cards: CardDef[] = scope === "admin" ? [...BASE_CARDS, ...ADMIN_ONLY_CARDS] : BASE_CARDS;
+  const cards: CardDef[] = scope === "admin" ? ALL_CARDS : ALL_CARDS.filter((c) => !c.adminOnly);
   const isSuper = profile.role === "Super Admin";
   const roleLabel = isSuper
     ? "Super Admin"
