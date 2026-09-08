@@ -55,9 +55,11 @@ function configString(config: Record<string, unknown>, key: string): string | nu
 /**
  * Problem Statements are catalogued in our DB only as bare number+status
  * rows (1–50) — the actual titles/content live in an admin-provided Google
- * Sheet, browsed externally by Team Leads. Releasing them ("Go Live"), the
- * sheet link, and the selection window (start & end) are all owned by
- * Configuration → Problem Statement Settings, not this module.
+ * Sheet, browsed externally by Team Leads. Releasing them ("Go Live") and the
+ * selection window (start & end) are both owned by Configuration → Problem
+ * Statement Settings, not this module — the sheet link is set there too, but
+ * shown here (read-only) for Super Admin, Campus Admin, Zone Manager, and
+ * SPOC, same as it's shown on the Team Lead/Member dashboard.
  */
 export function ProblemStatementsAdminSection({
   problemStatements,
@@ -69,6 +71,7 @@ export function ProblemStatementsAdminSection({
   staffAccounts,
   config,
   singleCampus = false,
+  hideVenue = false,
 }: {
   problemStatements: ProblemStatementRow[];
   problemStatementExtensions: ProblemStatementExtensionRow[];
@@ -79,6 +82,7 @@ export function ProblemStatementsAdminSection({
   staffAccounts: ProfileRow[];
   config: Record<string, unknown>;
   singleCampus?: boolean;
+  hideVenue?: boolean;
 }) {
   const [local, setLocal] = useState(problemStatements);
   const [localExtensions, setLocalExtensions] = useState(problemStatementExtensions);
@@ -87,9 +91,10 @@ export function ProblemStatementsAdminSection({
   const [view, setView] = useState<View>("team");
   const fadeRef = useTabFade(view);
 
-  // Selection window is configured in Configuration → Problem Statement
-  // Settings; read-only here.
+  // Selection window and the spreadsheet link are configured in Configuration
+  // → Problem Statement Settings; read-only here.
   const selectionEnd = configString(config, "problem_statement.selection_end");
+  const spreadsheetUrl = configString(config, "problem_statement.spreadsheet_url");
 
   // ── Team view: inline PS edit + per-team/bulk deadline ─────────────────
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
@@ -297,6 +302,19 @@ export function ProblemStatementsAdminSection({
 
   return (
     <div className="flex flex-col gap-6">
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Sheet</span>
+        {spreadsheetUrl ? (
+          <p className="mt-2 font-heading text-sm text-ink">
+            <a href={spreadsheetUrl} target="_blank" rel="noopener noreferrer" className="text-gold underline">
+              Open the problem statement sheet ↗
+            </a>
+          </p>
+        ) : (
+          <p className="mt-2 font-heading text-xs text-ink-muted">The problem statement list hasn&rsquo;t been shared yet.</p>
+        )}
+      </div>
+
       <ViewToggle
         value={view}
         onChange={setView}
@@ -356,20 +374,24 @@ export function ProblemStatementsAdminSection({
                   .sort((a, b) => a - b)
                   .map(String)}
               />
-              <FilterSelect
-                label="Zone"
-                value={filters.zone}
-                onChange={(v) => setFilters((f) => ({ ...f, zone: v }))}
-                options={zones.map((z) => z.name)}
-                valueOptions={zones.map((z) => z.id)}
-              />
-              <FilterSelect
-                label="Venue"
-                value={filters.room}
-                onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
-                options={rooms.map((r) => r.name)}
-                valueOptions={rooms.map((r) => r.id)}
-              />
+              {!hideVenue && (
+                <>
+                  <FilterSelect
+                    label="Zone"
+                    value={filters.zone}
+                    onChange={(v) => setFilters((f) => ({ ...f, zone: v }))}
+                    options={zones.map((z) => z.name)}
+                    valueOptions={zones.map((z) => z.id)}
+                  />
+                  <FilterSelect
+                    label="Venue"
+                    value={filters.room}
+                    onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
+                    options={rooms.map((r) => r.name)}
+                    valueOptions={rooms.map((r) => r.id)}
+                  />
+                </>
+              )}
               <FilterSelect
                 label="SPOC"
                 value={filters.spoc}

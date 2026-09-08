@@ -76,9 +76,10 @@ function countForSlug(slug: string, counts: DashboardCardCounts): number {
 // Order follows the requested module layout: Overview, Profile, Attendance,
 // NOC, Problem Statements, PPT, ID Cards & Certificates, Zones and Venues,
 // Approvals, Notifications, Exit Submissions, Staff Accounts, Configuration.
-// Problem Statements, Zones and Venues, Staff Accounts, and Configuration
-// stay admin-privileged (Super Admin / Campus Admin only) — everything else
-// is shared by every role.
+// Zones and Venues, Staff Accounts, and Configuration stay admin-privileged
+// (Super Admin / Campus Admin only) — everything else, Problem Statements
+// included, is shared by every role (each already scoped to just their own
+// teams/zone by fetchAdminDashboardData).
 interface OrderedCardDef extends CardDef {
   adminOnly?: boolean;
 }
@@ -88,7 +89,7 @@ const ALL_CARDS: OrderedCardDef[] = [
   { key: "Profile", slug: "teams", icon: Users },
   { key: "Attendance", slug: "attendance", icon: CalendarCheck },
   { key: "NOC", slug: "noc", icon: FileCheck2 },
-  { key: "Problem Statements", slug: "problem-statements", icon: FileQuestion, adminOnly: true },
+  { key: "Problem Statements", slug: "problem-statements", icon: FileQuestion },
   { key: "PPT", slug: "ppt", icon: Presentation },
   { key: "ID Cards & Certificates", slug: "id-cards", icon: IdCard },
   { key: "Zones and Venues", slug: "rooms-zones", icon: DoorOpen, adminOnly: true },
