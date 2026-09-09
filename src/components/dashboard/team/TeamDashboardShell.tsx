@@ -18,6 +18,7 @@ import type {
 import { Reveal } from "@/components/motion/Reveal";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
 import { DocumentsSection } from "@/components/dashboard/DocumentsSection";
+import { ScheduleSection } from "@/components/dashboard/ScheduleSection";
 import { useTabFade } from "@/hooks/useTabFade";
 import { teamActiveStatus } from "@/lib/dashboard/team-status";
 import { ProfileSection } from "./sections/ProfileSection";
@@ -53,6 +54,7 @@ export interface TeamDashboardShellProps {
 
 const TABS = [
   "Profile",
+  "Schedule",
   "Problem Statement",
   "Attendance",
   "NOC",
@@ -120,6 +122,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
               spocName={props.spocName}
             />
           )}
+          {tab === "Schedule" && <ScheduleSection config={props.config} profile={props.profile} />}
           {tab === "Problem Statement" && (
             <ProblemStatementSection
               team={props.team}

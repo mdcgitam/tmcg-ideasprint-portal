@@ -14,6 +14,7 @@ import {
   LogOut,
   IdCard,
   FolderOpen,
+  CalendarClock,
   type LucideIcon,
 } from "lucide-react";
 import type { ProfileRow } from "@/types/database";
@@ -57,6 +58,7 @@ interface OrderedCardDef extends CardDef {
 
 const ALL_CARDS: OrderedCardDef[] = [
   { key: "Overview", slug: "overview", icon: LayoutDashboard },
+  { key: "Schedule - Phase 1", slug: "schedule", icon: CalendarClock },
   { key: "Profile", slug: "teams", icon: Users },
   { key: "Attendance", slug: "attendance", icon: CalendarCheck },
   { key: "NOC", slug: "noc", icon: FileCheck2 },
