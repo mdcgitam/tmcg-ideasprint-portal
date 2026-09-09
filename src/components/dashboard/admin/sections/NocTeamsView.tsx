@@ -29,7 +29,9 @@ export function NocTeamsView({
   config,
   scope,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
   onTeamRenamed,
   onTeamDeleted,
 }: {
@@ -43,7 +45,9 @@ export function NocTeamsView({
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
   singleCampus?: boolean;
-  hideVenue?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
 }) {
@@ -287,7 +291,7 @@ export function NocTeamsView({
             .sort((a, b) => a - b)
             .map(String)}
         />
-        {!hideVenue && (
+        {!hideZoneFilters && (
           <>
             <FilterSelect
               label="Zone"
@@ -303,22 +307,26 @@ export function NocTeamsView({
               options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
               valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
             />
-            <FilterSelect
-              label="Venue"
-              value={venueFilter}
-              onChange={setVenueFilter}
-              options={rooms.map((r) => r.name)}
-              valueOptions={rooms.map((r) => r.id)}
-            />
           </>
         )}
-        <FilterSelect
-          label="SPOC"
-          value={spocFilter}
-          onChange={setSpocFilter}
-          options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
-          valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
-        />
+        {!hideVenueFilter && (
+          <FilterSelect
+            label="Venue"
+            value={venueFilter}
+            onChange={setVenueFilter}
+            options={rooms.map((r) => r.name)}
+            valueOptions={rooms.map((r) => r.id)}
+          />
+        )}
+        {!hideSpocFilter && (
+          <FilterSelect
+            label="SPOC"
+            value={spocFilter}
+            onChange={setSpocFilter}
+            options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
+            valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
+          />
+        )}
         <FilterSelect
           label="Status"
           value={statusFilter}

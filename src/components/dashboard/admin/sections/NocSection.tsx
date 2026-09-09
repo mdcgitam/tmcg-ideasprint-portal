@@ -22,7 +22,9 @@ export function NocSection({
   config,
   scope,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -34,7 +36,9 @@ export function NocSection({
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
   singleCampus?: boolean;
-  hideVenue?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
 }) {
   const [localTeams, setLocalTeams] = useState(teams);
   const [view, setView] = useState<View>("teams");
@@ -74,7 +78,9 @@ export function NocSection({
             config={config}
             scope={scope}
             singleCampus={singleCampus}
-            hideVenue={hideVenue}
+            hideZoneFilters={hideZoneFilters}
+            hideVenueFilter={hideVenueFilter}
+            hideSpocFilter={hideSpocFilter}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={onTeamDeleted}
           />
@@ -89,7 +95,9 @@ export function NocSection({
             config={config}
             scope={scope}
             singleCampus={singleCampus}
-            hideVenue={hideVenue}
+            hideZoneFilters={hideZoneFilters}
+            hideVenueFilter={hideVenueFilter}
+            hideSpocFilter={hideSpocFilter}
           />
         )}
       </div>

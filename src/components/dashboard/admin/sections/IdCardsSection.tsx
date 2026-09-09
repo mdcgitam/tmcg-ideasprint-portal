@@ -86,7 +86,9 @@ export function IdCardsSection({
   rooms,
   zones,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -97,7 +99,9 @@ export function IdCardsSection({
   rooms: RoomRow[];
   zones: ZoneRow[];
   singleCampus?: boolean;
-  hideVenue?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
 }) {
   const [localRecords, setLocalRecords] = useState(records);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -384,7 +388,7 @@ export function IdCardsSection({
                   onChange={(v) => setTeamFilters((f) => ({ ...f, teamSize: v }))}
                   options={["3", "4"]}
                 />
-                {!hideVenue && (
+                {!hideZoneFilters && (
                   <>
                     <FilterSelect
                       label="Zone"
@@ -400,22 +404,26 @@ export function IdCardsSection({
                       options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
                       valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
                     />
-                    <FilterSelect
-                      label="Venue"
-                      value={teamFilters.room}
-                      onChange={(v) => setTeamFilters((f) => ({ ...f, room: v }))}
-                      options={rooms.map((r) => r.name)}
-                      valueOptions={rooms.map((r) => r.id)}
-                    />
                   </>
                 )}
-                <FilterSelect
-                  label="SPOC"
-                  value={teamFilters.spoc}
-                  onChange={(v) => setTeamFilters((f) => ({ ...f, spoc: v }))}
-                  options={spocs.map((s) => s.name)}
-                  valueOptions={spocs.map((s) => s.id)}
-                />
+                {!hideVenueFilter && (
+                  <FilterSelect
+                    label="Venue"
+                    value={teamFilters.room}
+                    onChange={(v) => setTeamFilters((f) => ({ ...f, room: v }))}
+                    options={rooms.map((r) => r.name)}
+                    valueOptions={rooms.map((r) => r.id)}
+                  />
+                )}
+                {!hideSpocFilter && (
+                  <FilterSelect
+                    label="SPOC"
+                    value={teamFilters.spoc}
+                    onChange={(v) => setTeamFilters((f) => ({ ...f, spoc: v }))}
+                    options={spocs.map((s) => s.name)}
+                    valueOptions={spocs.map((s) => s.id)}
+                  />
+                )}
                 <FilterSelect
                   label="ID Card"
                   value={teamFilters.idCard}
@@ -607,7 +615,7 @@ export function IdCardsSection({
                   options={["Team Lead", "Member"]}
                   valueOptions={["lead", "member"]}
                 />
-                {!hideVenue && (
+                {!hideZoneFilters && (
                   <>
                     <FilterSelect
                       label="Zone"
@@ -623,22 +631,26 @@ export function IdCardsSection({
                       options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
                       valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
                     />
-                    <FilterSelect
-                      label="Venue"
-                      value={memberFilters.room}
-                      onChange={(v) => setMemberFilters((f) => ({ ...f, room: v }))}
-                      options={rooms.map((r) => r.name)}
-                      valueOptions={rooms.map((r) => r.id)}
-                    />
                   </>
                 )}
-                <FilterSelect
-                  label="SPOC"
-                  value={memberFilters.spoc}
-                  onChange={(v) => setMemberFilters((f) => ({ ...f, spoc: v }))}
-                  options={spocs.map((s) => s.name)}
-                  valueOptions={spocs.map((s) => s.id)}
-                />
+                {!hideVenueFilter && (
+                  <FilterSelect
+                    label="Venue"
+                    value={memberFilters.room}
+                    onChange={(v) => setMemberFilters((f) => ({ ...f, room: v }))}
+                    options={rooms.map((r) => r.name)}
+                    valueOptions={rooms.map((r) => r.id)}
+                  />
+                )}
+                {!hideSpocFilter && (
+                  <FilterSelect
+                    label="SPOC"
+                    value={memberFilters.spoc}
+                    onChange={(v) => setMemberFilters((f) => ({ ...f, spoc: v }))}
+                    options={spocs.map((s) => s.name)}
+                    valueOptions={spocs.map((s) => s.id)}
+                  />
+                )}
                 <FilterSelect
                   label="ID Card"
                   value={memberFilters.idCard}

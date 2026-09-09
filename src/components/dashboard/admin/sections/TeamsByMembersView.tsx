@@ -24,7 +24,9 @@ export function TeamsByMembersView({
   zones,
   problemStatements,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
   onTeamRenamed,
   onTeamDeleted,
 }: {
@@ -37,7 +39,9 @@ export function TeamsByMembersView({
   zones: ZoneRow[];
   problemStatements: ProblemStatementRow[];
   singleCampus?: boolean;
-  hideVenue?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
 }) {
@@ -125,7 +129,9 @@ export function TeamsByMembersView({
         zones={zones}
         staffAccounts={staffAccounts}
         singleCampus={singleCampus}
-        hideVenue={hideVenue}
+        hideZoneFilters={hideZoneFilters}
+        hideVenueFilter={hideVenueFilter}
+        hideSpocFilter={hideSpocFilter}
         extraActions={
           <button
             type="button"

@@ -67,7 +67,9 @@ export function PptSection({
   config,
   scope,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -79,7 +81,9 @@ export function PptSection({
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
   singleCampus?: boolean;
-  hideVenue?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
 }) {
   const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
   const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
@@ -401,7 +405,7 @@ export function PptSection({
           onChange={(v) => setFilters((f) => ({ ...f, teamSize: v }))}
           options={["3", "4"]}
         />
-        {!hideVenue && (
+        {!hideZoneFilters && (
           <>
             <FilterSelect
               label="Zone"
@@ -417,22 +421,26 @@ export function PptSection({
               options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
               valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
             />
-            <FilterSelect
-              label="Venue"
-              value={filters.room}
-              onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
-              options={rooms.map((r) => r.name)}
-              valueOptions={rooms.map((r) => r.id)}
-            />
           </>
         )}
-        <FilterSelect
-          label="SPOC"
-          value={filters.spoc}
-          onChange={(v) => setFilters((f) => ({ ...f, spoc: v }))}
-          options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
-          valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
-        />
+        {!hideVenueFilter && (
+          <FilterSelect
+            label="Venue"
+            value={filters.room}
+            onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
+            options={rooms.map((r) => r.name)}
+            valueOptions={rooms.map((r) => r.id)}
+          />
+        )}
+        {!hideSpocFilter && (
+          <FilterSelect
+            label="SPOC"
+            value={filters.spoc}
+            onChange={(v) => setFilters((f) => ({ ...f, spoc: v }))}
+            options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
+            valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
+          />
+        )}
         <FilterSelect
           label="PPT Status"
           value={filters.status}

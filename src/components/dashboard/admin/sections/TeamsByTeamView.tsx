@@ -28,7 +28,9 @@ export function TeamsByTeamView({
   nocs,
   scope,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
   onTeamRenamed,
   onTeamDeleted,
 }: {
@@ -42,7 +44,9 @@ export function TeamsByTeamView({
   nocs: NocRow[];
   scope: "spoc" | "admin";
   singleCampus?: boolean;
-  hideVenue?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
 }) {
@@ -108,7 +112,9 @@ export function TeamsByTeamView({
         zones={zones}
         staffAccounts={staffAccounts}
         singleCampus={singleCampus}
-        hideVenue={hideVenue}
+        hideZoneFilters={hideZoneFilters}
+        hideVenueFilter={hideVenueFilter}
+        hideSpocFilter={hideSpocFilter}
         extraActions={
           <button
             type="button"

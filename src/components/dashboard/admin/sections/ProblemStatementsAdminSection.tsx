@@ -74,7 +74,9 @@ export function ProblemStatementsAdminSection({
   staffAccounts,
   config,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
   canManage = false,
 }: {
   problemStatements: ProblemStatementRow[];
@@ -86,7 +88,9 @@ export function ProblemStatementsAdminSection({
   staffAccounts: ProfileRow[];
   config: Record<string, unknown>;
   singleCampus?: boolean;
-  hideVenue?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
   canManage?: boolean;
 }) {
   const [local, setLocal] = useState(problemStatements);
@@ -495,31 +499,33 @@ export function ProblemStatementsAdminSection({
                   .sort((a, b) => a - b)
                   .map(String)}
               />
-              {!hideVenue && (
-                <>
-                  <FilterSelect
-                    label="Zone"
-                    value={filters.zone}
-                    onChange={(v) => setFilters((f) => ({ ...f, zone: v }))}
-                    options={zones.map((z) => z.name)}
-                    valueOptions={zones.map((z) => z.id)}
-                  />
-                  <FilterSelect
-                    label="Venue"
-                    value={filters.room}
-                    onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
-                    options={rooms.map((r) => r.name)}
-                    valueOptions={rooms.map((r) => r.id)}
-                  />
-                </>
+              {!hideZoneFilters && (
+                <FilterSelect
+                  label="Zone"
+                  value={filters.zone}
+                  onChange={(v) => setFilters((f) => ({ ...f, zone: v }))}
+                  options={zones.map((z) => z.name)}
+                  valueOptions={zones.map((z) => z.id)}
+                />
               )}
-              <FilterSelect
-                label="SPOC"
-                value={filters.spoc}
-                onChange={(v) => setFilters((f) => ({ ...f, spoc: v }))}
-                options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
-                valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
-              />
+              {!hideVenueFilter && (
+                <FilterSelect
+                  label="Venue"
+                  value={filters.room}
+                  onChange={(v) => setFilters((f) => ({ ...f, room: v }))}
+                  options={rooms.map((r) => r.name)}
+                  valueOptions={rooms.map((r) => r.id)}
+                />
+              )}
+              {!hideSpocFilter && (
+                <FilterSelect
+                  label="SPOC"
+                  value={filters.spoc}
+                  onChange={(v) => setFilters((f) => ({ ...f, spoc: v }))}
+                  options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
+                  valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
+                />
+              )}
               <input
                 value={filters.search}
                 onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}

@@ -16,18 +16,18 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { ProfileRow } from "@/types/database";
-import type { DashboardCardCounts } from "@/lib/dashboard/admin-data";
 import { Reveal } from "@/components/motion/Reveal";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
 
 export interface AdminDashboardShellProps {
   profile: ProfileRow;
   scope: "spoc" | "admin" | "zone";
-  counts: DashboardCardCounts;
   /** Set for the global Super Admin: which campus module is active ("all" = every campus). */
   superCampus?: "VSP" | "BLR" | "HYD" | "all";
-  /** Zone Manager only: "<zone name(s)>, <campus>", shown next to the role label. */
+  /** Zone Manager only: "<zone name(s)>_<campus>", shown next to the role label. */
   zoneLabel?: string;
+  /** SPOC only: "<zone>_<venue>_<campus>", shown next to the role label. */
+  spocLabel?: string;
 }
 
 const CAMPUS_TABS: Array<{ code: "VSP" | "BLR" | "HYD" | "all"; label: string }> = [
@@ -41,34 +41,6 @@ interface CardDef {
   key: string;
   slug: string;
   icon: LucideIcon;
-}
-
-/** Cards whose count is an actionable/needs-attention queue get the red "urgent" badge; pure totals get a neutral gold one. */
-const URGENT_SLUGS = new Set(["notifications", "approvals", "exit-submissions", "noc", "ppt"]);
-
-function countForSlug(slug: string, counts: DashboardCardCounts): number {
-  switch (slug) {
-    case "teams":
-      return counts.teams;
-    case "approvals":
-      return counts.pendingApprovals;
-    case "exit-submissions":
-      return counts.pendingExits;
-    case "notifications":
-      return counts.unreadNotifications;
-    case "noc":
-      return counts.missingNocs;
-    case "ppt":
-      return counts.missingPpt;
-    case "rooms-zones":
-      return counts.rooms;
-    case "problem-statements":
-      return counts.problemStatements;
-    case "staff-accounts":
-      return counts.staffAccounts;
-    default:
-      return 0;
-  }
 }
 
 // Order follows the requested module layout: Overview, Profile, Attendance,
@@ -107,9 +79,9 @@ const ALL_CARDS: OrderedCardDef[] = [
 export function AdminDashboardShell({
   profile,
   scope,
-  counts,
   superCampus,
   zoneLabel,
+  spocLabel,
 }: AdminDashboardShellProps) {
   const cards: CardDef[] = scope === "admin" ? ALL_CARDS : ALL_CARDS.filter((c) => !c.adminOnly);
   const isSuper = profile.role === "Super Admin";
@@ -119,7 +91,7 @@ export function AdminDashboardShell({
       ? "Campus Admin"
       : scope === "zone"
         ? `Zone Manager${zoneLabel ? ` (${zoneLabel})` : ""}`
-        : "SPOC";
+        : `SPOC${spocLabel ? ` (${spocLabel})` : ""}`;
   const q = isSuper && superCampus ? `?campus=${superCampus}` : "";
 
   return (
@@ -159,31 +131,17 @@ export function AdminDashboardShell({
         )}
 
         <nav aria-label="Dashboard sections" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {cards.map(({ key, slug, icon: Icon }) => {
-            // Super Admin / Campus Admin / Zone Manager see a clean launcher grid — no needs-attention counts, unlike SPOC.
-            const count = scope === "admin" || scope === "zone" ? 0 : countForSlug(slug, counts);
-            const urgent = URGENT_SLUGS.has(slug);
-            return (
-              <Link
-                key={key}
-                href={`/dashboard/${scope}/${slug}${q}`}
-                target="_blank"
-                className="relative flex flex-col items-start gap-3 rounded-xl border border-border bg-surface px-4 py-4 text-left transition-colors hover:border-border-strong hover:bg-surface/80"
-              >
-                <Icon className="size-6 text-ink-muted" strokeWidth={1.5} />
-                <span className="font-heading text-sm text-ink">{key}</span>
-                {count > 0 && (
-                  <span
-                    className={`absolute top-3 right-3 rounded-full px-1.5 py-0.5 text-[10px] ${
-                      urgent ? "bg-danger text-ink" : "bg-gold/20 text-gold"
-                    }`}
-                  >
-                    {count}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
+          {cards.map(({ key, slug, icon: Icon }) => (
+            <Link
+              key={key}
+              href={`/dashboard/${scope}/${slug}${q}`}
+              target="_blank"
+              className="relative flex flex-col items-start gap-3 rounded-xl border border-border bg-surface px-4 py-4 text-left transition-colors hover:border-border-strong hover:bg-surface/80"
+            >
+              <Icon className="size-6 text-ink-muted" strokeWidth={1.5} />
+              <span className="font-heading text-sm text-ink">{key}</span>
+            </Link>
+          ))}
         </nav>
       </div>
     </main>

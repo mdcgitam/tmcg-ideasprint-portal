@@ -9,11 +9,16 @@ export async function ProblemStatementsRoute({ profile }: { profile: ProfileRow 
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   const canManage = profile.role === "Super Admin" || profile.role === "Campus Admin";
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
+  const isSpoc = profile.role === "SPOC";
+  const hideZoneFilters = isSpoc || profile.role === "Zone Manager";
 
   return (
     <SectionPageShell title="Problem Statements" scope={scope} campus={profile.campus}>
       <ProblemStatementsAdminSection
         singleCampus={singleCampus}
+        hideZoneFilters={hideZoneFilters}
+        hideVenueFilter={isSpoc}
+        hideSpocFilter={isSpoc}
         problemStatements={problemStatements}
         problemStatementExtensions={problemStatementExtensions}
         teams={teams}

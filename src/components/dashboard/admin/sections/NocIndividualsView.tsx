@@ -39,7 +39,9 @@ export function NocIndividualsView({
   config,
   scope,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -50,7 +52,9 @@ export function NocIndividualsView({
   config: Record<string, unknown>;
   scope: "spoc" | "admin";
   singleCampus?: boolean;
-  hideVenue?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
 }) {
   const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
   const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
@@ -332,7 +336,7 @@ export function NocIndividualsView({
             options={["Team Lead", "Member"]}
             valueOptions={["lead", "member"]}
           />
-          {!hideVenue && (
+          {!hideZoneFilters && (
             <>
               <FilterSelect
                 label="Zone"
@@ -348,22 +352,26 @@ export function NocIndividualsView({
                 options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
                 valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
               />
-              <FilterSelect
-                label="Venue"
-                value={venueFilter}
-                onChange={setVenueFilter}
-                options={rooms.map((r) => r.name)}
-                valueOptions={rooms.map((r) => r.id)}
-              />
             </>
           )}
-          <FilterSelect
-            label="SPOC"
-            value={spocFilter}
-            onChange={setSpocFilter}
-            options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
-            valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
-          />
+          {!hideVenueFilter && (
+            <FilterSelect
+              label="Venue"
+              value={venueFilter}
+              onChange={setVenueFilter}
+              options={rooms.map((r) => r.name)}
+              valueOptions={rooms.map((r) => r.id)}
+            />
+          )}
+          {!hideSpocFilter && (
+            <FilterSelect
+              label="SPOC"
+              value={spocFilter}
+              onChange={setSpocFilter}
+              options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
+              valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
+            />
+          )}
           <FilterSelect
             label="File Status"
             value={fileStatusFilter}

@@ -70,7 +70,9 @@ export function TeamFilterBar({
   staffAccounts,
   extraActions,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
 }: {
   filters: TeamFilters;
   onChange: (next: TeamFilters) => void;
@@ -83,8 +85,12 @@ export function TeamFilterBar({
   extraActions?: ReactNode;
   /** Hide the Campus filter when the view is locked to one campus. */
   singleCampus?: boolean;
-  /** Hide the Zone/Venue filters when a venue tab bar already covers them (Zone Manager). */
-  hideVenue?: boolean;
+  /** Hide the Zone/Zone Manager filters — always a single value for this viewer (Zone Manager, SPOC). */
+  hideZoneFilters?: boolean;
+  /** Hide the Venue filter — always a single value for this viewer (SPOC). */
+  hideVenueFilter?: boolean;
+  /** Hide the SPOC filter — always a single value for this viewer (SPOC). */
+  hideSpocFilter?: boolean;
 }) {
   function set<K extends keyof TeamFilters>(key: K, value: string) {
     onChange({ ...filters, [key]: value });
@@ -118,7 +124,7 @@ export function TeamFilterBar({
           <FilterSelect label="Campus" value={filters.campus} onChange={(v) => set("campus", v)} options={campusOptions} />
         )}
         <FilterSelect label="Team Size" value={filters.teamSize} onChange={(v) => set("teamSize", v)} options={["3", "4"]} />
-        {!hideVenue && (
+        {!hideZoneFilters && (
           <>
             <FilterSelect
               label="Zone"
@@ -134,22 +140,26 @@ export function TeamFilterBar({
               options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
               valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
             />
-            <FilterSelect
-              label="Venue"
-              value={filters.room}
-              onChange={(v) => set("room", v)}
-              options={rooms.map((r) => r.name)}
-              valueOptions={rooms.map((r) => r.id)}
-            />
           </>
         )}
-        <FilterSelect
-          label="SPOC"
-          value={filters.spoc}
-          onChange={(v) => set("spoc", v)}
-          options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
-          valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
-        />
+        {!hideVenueFilter && (
+          <FilterSelect
+            label="Venue"
+            value={filters.room}
+            onChange={(v) => set("room", v)}
+            options={rooms.map((r) => r.name)}
+            valueOptions={rooms.map((r) => r.id)}
+          />
+        )}
+        {!hideSpocFilter && (
+          <FilterSelect
+            label="SPOC"
+            value={filters.spoc}
+            onChange={(v) => set("spoc", v)}
+            options={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.name)}
+            valueOptions={staffAccounts.filter((s) => s.role === "SPOC").map((s) => s.id)}
+          />
+        )}
         <FilterSelect label="Status" value={filters.status} onChange={(v) => set("status", v)} options={[...TEAM_STATUS_OPTIONS]} />
       </div>
     </div>

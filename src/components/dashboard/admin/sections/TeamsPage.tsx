@@ -29,7 +29,9 @@ export function TeamsPage({
   zones,
   problemStatements,
   singleCampus = false,
-  hideVenue = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -41,7 +43,9 @@ export function TeamsPage({
   zones: ZoneRow[];
   problemStatements: ProblemStatementRow[];
   singleCampus?: boolean;
-  hideVenue?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
 }) {
   const [localTeams, setLocalTeams] = useState(teams);
   const [view, setView] = useState<View>("by-team");
@@ -79,7 +83,9 @@ export function TeamsPage({
             nocs={nocs}
             scope={scope}
             singleCampus={singleCampus}
-            hideVenue={hideVenue}
+            hideZoneFilters={hideZoneFilters}
+            hideVenueFilter={hideVenueFilter}
+            hideSpocFilter={hideSpocFilter}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={onTeamDeleted}
           />
@@ -94,7 +100,9 @@ export function TeamsPage({
             zones={zones}
             problemStatements={problemStatements}
             singleCampus={singleCampus}
-            hideVenue={hideVenue}
+            hideZoneFilters={hideZoneFilters}
+            hideVenueFilter={hideVenueFilter}
+            hideSpocFilter={hideSpocFilter}
             onTeamRenamed={onTeamRenamed}
             onTeamDeleted={onTeamDeleted}
           />

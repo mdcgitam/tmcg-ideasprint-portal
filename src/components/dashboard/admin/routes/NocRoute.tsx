@@ -8,11 +8,16 @@ export async function NocRoute({ profile }: { profile: ProfileRow }) {
     await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
+  const isSpoc = profile.role === "SPOC";
+  const hideZoneFilters = isSpoc || profile.role === "Zone Manager";
 
   return (
     <SectionPageShell title="NOC" scope={scope} campus={profile.campus}>
       <NocSection
         singleCampus={singleCampus}
+        hideZoneFilters={hideZoneFilters}
+        hideVenueFilter={isSpoc}
+        hideSpocFilter={isSpoc}
         teams={teams}
         membersByTeam={membersByTeam}
         nocs={nocs}
