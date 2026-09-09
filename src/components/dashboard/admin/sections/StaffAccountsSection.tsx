@@ -9,6 +9,7 @@ import {
   updateUserRole,
   deleteSpoc,
   deleteZoneManager,
+  deleteCampusAdmin,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
@@ -95,12 +96,15 @@ export function StaffAccountsSection({
   }
 
   async function handleDeleteStaff(s: ProfileRow) {
-    const label = s.role === "Zone Manager" ? "Zone Manager" : "SPOC";
-    if (!window.confirm(`Delete ${label} ${s.name}? They're unassigned from every ${s.role === "Zone Manager" ? "zone" : "venue"} first.`)) return;
+    const confirmMessage =
+      s.role === "Campus Admin"
+        ? `Delete Campus Admin ${s.name}?`
+        : `Delete ${s.role} ${s.name}? They're unassigned from every ${s.role === "Zone Manager" ? "zone" : "venue"} first.`;
+    if (!window.confirm(confirmMessage)) return;
     setChangingId(s.id);
     setRowError(null);
     try {
-      await (s.role === "Zone Manager" ? deleteZoneManager(s.id) : deleteSpoc(s.id));
+      await (s.role === "Campus Admin" ? deleteCampusAdmin(s.id) : s.role === "Zone Manager" ? deleteZoneManager(s.id) : deleteSpoc(s.id));
       setLocal((prev) => prev.filter((p) => p.id !== s.id));
     } catch (err) {
       setRowError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
@@ -221,7 +225,7 @@ export function StaffAccountsSection({
                             </option>
                           )}
                         </select>
-                        {(s.role === "SPOC" || s.role === "Zone Manager") && (
+                        {(s.role === "SPOC" || s.role === "Zone Manager" || (s.role === "Campus Admin" && canManageCampusAdmins)) && (
                           <button
                             type="button"
                             disabled={changingId === s.id}

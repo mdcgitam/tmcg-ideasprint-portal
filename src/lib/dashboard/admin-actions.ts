@@ -262,6 +262,10 @@ export function deleteZoneManager(profileId: string) {
   return callRpc<null>("delete_zone_manager", { p_profile_id: profileId });
 }
 
+export function deleteCampusAdmin(profileId: string) {
+  return callRpc<null>("delete_campus_admin", { p_profile_id: profileId });
+}
+
 // ── Edits (admin-only: rename a team, edit a member's/participant's details) ──
 
 export interface UpdateMemberInput {

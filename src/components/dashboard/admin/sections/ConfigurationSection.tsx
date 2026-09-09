@@ -80,9 +80,9 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
   const isSuperAdmin = profile.role === "Super Admin";
   const campus = profile.campus;
   // Super Admin viewing "All" (no campus module selected) edits the global
-  // key; a Campus Admin, or a Super Admin viewing one campus module, edits
-  // that campus's override — same rule Schedule uses. Privacy Policy / T&C
-  // stay gated on isSuperAdmin alone (visible regardless of campus module).
+  // key and is the only one who sees Privacy Policy / T&C (truly global,
+  // no campus override); a Campus Admin, or a Super Admin viewing one
+  // campus module, edits that campus's override — same rule Schedule uses.
   const isAllMode = isSuperAdmin && !campus;
 
   function writeKeyFor(baseKey: string): string {
@@ -94,7 +94,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
 
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
-    if (isSuperAdmin) {
+    if (isAllMode) {
       const rawPrivacy = config[PRIVACY_POLICY_KEY];
       initial[PRIVACY_POLICY_KEY] = typeof rawPrivacy === "string" ? rawPrivacy : "";
       const rawTnc = config[TNC_URL_KEY];
@@ -350,8 +350,8 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
           <>
             {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
             {DEADLINE_KEYS.map((d) => deadlineField(d))}
-            {isSuperAdmin && tncField()}
-            {isSuperAdmin && privacyField()}
+            {isAllMode && tncField()}
+            {isAllMode && privacyField()}
           </>
         ) : (
           documentsField()
