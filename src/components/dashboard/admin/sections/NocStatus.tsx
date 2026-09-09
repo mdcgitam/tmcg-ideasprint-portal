@@ -15,9 +15,10 @@ const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
 /**
  * NOC status + View/Delete actions for one member — shared by
- * TeamsByMembersView and TeamDetailModal. `canUpload` additionally lets
- * Super Admin upload/replace on the member's behalf (record_noc_metadata
- * and the noc-uploads storage policy already allow this — see 0015).
+ * TeamsByMembersView and TeamDetailModal. `canUpload` additionally lets an
+ * admin-side viewer (Super Admin / Campus Admin / SPOC / Zone Manager)
+ * upload/replace on the member's behalf (record_noc_metadata and the
+ * noc-uploads storage policy already allow this — see 0015, 0047).
  */
 export function NocStatus({
   profileId,

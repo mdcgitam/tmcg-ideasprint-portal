@@ -37,7 +37,6 @@ export function NocIndividualsView({
   zones,
   staffAccounts,
   config,
-  scope,
   singleCampus = false,
   hideZoneFilters = false,
   hideVenueFilter = false,
@@ -50,7 +49,6 @@ export function NocIndividualsView({
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
   config: Record<string, unknown>;
-  scope: "spoc" | "admin";
   singleCampus?: boolean;
   hideZoneFilters?: boolean;
   hideVenueFilter?: boolean;
@@ -407,7 +405,7 @@ export function NocIndividualsView({
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">File Status</th>
                 <th className="px-4 py-3">File</th>
-                {scope === "admin" && <th className="px-4 py-3">Admin Upload</th>}
+                <th className="px-4 py-3">Admin Upload</th>
                 <th className="px-4 py-3">Deadline</th>
               </tr>
             </thead>
@@ -459,33 +457,31 @@ export function NocIndividualsView({
                         )}
                       </div>
                     </td>
-                    {scope === "admin" && (
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-1">
-                          <input
-                            ref={(el) => {
-                              uploadInputRefs.current[member.id] = el;
-                            }}
-                            type="file"
-                            accept=".pdf,application/pdf"
-                            className="hidden"
-                            onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleAdminUpload(member.id, file);
-                              e.target.value = "";
-                            }}
-                          />
-                          <button
-                            type="button"
-                            disabled={busy}
-                            onClick={() => uploadInputRefs.current[member.id]?.click()}
-                            className="w-fit rounded-full bg-gold px-3 py-1 font-heading text-[11px] font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-                          >
-                            {busy ? "Uploading…" : uploaded ? "Replace" : "Upload"}
-                          </button>
-                        </div>
-                      </td>
-                    )}
+                    <td className="px-4 py-3">
+                      <div className="flex flex-col gap-1">
+                        <input
+                          ref={(el) => {
+                            uploadInputRefs.current[member.id] = el;
+                          }}
+                          type="file"
+                          accept=".pdf,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleAdminUpload(member.id, file);
+                            e.target.value = "";
+                          }}
+                        />
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => uploadInputRefs.current[member.id]?.click()}
+                          className="w-fit rounded-full bg-gold px-3 py-1 font-heading text-[11px] font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                        >
+                          {busy ? "Uploading…" : uploaded ? "Replace" : "Upload"}
+                        </button>
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         {(() => {

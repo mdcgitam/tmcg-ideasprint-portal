@@ -17,6 +17,7 @@ import type {
 } from "@/types/database";
 import { Reveal } from "@/components/motion/Reveal";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
+import { DocumentsSection } from "@/components/dashboard/DocumentsSection";
 import { useTabFade } from "@/hooks/useTabFade";
 import { teamActiveStatus } from "@/lib/dashboard/team-status";
 import { ProfileSection } from "./sections/ProfileSection";
@@ -59,6 +60,7 @@ const TABS = [
   "Exit Request",
   "Notifications",
   "ID Cards",
+  "Documents",
 ] as const;
 type Tab = (typeof TABS)[number];
 
@@ -155,6 +157,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
             <NotificationsSection profileId={props.profile.id} notifications={props.notifications} />
           )}
           {tab === "ID Cards" && <IdCardsSection />}
+          {tab === "Documents" && <DocumentsSection config={props.config} />}
         </div>
       </div>
     </main>

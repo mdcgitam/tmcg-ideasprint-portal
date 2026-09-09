@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { setConfiguration, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { parseDocumentLinks, type DocumentLink } from "@/components/dashboard/DocumentsSection";
+
+const DOCUMENTS_KEY = "documents.list";
 
 /**
  * SPEC §79-88: everything admin-configurable lives in one generic
@@ -88,6 +91,41 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
   });
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [message, setMessage] = useState<Record<string, string>>({});
+
+  const [documents, setDocuments] = useState<DocumentLink[]>(() => parseDocumentLinks(config));
+  const [newDocName, setNewDocName] = useState("");
+  const [newDocUrl, setNewDocUrl] = useState("");
+  const [savingDocs, setSavingDocs] = useState(false);
+  const [docsError, setDocsError] = useState<string | null>(null);
+
+  async function saveDocuments(next: DocumentLink[]) {
+    setSavingDocs(true);
+    setDocsError(null);
+    try {
+      await setConfiguration(DOCUMENTS_KEY, next, "Document links shown in the Documents module.");
+      setDocuments(next);
+    } catch (err) {
+      setDocsError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setSavingDocs(false);
+    }
+  }
+
+  function handleAddDocument() {
+    const name = newDocName.trim();
+    const url = newDocUrl.trim();
+    if (!name || !url) {
+      setDocsError("Enter both a name and a link.");
+      return;
+    }
+    saveDocuments([...documents, { name, url }]);
+    setNewDocName("");
+    setNewDocUrl("");
+  }
+
+  function handleRemoveDocument(index: number) {
+    saveDocuments(documents.filter((_, i) => i !== index));
+  }
 
   async function handleSave(key: string) {
     setSavingKey(key);
@@ -210,12 +248,67 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     );
   }
 
+  function documentsField() {
+    return (
+      <div className="rounded-xl border border-border bg-surface p-6">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Documents</span>
+        <p className="mt-1 font-heading text-xs text-ink-muted">
+          Shown as cards in every role&rsquo;s Documents module. Add as many links as you need.
+        </p>
+
+        {documents.length > 0 && (
+          <div className="mt-4 flex flex-col gap-2">
+            {documents.map((doc, i) => (
+              <div key={i} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-void px-4 py-2.5">
+                <span className="font-heading text-sm text-ink">{doc.name}</span>
+                <span className="flex-1 truncate font-heading text-xs text-ink-muted">{doc.url}</span>
+                <button
+                  type="button"
+                  disabled={savingDocs}
+                  onClick={() => handleRemoveDocument(i)}
+                  className="text-danger underline disabled:opacity-60"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <input
+            value={newDocName}
+            onChange={(e) => setNewDocName(e.target.value)}
+            placeholder="Name (e.g. Guidelines & Rule Book)"
+            className="min-w-[180px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <input
+            value={newDocUrl}
+            onChange={(e) => setNewDocUrl(e.target.value)}
+            placeholder="https://..."
+            className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            disabled={savingDocs}
+            onClick={handleAddDocument}
+            className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+          >
+            {savingDocs ? "Saving…" : "Add"}
+          </button>
+        </div>
+        {docsError && <p className="mt-2 font-heading text-xs text-danger">{docsError}</p>}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
       {DEADLINE_KEYS.map((d) => deadlineField(d))}
       {tncField()}
       {privacyField()}
+      {documentsField()}
     </div>
   );
 }

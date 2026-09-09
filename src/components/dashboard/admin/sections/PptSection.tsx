@@ -480,7 +480,7 @@ export function PptSection({
                   <th className="px-4 py-3">PS Code</th>
                   <th className="px-4 py-3">PPT Status</th>
                   <th className="px-4 py-3">PPT Link</th>
-                  {scope === "admin" && <th className="px-4 py-3">Admin Upload</th>}
+                  <th className="px-4 py-3">Admin Upload</th>
                   <th className="px-4 py-3">Deadline</th>
                 </tr>
               </thead>
@@ -550,33 +550,31 @@ export function PptSection({
                           {rowError && <span className="w-full font-heading text-[11px] text-danger">{rowError}</span>}
                         </div>
                       </td>
-                      {scope === "admin" && (
-                        <td className="px-4 py-3">
-                          <div className="flex flex-col gap-1">
-                            <input
-                              ref={(el) => {
-                                uploadInputRefs.current[team.id] = el;
-                              }}
-                              type="file"
-                              accept=".pdf,application/pdf"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (file) handleAdminUpload(team.id, file);
-                                e.target.value = "";
-                              }}
-                            />
-                            <button
-                              type="button"
-                              disabled={rowBusyHere}
-                              onClick={() => uploadInputRefs.current[team.id]?.click()}
-                              className="w-fit rounded-full bg-gold px-3 py-1 font-heading text-[11px] font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-                            >
-                              {rowBusyHere ? "Uploading…" : uploaded ? "Replace" : "Upload"}
-                            </button>
-                          </div>
-                        </td>
-                      )}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-col gap-1">
+                          <input
+                            ref={(el) => {
+                              uploadInputRefs.current[team.id] = el;
+                            }}
+                            type="file"
+                            accept=".pdf,application/pdf"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleAdminUpload(team.id, file);
+                              e.target.value = "";
+                            }}
+                          />
+                          <button
+                            type="button"
+                            disabled={rowBusyHere}
+                            onClick={() => uploadInputRefs.current[team.id]?.click()}
+                            className="w-fit rounded-full bg-gold px-3 py-1 font-heading text-[11px] font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                          >
+                            {rowBusyHere ? "Uploading…" : uploaded ? "Replace" : "Upload"}
+                          </button>
+                        </div>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-col gap-1">
                           <span className={`font-heading text-[11px] ${expired ? "text-danger" : "text-ink-muted"}`}>

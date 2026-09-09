@@ -321,7 +321,7 @@ export function TeamDetailModal({
                       <NocStatus
                         profileId={selectedMember.id}
                         noc={localNocs.find((n) => n.profile_id === selectedMember.id)}
-                        canUpload={scope === "admin"}
+                        canUpload
                         onDeleted={() =>
                           setLocalNocs((prev) =>
                             prev.map((n) =>

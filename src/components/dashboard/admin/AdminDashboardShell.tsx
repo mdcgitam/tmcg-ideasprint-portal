@@ -13,6 +13,7 @@ import {
   Presentation,
   LogOut,
   IdCard,
+  FolderOpen,
   type LucideIcon,
 } from "lucide-react";
 import type { ProfileRow } from "@/types/database";
@@ -64,6 +65,7 @@ const ALL_CARDS: OrderedCardDef[] = [
   { key: "ID Cards & Certificates", slug: "id-cards", icon: IdCard },
   { key: "Zones and Venues", slug: "rooms-zones", icon: DoorOpen, adminOnly: true },
   { key: "Approvals", slug: "approvals", icon: ClipboardCheck },
+  { key: "Documents", slug: "documents", icon: FolderOpen },
   { key: "Notifications", slug: "notifications", icon: Bell },
   { key: "Exit Submissions", slug: "exit-submissions", icon: LogOut },
   { key: "Staff Accounts", slug: "staff-accounts", icon: UserCog, adminOnly: true },

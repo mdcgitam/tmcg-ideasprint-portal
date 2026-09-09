@@ -93,7 +93,6 @@ export function NocSection({
             zones={zones}
             staffAccounts={staffAccounts}
             config={config}
-            scope={scope}
             singleCampus={singleCampus}
             hideZoneFilters={hideZoneFilters}
             hideVenueFilter={hideVenueFilter}
