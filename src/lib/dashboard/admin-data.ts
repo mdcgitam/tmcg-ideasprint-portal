@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { buildConfigMap } from "@/lib/dashboard/campus-config";
 import type {
   CampusCode,
   ProfileRow,
@@ -124,10 +125,7 @@ export async function fetchAdminDashboardData(
     list.sort((a, b) => Number(b.is_lead) - Number(a.is_lead));
   }
 
-  const config: Record<string, unknown> = {};
-  for (const row of (configRows ?? []) as ConfigurationRow[]) {
-    config[row.key] = row.value;
-  }
+  const config = buildConfigMap((configRows ?? []) as ConfigurationRow[]);
 
   let scopedTeams = (teams ?? []) as TeamRow[];
   let scopedMembersByTeam = membersByTeam;

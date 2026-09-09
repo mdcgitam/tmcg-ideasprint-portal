@@ -54,16 +54,16 @@ const TNC_URL_KEY = "terms_and_conditions.url";
 
 const DEADLINE_KEYS = [
   {
-    key: "ppt.general_deadline",
-    label: "General PPT Deadline",
-    hint: "Default presentation submission deadline for every team. Teams with an individually extended deadline (set from the PPT page) keep their own instead.",
-    description: "Default PPT submission deadline for teams without an individually extended deadline.",
-  },
-  {
     key: "noc.general_deadline",
     label: "General NOC Deadline",
     hint: "Default NOC submission deadline for every member. Members with an individually extended deadline (set from the NOC page) keep their own instead.",
     description: "Default NOC submission deadline for members without an individually extended deadline.",
+  },
+  {
+    key: "ppt.general_deadline",
+    label: "General PPT Deadline",
+    hint: "Default presentation submission deadline for every team. Teams with an individually extended deadline (set from the PPT page) keep their own instead.",
+    description: "Default PPT submission deadline for teams without an individually extended deadline.",
   },
 ] as const;
 
@@ -276,6 +276,30 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
             : `Global links plus your own additions, shown to ${campus}. Yours are removable; the Super Admin's aren't.`}
         </p>
 
+        <div className="mt-4 flex flex-wrap gap-3">
+          <input
+            value={newDocName}
+            onChange={(e) => setNewDocName(e.target.value)}
+            placeholder="Name (e.g. Guidelines & Rule Book)"
+            className="min-w-[180px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <input
+            value={newDocUrl}
+            onChange={(e) => setNewDocUrl(e.target.value)}
+            placeholder="https://..."
+            className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            disabled={savingDocs}
+            onClick={handleAddDocument}
+            className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+          >
+            {savingDocs ? "Saving…" : "Add"}
+          </button>
+        </div>
+        {docsError && <p className="mt-2 font-heading text-xs text-danger">{docsError}</p>}
+
         {visibleDocuments.length > 0 && (
           <div className="mt-4 flex flex-col gap-2">
             {visibleDocuments.map((doc, i) => {
@@ -302,30 +326,6 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
             })}
           </div>
         )}
-
-        <div className="mt-4 flex flex-wrap gap-3">
-          <input
-            value={newDocName}
-            onChange={(e) => setNewDocName(e.target.value)}
-            placeholder="Name (e.g. Guidelines & Rule Book)"
-            className="min-w-[180px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-          />
-          <input
-            value={newDocUrl}
-            onChange={(e) => setNewDocUrl(e.target.value)}
-            placeholder="https://..."
-            className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-          />
-          <button
-            type="button"
-            disabled={savingDocs}
-            onClick={handleAddDocument}
-            className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-          >
-            {savingDocs ? "Saving…" : "Add"}
-          </button>
-        </div>
-        {docsError && <p className="mt-2 font-heading text-xs text-danger">{docsError}</p>}
       </div>
     );
   }

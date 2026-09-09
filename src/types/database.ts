@@ -210,6 +210,7 @@ export interface ConfigurationRow {
   key: string;
   value: unknown;
   description: string | null;
+  updated_at: string;
 }
 
 export interface Database {

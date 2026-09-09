@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth/current-user";
 import { dashboardPathForRole } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
+import { buildConfigMap } from "@/lib/dashboard/campus-config";
 import { TeamDashboardShell } from "@/components/dashboard/team/TeamDashboardShell";
 import type {
   ProfileRow,
@@ -108,10 +109,7 @@ export default async function TeamDashboardPage() {
     ? await supabase.from("problem_statements").select("*").eq("id", teamRow.current_problem_statement_id).maybeSingle()
     : { data: null };
 
-  const config: Record<string, unknown> = {};
-  for (const row of (configRows ?? []) as ConfigurationRow[]) {
-    config[row.key] = row.value;
-  }
+  const config = buildConfigMap((configRows ?? []) as ConfigurationRow[]);
 
   return (
     <TeamDashboardShell
