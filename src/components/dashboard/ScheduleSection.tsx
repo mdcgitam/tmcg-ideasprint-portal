@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { CampusCode, ProfileRow } from "@/types/database";
 import { setConfiguration, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
+import { useTabFade } from "@/hooks/useTabFade";
 
 export interface ScheduleEntry {
   time: string;
@@ -25,6 +27,42 @@ export function parseScheduleEntries(config: Record<string, unknown>): ScheduleE
     .map((e) => ({ time: e.time, description: e.description, campus: e.campus ?? null }));
 }
 
+function campusView(entries: ScheduleEntry[], campus: CampusCode): ScheduleEntry[] {
+  return entries.filter((e) => !e.campus || e.campus === campus);
+}
+
+/** Plain read-only table — the "VSP View"/"HYD View"/"BLR View" tabs, and what every non-managing viewer sees. */
+function ReadOnlyTable({ entries }: { entries: ScheduleEntry[] }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+      <table className="w-full text-left font-heading text-sm">
+        <thead>
+          <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+            <th className="px-4 py-3">Time</th>
+            <th className="px-4 py-3">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.length === 0 ? (
+            <tr>
+              <td colSpan={2} className="px-4 py-8 text-center text-ink-muted">
+                No schedule published yet.
+              </td>
+            </tr>
+          ) : (
+            entries.map((entry, i) => (
+              <tr key={i} className="border-b border-border align-top last:border-0">
+                <td className="px-4 py-3 whitespace-nowrap text-ink">{entry.time}</td>
+                <td className="px-4 py-3 whitespace-pre-line text-ink-muted">{entry.description}</td>
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /**
  * Shared by every dashboard (admin/spoc/zone launcher pages and the Team
  * dashboard) — the read-only two-column Time/Action table everyone sees,
@@ -32,11 +70,12 @@ export function parseScheduleEntries(config: Record<string, unknown>): ScheduleE
  *
  * Editing scope follows the viewer's current campus, same as the Zones
  * tabs: a Campus Admin, or a Super Admin viewing one campus module, can
- * only add/remove entries tagged to that campus (never the untagged
+ * only add/edit/remove entries tagged to that campus (never the untagged
  * "every campus" rows) and can't reorder — new rows land at the end of the
  * master list. Only a Super Admin viewing "All" sees the full master list,
  * can tag a new row to a specific campus or leave it untagged for
- * everyone, and can reorder any row.
+ * everyone, and can reorder any row — plus gets three read-only preview
+ * tabs (one per campus) alongside the management view.
  */
 export function ScheduleSection({ config, profile }: { config: Record<string, unknown>; profile: ProfileRow }) {
   const canManage = profile.role === "Super Admin" || profile.role === "Campus Admin";
@@ -49,6 +88,14 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
   const [newCampus, setNewCampus] = useState<CampusCode | "">("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [editingEntry, setEditingEntry] = useState<ScheduleEntry | null>(null);
+  const [editTime, setEditTime] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+
+  type View = "manage" | CampusCode;
+  const [view, setView] = useState<View>("manage");
+  const fadeRef = useTabFade(view);
 
   async function save(next: ScheduleEntry[]) {
     setSaving(true);
@@ -90,12 +137,68 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
     save(next);
   }
 
+  function startEdit(entry: ScheduleEntry) {
+    setEditingEntry(entry);
+    setEditTime(entry.time);
+    setEditDescription(entry.description);
+    setError(null);
+  }
+
+  function cancelEdit() {
+    setEditingEntry(null);
+  }
+
+  function handleSaveEdit() {
+    if (!editingEntry) return;
+    const time = editTime.trim();
+    const description = editDescription.trim();
+    if (!time || !description) {
+      setError("Enter both a time and a description.");
+      return;
+    }
+    save(entries.map((e) => (e === editingEntry ? { ...e, time, description } : e)));
+    setEditingEntry(null);
+  }
+
   const visibleEntries = isAllMode ? entries : entries.filter((e) => !e.campus || e.campus === viewCampus);
-  const canRemove = (entry: ScheduleEntry) => isAllMode || entry.campus === viewCampus;
+  const canEditOrRemove = (entry: ScheduleEntry) => isAllMode || entry.campus === viewCampus;
   const columnCount = 2 + (isAllMode ? 1 : 0) + (canManage ? 1 : 0);
+
+  if (isAllMode && view !== "manage") {
+    return (
+      <div className="flex flex-col gap-4">
+        <ViewToggle
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "manage", label: "Create" },
+            { value: "VSP", label: "VSP View" },
+            { value: "HYD", label: "HYD View" },
+            { value: "BLR", label: "BLR View" },
+          ]}
+        />
+        <div ref={fadeRef}>
+          <ReadOnlyTable entries={campusView(entries, view)} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
+      {isAllMode && (
+        <ViewToggle
+          value={view}
+          onChange={setView}
+          options={[
+            { value: "manage", label: "Create" },
+            { value: "VSP", label: "VSP View" },
+            { value: "HYD", label: "HYD View" },
+            { value: "BLR", label: "BLR View" },
+          ]}
+        />
+      )}
+
       {canManage && (
         <div className="rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Add Entry</span>
@@ -163,49 +266,105 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
                 </td>
               </tr>
             ) : (
-              visibleEntries.map((entry, i) => (
-                <tr key={i} className="border-b border-border align-top last:border-0">
-                  <td className="px-4 py-3 whitespace-nowrap text-ink">{entry.time}</td>
-                  <td className="px-4 py-3 whitespace-pre-line text-ink-muted">{entry.description}</td>
-                  {isAllMode && <td className="px-4 py-3 text-ink-muted">{entry.campus ?? "All"}</td>}
-                  {canManage && (
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        {isAllMode && (
-                          <>
+              visibleEntries.map((entry, i) => {
+                const isEditing = editingEntry === entry;
+                return (
+                  <tr key={i} className="border-b border-border align-top last:border-0">
+                    {isEditing ? (
+                      <>
+                        <td className="px-4 py-3">
+                          <input
+                            value={editTime}
+                            onChange={(e) => setEditTime(e.target.value)}
+                            className="w-full min-w-[160px] rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                          />
+                        </td>
+                        <td className="px-4 py-3">
+                          <textarea
+                            value={editDescription}
+                            onChange={(e) => setEditDescription(e.target.value)}
+                            rows={2}
+                            className="w-full min-w-[220px] rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                          />
+                        </td>
+                        {isAllMode && <td className="px-4 py-3 text-ink-muted">{entry.campus ?? "All"}</td>}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
                             <button
                               type="button"
                               disabled={saving}
-                              onClick={() => handleMove(entry, -1)}
-                              className="rounded border border-border px-2 py-1 text-xs text-ink-muted hover:border-gold hover:text-gold disabled:opacity-60"
+                              onClick={handleSaveEdit}
+                              className="rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
                             >
-                              ↑
+                              {saving ? "Saving…" : "Save"}
                             </button>
                             <button
                               type="button"
                               disabled={saving}
-                              onClick={() => handleMove(entry, 1)}
-                              className="rounded border border-border px-2 py-1 text-xs text-ink-muted hover:border-gold hover:text-gold disabled:opacity-60"
+                              onClick={cancelEdit}
+                              className="text-ink-muted underline disabled:opacity-60"
                             >
-                              ↓
+                              Cancel
                             </button>
-                          </>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink">{entry.time}</td>
+                        <td className="px-4 py-3 whitespace-pre-line text-ink-muted">{entry.description}</td>
+                        {isAllMode && <td className="px-4 py-3 text-ink-muted">{entry.campus ?? "All"}</td>}
+                        {canManage && (
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              {isAllMode && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={saving}
+                                    onClick={() => handleMove(entry, -1)}
+                                    className="rounded border border-border px-2 py-1 text-xs text-ink-muted hover:border-gold hover:text-gold disabled:opacity-60"
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={saving}
+                                    onClick={() => handleMove(entry, 1)}
+                                    className="rounded border border-border px-2 py-1 text-xs text-ink-muted hover:border-gold hover:text-gold disabled:opacity-60"
+                                  >
+                                    ↓
+                                  </button>
+                                </>
+                              )}
+                              {canEditOrRemove(entry) && (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={saving}
+                                    onClick={() => startEdit(entry)}
+                                    className="text-gold underline disabled:opacity-60"
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={saving}
+                                    onClick={() => handleRemove(entry)}
+                                    className="text-danger underline disabled:opacity-60"
+                                  >
+                                    Remove
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
                         )}
-                        {canRemove(entry) && (
-                          <button
-                            type="button"
-                            disabled={saving}
-                            onClick={() => handleRemove(entry)}
-                            className="text-danger underline disabled:opacity-60"
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))
+                      </>
+                    )}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

@@ -79,10 +79,14 @@ type View = "settings" | "documents";
 export function ConfigurationSection({ config, profile }: { config: Record<string, unknown>; profile: ProfileRow }) {
   const isSuperAdmin = profile.role === "Super Admin";
   const campus = profile.campus;
+  // Super Admin viewing "All" (no campus module selected) edits the global
+  // key; a Campus Admin, or a Super Admin viewing one campus module, edits
+  // that campus's override — same rule Schedule uses. Privacy Policy / T&C
+  // stay gated on isSuperAdmin alone (visible regardless of campus module).
+  const isAllMode = isSuperAdmin && !campus;
 
-  // Campus Admin writes/reads a campus-suffixed key for these four; Super Admin always uses the global key.
   function writeKeyFor(baseKey: string): string {
-    return !isSuperAdmin && campus ? campusConfigKey(baseKey, campus) : baseKey;
+    return !isAllMode && campus ? campusConfigKey(baseKey, campus) : baseKey;
   }
 
   const [view, setView] = useState<View>("settings");
@@ -97,7 +101,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
       initial[TNC_URL_KEY] = typeof rawTnc === "string" ? rawTnc : "";
     }
     for (const { key } of [...SELECTION_WINDOW_KEYS, ...DEADLINE_KEYS]) {
-      initial[key] = toDatetimeLocal(effectiveConfigValue(config, key, isSuperAdmin ? null : campus));
+      initial[key] = toDatetimeLocal(effectiveConfigValue(config, key, isAllMode ? null : campus));
     }
     return initial;
   });
@@ -130,7 +134,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
       setDocsError("Enter both a name and a link.");
       return;
     }
-    saveDocuments([...documents, { name, url, campus: isSuperAdmin ? null : campus }]);
+    saveDocuments([...documents, { name, url, campus: isAllMode ? null : campus }]);
     setNewDocName("");
     setNewDocUrl("");
   }
@@ -158,7 +162,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
     try {
       const iso = values[baseKey] ? new Date(values[baseKey]).toISOString() : null;
       await setConfiguration(writeKeyFor(baseKey), iso, description);
-      setMessage((m) => ({ ...m, [baseKey]: isSuperAdmin ? "Saved." : `Saved — applies to ${campus} only.` }));
+      setMessage((m) => ({ ...m, [baseKey]: isAllMode ? "Saved." : `Saved — applies to ${campus} only.` }));
     } catch (err) {
       setMessage((m) => ({ ...m, [baseKey]: err instanceof DashboardActionError ? err.message : "Something went wrong." }));
     } finally {
@@ -181,9 +185,9 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
       <div key={key} className="rounded-xl border border-border bg-surface p-6">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">{label}</span>
         <p className="mt-1 font-heading text-xs text-ink-muted">{hint}</p>
-        {!isSuperAdmin && (
+        {!isAllMode && (
           <p className="mt-1 font-heading text-xs text-gold">
-            Showing the value in effect for {campus} — your own override if set, otherwise the Super Admin&rsquo;s default. Saving only changes it for {campus}.
+            Showing the value in effect for {campus} — your own override if set, otherwise the Super Admin&rsquo;s global default. Saving only changes it for {campus}.
           </p>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -266,14 +270,14 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
   }
 
   function documentsField() {
-    const visibleDocuments = isSuperAdmin ? documents : documents.filter((d) => !d.campus || d.campus === campus);
+    const visibleDocuments = isAllMode ? documents : documents.filter((d) => !d.campus || d.campus === campus);
     return (
       <div className="rounded-xl border border-border bg-surface p-6">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Documents</span>
         <p className="mt-1 font-heading text-xs text-ink-muted">
-          {isSuperAdmin
+          {isAllMode
             ? "Shown as cards in every role's Documents module. Add as many links as you need."
-            : `Global links plus your own additions, shown to ${campus}. Yours are removable; the Super Admin's aren't.`}
+            : `Global links plus your own additions, shown to ${campus}. Yours are removable; the global ones aren't.`}
         </p>
 
         <div className="mt-4 flex flex-wrap gap-3">
@@ -303,11 +307,11 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
         {visibleDocuments.length > 0 && (
           <div className="mt-4 flex flex-col gap-2">
             {visibleDocuments.map((doc, i) => {
-              const canRemove = isSuperAdmin || doc.campus === campus;
+              const canRemove = isAllMode || doc.campus === campus;
               return (
                 <div key={i} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-void px-4 py-2.5">
                   <span className="font-heading text-sm text-ink">{doc.name}</span>
-                  {!doc.campus && !isSuperAdmin && (
+                  {!doc.campus && !isAllMode && (
                     <span className="rounded-full bg-gold/10 px-2 py-0.5 font-heading text-[10px] text-gold uppercase">Global</span>
                   )}
                   <span className="flex-1 truncate font-heading text-xs text-ink-muted">{doc.url}</span>
