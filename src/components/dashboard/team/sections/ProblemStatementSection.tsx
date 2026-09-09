@@ -7,9 +7,10 @@ import { selectProblemStatement, DashboardActionError } from "@/lib/dashboard/te
 /**
  * SPEC §30-38: problem statements are browsed via an admin-provided
  * spreadsheet link (not an in-app catalog), and the Team Lead selects by
- * entering the PS number, not browse-and-click. Both the spreadsheet link
- * and the selection window are admin config (Phase 6) — until then this
- * honestly shows "not provided yet" / "not open yet" rather than faking it.
+ * entering the PS number, not browse-and-click. The spreadsheet link stays
+ * hidden until Go Live (problem_statement.live_at is set) — set on the
+ * admin Problem Statements page, not shown here until then rather than
+ * faking it.
  */
 export function ProblemStatementSection({
   team,
@@ -29,7 +30,8 @@ export function ProblemStatementSection({
     currentProblemStatement ? { number: currentProblemStatement.number, title: currentProblemStatement.title } : null,
   );
 
-  const spreadsheetUrl = typeof config["problem_statement.spreadsheet_url"] === "string"
+  const liveAt = typeof config["problem_statement.live_at"] === "string" ? (config["problem_statement.live_at"] as string) : null;
+  const spreadsheetUrl = liveAt && typeof config["problem_statement.spreadsheet_url"] === "string"
     ? (config["problem_statement.spreadsheet_url"] as string)
     : null;
 
@@ -66,7 +68,7 @@ export function ProblemStatementSection({
             </a>
           </p>
         ) : (
-          <p className="mt-3 font-heading text-sm text-ink-muted">The problem statement list hasn&rsquo;t been shared yet.</p>
+          <p className="mt-3 font-heading text-sm text-ink-muted">The problem statement list hasn&rsquo;t gone live yet.</p>
         )}
       </div>
 

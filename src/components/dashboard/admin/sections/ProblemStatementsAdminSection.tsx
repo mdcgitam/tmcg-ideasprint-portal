@@ -13,6 +13,8 @@ import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import {
   adminSetProblemStatement,
   extendProblemStatementDeadline,
+  setConfiguration,
+  upsertProblemStatement,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
@@ -55,11 +57,12 @@ function configString(config: Record<string, unknown>, key: string): string | nu
 /**
  * Problem Statements are catalogued in our DB only as bare number+status
  * rows (1–50) — the actual titles/content live in an admin-provided Google
- * Sheet, browsed externally by Team Leads. Releasing them ("Go Live") and the
- * selection window (start & end) are both owned by Configuration → Problem
- * Statement Settings, not this module — the sheet link is set there too, but
- * shown here (read-only) for Super Admin, Campus Admin, Zone Manager, and
- * SPOC, same as it's shown on the Team Lead/Member dashboard.
+ * Sheet, browsed externally by Team Leads. The sheet URL and the "Go Live"
+ * release control live here (Super Admin / Campus Admin only) rather than in
+ * Configuration. Until Go Live is clicked, the sheet link stays hidden from
+ * Zone Manager / SPOC (here) and Team Lead / Member (on their own
+ * dashboard) — "live" is recorded as a timestamp
+ * (problem_statement.live_at) so there's a record of when it happened.
  */
 export function ProblemStatementsAdminSection({
   problemStatements,
@@ -72,6 +75,7 @@ export function ProblemStatementsAdminSection({
   config,
   singleCampus = false,
   hideVenue = false,
+  canManage = false,
 }: {
   problemStatements: ProblemStatementRow[];
   problemStatementExtensions: ProblemStatementExtensionRow[];
@@ -83,6 +87,7 @@ export function ProblemStatementsAdminSection({
   config: Record<string, unknown>;
   singleCampus?: boolean;
   hideVenue?: boolean;
+  canManage?: boolean;
 }) {
   const [local, setLocal] = useState(problemStatements);
   const [localExtensions, setLocalExtensions] = useState(problemStatementExtensions);
@@ -91,10 +96,82 @@ export function ProblemStatementsAdminSection({
   const [view, setView] = useState<View>("team");
   const fadeRef = useTabFade(view);
 
-  // Selection window and the spreadsheet link are configured in Configuration
-  // → Problem Statement Settings; read-only here.
+  const selectionStart = configString(config, "problem_statement.selection_start");
   const selectionEnd = configString(config, "problem_statement.selection_end");
-  const spreadsheetUrl = configString(config, "problem_statement.spreadsheet_url");
+  const [spreadsheetUrl, setSpreadsheetUrl] = useState(configString(config, "problem_statement.spreadsheet_url") ?? "");
+  const [savingUrl, setSavingUrl] = useState(false);
+  const [urlMessage, setUrlMessage] = useState<string | null>(null);
+  const [liveAt, setLiveAt] = useState(configString(config, "problem_statement.live_at"));
+  const [goingLive, setGoingLive] = useState(false);
+  const [goLiveError, setGoLiveError] = useState<string | null>(null);
+
+  async function handleSaveUrl() {
+    setSavingUrl(true);
+    setUrlMessage(null);
+    try {
+      await setConfiguration("problem_statement.spreadsheet_url", spreadsheetUrl || null, "Problem statement spreadsheet URL.");
+      setUrlMessage("Saved.");
+    } catch (err) {
+      setUrlMessage(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setSavingUrl(false);
+    }
+  }
+
+  async function handleGoLive() {
+    if (!selectionStart || !selectionEnd) {
+      setGoLiveError("Set the selection window (start & end) in Configuration before going live.");
+      return;
+    }
+    if (!spreadsheetUrl.trim()) {
+      setGoLiveError("Add the spreadsheet URL above before going live.");
+      return;
+    }
+    setGoingLive(true);
+    setGoLiveError(null);
+    try {
+      const results = await Promise.all(
+        Array.from({ length: PS_MAX - PS_MIN + 1 }, (_, i) => String(PS_MIN + i)).map(async (number) => {
+          const existing = local.find((p) => p.number === number);
+          const id = await upsertProblemStatement({
+            id: existing?.id ?? null,
+            number,
+            title: existing?.title || `Problem Statement ${number}`,
+            description: existing?.description ?? "",
+            status: "Released",
+          });
+          return { id, number, existing };
+        }),
+      );
+
+      setLocal((prev) => {
+        const next = [...prev];
+        for (const { id, number, existing } of results) {
+          const row: ProblemStatementRow = {
+            id,
+            number,
+            title: existing?.title || `Problem Statement ${number}`,
+            description: existing?.description ?? null,
+            status: "Released",
+            created_at: existing?.created_at ?? new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          const idx = next.findIndex((p) => p.id === id);
+          if (idx >= 0) next[idx] = row;
+          else next.push(row);
+        }
+        return next;
+      });
+
+      const nowIso = new Date().toISOString();
+      await setConfiguration("problem_statement.live_at", nowIso, "When problem statements were released (Go Live).");
+      setLiveAt(nowIso);
+    } catch (err) {
+      setGoLiveError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setGoingLive(false);
+    }
+  }
 
   // ── Team view: inline PS edit + per-team/bulk deadline ─────────────────
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
@@ -302,18 +379,62 @@ export function ProblemStatementsAdminSection({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="rounded-xl border border-border bg-surface p-4">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Sheet</span>
-        {spreadsheetUrl ? (
-          <p className="mt-2 font-heading text-sm text-ink">
-            <a href={spreadsheetUrl} target="_blank" rel="noopener noreferrer" className="text-gold underline">
-              Open the problem statement sheet ↗
-            </a>
+      {canManage ? (
+        <div className="rounded-xl border border-border bg-surface p-6">
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Spreadsheet URL</span>
+          <p className="mt-1 font-heading text-xs text-ink-muted">
+            Hidden from Zone Manager, SPOC, and Team Lead / Member until you click Go Live below.
           </p>
-        ) : (
-          <p className="mt-2 font-heading text-xs text-ink-muted">The problem statement list hasn&rsquo;t been shared yet.</p>
-        )}
-      </div>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <input
+              value={spreadsheetUrl}
+              onChange={(e) => setSpreadsheetUrl(e.target.value)}
+              placeholder="https://docs.google.com/spreadsheets/..."
+              className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+            />
+            <button
+              type="button"
+              disabled={savingUrl}
+              onClick={handleSaveUrl}
+              className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+            >
+              {savingUrl ? "Saving…" : "Save"}
+            </button>
+          </div>
+          {urlMessage && <p className="mt-2 font-heading text-xs text-ink-muted">{urlMessage}</p>}
+
+          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-5">
+            <button
+              type="button"
+              disabled={goingLive}
+              onClick={handleGoLive}
+              className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+            >
+              {goingLive ? "Going Live…" : "Go Live Now"}
+            </button>
+            <span className="font-heading text-xs text-ink-muted">
+              {liveAt ? `Live since ${fmtDateTime(liveAt)}` : "Not live yet — the sheet is hidden from other roles."}
+            </span>
+          </div>
+          {goLiveError && <p className="mt-2 font-heading text-xs text-danger">{goLiveError}</p>}
+        </div>
+      ) : (
+        <div className="rounded-xl border border-border bg-surface p-4">
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Sheet</span>
+          {liveAt && spreadsheetUrl ? (
+            <>
+              <p className="mt-2 font-heading text-sm text-ink">
+                <a href={spreadsheetUrl} target="_blank" rel="noopener noreferrer" className="text-gold underline">
+                  Open the problem statement sheet ↗
+                </a>
+              </p>
+              <p className="mt-1 font-heading text-xs text-ink-muted">Live since {fmtDateTime(liveAt)}.</p>
+            </>
+          ) : (
+            <p className="mt-2 font-heading text-xs text-ink-muted">The problem statement list hasn&rsquo;t gone live yet.</p>
+          )}
+        </div>
+      )}
 
       <ViewToggle
         value={view}

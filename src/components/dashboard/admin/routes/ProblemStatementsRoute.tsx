@@ -8,6 +8,7 @@ export async function ProblemStatementsRoute({ profile, roomId }: { profile: Pro
   const { problemStatements, problemStatementExtensions, teams, membersByTeam, rooms, zones, staffAccounts, config } =
     await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
+  const canManage = profile.role === "Super Admin" || profile.role === "Campus Admin";
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
   const isZoneManager = profile.role === "Zone Manager";
   const venueTabs = isZoneManager ? (
@@ -27,6 +28,7 @@ export async function ProblemStatementsRoute({ profile, roomId }: { profile: Pro
         zones={zones}
         staffAccounts={staffAccounts}
         config={config}
+        canManage={canManage}
       />
     </SectionPageShell>
   );

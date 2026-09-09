@@ -1,15 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ProblemStatementRow } from "@/types/database";
-import { setConfiguration, upsertProblemStatement, DashboardActionError } from "@/lib/dashboard/admin-actions";
-import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
-import { useTabFade } from "@/hooks/useTabFade";
-
-const PS_MIN = 1;
-const PS_MAX = 50;
-
-type View = "all" | "by-category";
+import { setConfiguration, DashboardActionError } from "@/lib/dashboard/admin-actions";
 
 /**
  * SPEC §79-88: everything admin-configurable lives in one generic
@@ -19,10 +11,11 @@ type View = "all" | "by-category";
  * string (e.g. 2026-09-25T16:00:00.000Z), the form the consuming RPCs read
  * back as raw text (select_problem_statement in supabase/migrations/
  * 0002/0003; record_presentation / record_noc_metadata in 0027/0028).
+ *
+ * The Problem Statement spreadsheet URL and the "Go Live" release control
+ * live on the Problem Statements page instead — see
+ * ProblemStatementsAdminSection.tsx.
  */
-const KNOWN_KEYS = [
-  { key: "problem_statement.spreadsheet_url", label: "Problem Statement Spreadsheet URL", placeholder: "https://docs.google.com/spreadsheets/..." },
-] as const;
 
 // Selection window — calendar date + time pickers. Stored as a
 // timestamptz-parseable ISO string (same convention as the deadline keys
@@ -32,24 +25,16 @@ const KNOWN_KEYS = [
 const SELECTION_WINDOW_KEYS = [
   {
     key: "problem_statement.selection_start",
-    label: "Selection Window Start",
+    label: "Problem Statement Selection Start",
     hint: "When Team Leads can begin selecting a problem statement.",
     description: "Problem statement selection window open time.",
   },
   {
     key: "problem_statement.selection_end",
-    label: "Selection Window End",
+    label: "Problem Statement Selection End",
     hint: "When problem statement selection closes. Also the default deadline shown per team in the Problem Statements module.",
     description: "Problem statement selection window close time.",
   },
-] as const;
-
-// Homepage Journey section (University Level card) shows "to be announced"
-// for either of these until set — the Grand Finale's date/venue genuinely
-// isn't confirmed pre-launch.
-const GRAND_FINALE_KEYS = [
-  { key: "grand_finale.date", label: "Grand Finale Date", placeholder: "e.g. December 2026" },
-  { key: "grand_finale.venue", label: "Grand Finale Venue", placeholder: "e.g. GITAM Bengaluru" },
 ] as const;
 
 // Item 23: Super Admin edits the /privacy page content directly from here —
@@ -65,7 +50,7 @@ const TNC_URL_KEY = "terms_and_conditions.url";
 // (record_presentation 0027 / record_noc_metadata 0028) as the default
 // deadline for teams/members without an individually extended one. Stored
 // as a timestamptz-parseable ISO string, same convention as every other
-// datetime config value — see KNOWN_KEYS' comment above.
+// datetime config value.
 const DEADLINE_KEYS = [
   {
     key: "ppt.general_deadline",
@@ -88,24 +73,9 @@ function toDatetimeLocal(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function fmtDateTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
-}
-
-export function ConfigurationSection({
-  config,
-  problemStatements,
-}: {
-  config: Record<string, unknown>;
-  problemStatements: ProblemStatementRow[];
-}) {
+export function ConfigurationSection({ config }: { config: Record<string, unknown> }) {
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
-    for (const { key } of [...KNOWN_KEYS, ...GRAND_FINALE_KEYS]) {
-      const raw = config[key];
-      initial[key] = typeof raw === "string" ? raw : "";
-    }
     const rawPrivacy = config[PRIVACY_POLICY_KEY];
     initial[PRIVACY_POLICY_KEY] = typeof rawPrivacy === "string" ? rawPrivacy : "";
     const rawTnc = config[TNC_URL_KEY];
@@ -118,66 +88,6 @@ export function ConfigurationSection({
   });
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [message, setMessage] = useState<Record<string, string>>({});
-  const [view, setView] = useState<View>("all");
-  const fadeRef = useTabFade(view);
-
-  // ── Go Live (Problem Statements) ────────────────────────────────────────
-  const [localProblemStatements, setLocalProblemStatements] = useState(problemStatements);
-  const [goingLive, setGoingLive] = useState(false);
-  const [goLiveError, setGoLiveError] = useState<string | null>(null);
-  const [goLiveMessage, setGoLiveMessage] = useState<string | null>(null);
-
-  const selectionStart = typeof config["problem_statement.selection_start"] === "string" ? config["problem_statement.selection_start"] : null;
-  const selectionEnd = typeof config["problem_statement.selection_end"] === "string" ? config["problem_statement.selection_end"] : null;
-
-  async function handleGoLive() {
-    if (!selectionStart || !selectionEnd) {
-      setGoLiveError("Set the selection window (start & end) above before going live.");
-      return;
-    }
-    setGoingLive(true);
-    setGoLiveError(null);
-    setGoLiveMessage(null);
-    try {
-      const results = await Promise.all(
-        Array.from({ length: PS_MAX - PS_MIN + 1 }, (_, i) => String(PS_MIN + i)).map(async (number) => {
-          const existing = localProblemStatements.find((p) => p.number === number);
-          const id = await upsertProblemStatement({
-            id: existing?.id ?? null,
-            number,
-            title: existing?.title || `Problem Statement ${number}`,
-            description: existing?.description ?? "",
-            status: "Released",
-          });
-          return { id, number, existing };
-        }),
-      );
-
-      setLocalProblemStatements((prev) => {
-        const next = [...prev];
-        for (const { id, number, existing } of results) {
-          const row: ProblemStatementRow = {
-            id,
-            number,
-            title: existing?.title || `Problem Statement ${number}`,
-            description: existing?.description ?? null,
-            status: "Released",
-            created_at: existing?.created_at ?? new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          const idx = next.findIndex((p) => p.id === id);
-          if (idx >= 0) next[idx] = row;
-          else next.push(row);
-        }
-        return next;
-      });
-      setGoLiveMessage("Live — problem statements 1–50 are released.");
-    } catch (err) {
-      setGoLiveError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setGoingLive(false);
-    }
-  }
 
   async function handleSave(key: string) {
     setSavingKey(key);
@@ -204,61 +114,6 @@ export function ConfigurationSection({
     } finally {
       setSavingKey(null);
     }
-  }
-
-  function simpleFields(keys: readonly { key: string; label: string; placeholder: string }[]) {
-    return keys.map(({ key, label, placeholder }) => (
-      <div key={key} className="rounded-xl border border-border bg-surface p-6">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">{label}</span>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <input
-            value={values[key] ?? ""}
-            onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
-            placeholder={placeholder}
-            className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-          />
-          <button
-            type="button"
-            disabled={savingKey === key}
-            onClick={() => handleSave(key)}
-            className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-          >
-            {savingKey === key ? "Saving…" : "Save"}
-          </button>
-        </div>
-        {message[key] && <p className="mt-2 font-heading text-xs text-ink-muted">{message[key]}</p>}
-      </div>
-    ));
-  }
-
-  function privacyField() {
-    return (
-      <div className="rounded-xl border border-border bg-surface p-6">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Privacy Policy Content</span>
-        <p className="mt-1 font-heading text-xs text-ink-muted">
-          Plain paragraphs — a blank line starts a new one. Leave empty to use the built-in default copy.
-        </p>
-        <div className="mt-3 flex flex-col gap-3">
-          <textarea
-            rows={10}
-            value={values[PRIVACY_POLICY_KEY] ?? ""}
-            onChange={(e) => setValues((v) => ({ ...v, [PRIVACY_POLICY_KEY]: e.target.value }))}
-            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-          />
-          <button
-            type="button"
-            disabled={savingKey === PRIVACY_POLICY_KEY}
-            onClick={() => handleSave(PRIVACY_POLICY_KEY)}
-            className="w-fit rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-          >
-            {savingKey === PRIVACY_POLICY_KEY ? "Saving…" : "Save"}
-          </button>
-        </div>
-        {message[PRIVACY_POLICY_KEY] && (
-          <p className="mt-2 font-heading text-xs text-ink-muted">{message[PRIVACY_POLICY_KEY]}</p>
-        )}
-      </div>
-    );
   }
 
   function deadlineField({
@@ -297,34 +152,6 @@ export function ConfigurationSection({
     );
   }
 
-  function goLiveField() {
-    return (
-      <div className="rounded-xl border border-border bg-surface p-6">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Release Problem Statements</span>
-        <p className="mt-1 font-heading text-xs text-ink-muted">
-          Releases problem statements 1–50 for selection, using the spreadsheet URL and selection window above.
-        </p>
-        <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            disabled={goingLive}
-            onClick={handleGoLive}
-            className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-          >
-            {goingLive ? "Going Live…" : "Go Live Now"}
-          </button>
-          <span className="font-heading text-xs text-ink-muted">
-            {selectionStart && selectionEnd
-              ? `Selection window: ${fmtDateTime(selectionStart)} → ${fmtDateTime(selectionEnd)}`
-              : "Selection window not configured"}
-          </span>
-        </div>
-        {goLiveError && <p className="mt-2 font-heading text-xs text-danger">{goLiveError}</p>}
-        {goLiveMessage && <p className="mt-2 font-heading text-xs text-gitam">{goLiveMessage}</p>}
-      </div>
-    );
-  }
-
   function tncField() {
     return (
       <div className="rounded-xl border border-border bg-surface p-6">
@@ -353,58 +180,42 @@ export function ConfigurationSection({
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4">
-      <ViewToggle
-        value={view}
-        onChange={setView}
-        options={[
-          { value: "all", label: "All Settings" },
-          { value: "by-category", label: "By Category" },
-        ]}
-      />
-
-      <div ref={fadeRef} className="flex flex-col gap-6">
-        {view === "all" ? (
-          <div className="flex flex-col gap-4">
-            {simpleFields(KNOWN_KEYS)}
-            {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
-            {goLiveField()}
-            {DEADLINE_KEYS.map((d) => deadlineField(d))}
-            {simpleFields(GRAND_FINALE_KEYS)}
-            {tncField()}
-            {privacyField()}
-          </div>
-        ) : (
-          <>
-            <div>
-              <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">
-                Problem Statement Settings
-              </p>
-              <div className="flex flex-col gap-4">
-                {simpleFields(KNOWN_KEYS)}
-                {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
-                {goLiveField()}
-              </div>
-            </div>
-            <div>
-              <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">PPT &amp; NOC Deadlines</p>
-              <div className="flex flex-col gap-4">{DEADLINE_KEYS.map((d) => deadlineField(d))}</div>
-            </div>
-            <div>
-              <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">Grand Finale (University Level)</p>
-              <div className="flex flex-col gap-4">{simpleFields(GRAND_FINALE_KEYS)}</div>
-            </div>
-            <div>
-              <p className="mb-2 font-heading text-xs tracking-[0.2em] text-gold uppercase">Site Content</p>
-              <div className="flex flex-col gap-4">
-                {tncField()}
-                {privacyField()}
-              </div>
-            </div>
-          </>
+  function privacyField() {
+    return (
+      <div className="rounded-xl border border-border bg-surface p-6">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Privacy Policy Content</span>
+        <p className="mt-1 font-heading text-xs text-ink-muted">
+          Plain paragraphs — a blank line starts a new one. Leave empty to use the built-in default copy.
+        </p>
+        <div className="mt-3 flex flex-col gap-3">
+          <textarea
+            rows={10}
+            value={values[PRIVACY_POLICY_KEY] ?? ""}
+            onChange={(e) => setValues((v) => ({ ...v, [PRIVACY_POLICY_KEY]: e.target.value }))}
+            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            disabled={savingKey === PRIVACY_POLICY_KEY}
+            onClick={() => handleSave(PRIVACY_POLICY_KEY)}
+            className="w-fit rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+          >
+            {savingKey === PRIVACY_POLICY_KEY ? "Saving…" : "Save"}
+          </button>
+        </div>
+        {message[PRIVACY_POLICY_KEY] && (
+          <p className="mt-2 font-heading text-xs text-ink-muted">{message[PRIVACY_POLICY_KEY]}</p>
         )}
       </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
+      {DEADLINE_KEYS.map((d) => deadlineField(d))}
+      {tncField()}
+      {privacyField()}
     </div>
   );
 }

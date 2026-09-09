@@ -4,11 +4,11 @@ import { ConfigurationSection } from "@/components/dashboard/admin/sections/Conf
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function ConfigurationRoute({ profile }: { profile: ProfileRow }) {
-  const { config, problemStatements } = await fetchAdminDashboardData(profile);
+  const { config } = await fetchAdminDashboardData(profile);
 
   return (
     <SectionPageShell title="Configuration" scope="admin" campus={profile.campus}>
-      <ConfigurationSection config={config} problemStatements={problemStatements} />
+      <ConfigurationSection config={config} />
     </SectionPageShell>
   );
 }
