@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { NocRow, ProblemStatementRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { extendNocDeadline, DashboardActionError } from "@/lib/dashboard/team-actions";
+import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 import { TeamDetailModal } from "./TeamDetailModal";
@@ -51,8 +52,6 @@ export function NocTeamsView({
   onTeamRenamed: (teamId: string, name: string) => void;
   onTeamDeleted: (teamId: string) => void;
 }) {
-  const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
-  const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
   const [localNocs, setLocalNocs] = useState(nocs);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeadline, setBulkDeadline] = useState("");
@@ -96,6 +95,7 @@ export function NocTeamsView({
   function teamDeadline(team: TeamRow): { display: string; iso: string | null; mixed: boolean; expired: boolean; isGeneral: boolean } {
     const members = membersByTeam[team.id] ?? [];
     if (members.length === 0) return { display: "—", iso: null, mixed: false, expired: false, isGeneral: false };
+    const generalDeadline = effectiveConfigValue(config, GENERAL_DEADLINE_KEY, team.campus);
     const overrides = members.map((m) => localNocs.find((n) => n.profile_id === m.id)?.deadline ?? null);
     const effective = overrides.map((d) => d ?? generalDeadline);
     const allSame = effective.every((d) => d === effective[0]);

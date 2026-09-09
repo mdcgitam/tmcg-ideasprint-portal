@@ -157,7 +157,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
             <NotificationsSection profileId={props.profile.id} notifications={props.notifications} />
           )}
           {tab === "ID Cards" && <IdCardsSection />}
-          {tab === "Documents" && <DocumentsSection config={props.config} />}
+          {tab === "Documents" && <DocumentsSection config={props.config} campus={props.profile.campus} />}
         </div>
       </div>
     </main>

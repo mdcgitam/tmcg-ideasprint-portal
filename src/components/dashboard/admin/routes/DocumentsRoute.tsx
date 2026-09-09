@@ -9,7 +9,7 @@ export async function DocumentsRoute({ profile }: { profile: ProfileRow }) {
 
   return (
     <SectionPageShell title="Documents" scope={scope} campus={profile.campus}>
-      <DocumentsSection config={config} />
+      <DocumentsSection config={config} campus={profile.campus} />
     </SectionPageShell>
   );
 }

@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import type { ProfileRow } from "@/types/database";
 import { setConfiguration, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { effectiveConfigValue, campusConfigKey } from "@/lib/dashboard/campus-config";
 import { parseDocumentLinks, type DocumentLink } from "@/components/dashboard/DocumentsSection";
+import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
+import { useTabFade } from "@/hooks/useTabFade";
 
 const DOCUMENTS_KEY = "documents.list";
 
@@ -12,19 +16,21 @@ const DOCUMENTS_KEY = "documents.list";
  * new entry in one of these lists. Datetime settings use a calendar
  * date + time picker and are stored as a timestamptz-parseable ISO 8601
  * string (e.g. 2026-09-25T16:00:00.000Z), the form the consuming RPCs read
- * back as raw text (select_problem_statement in supabase/migrations/
- * 0002/0003; record_presentation / record_noc_metadata in 0027/0028).
+ * back as raw text (select_problem_statement / record_presentation /
+ * record_noc_metadata, see 0002/0003/0027/0028/0048).
  *
  * The Problem Statement spreadsheet URL and the "Go Live" release control
  * live on the Problem Statements page instead — see
  * ProblemStatementsAdminSection.tsx.
+ *
+ * Campus scoping (0048): the four fields below are campus-overridable — a
+ * Campus Admin's save writes a campus-suffixed key (e.g.
+ * "noc.general_deadline.VSP") instead of the global one, and their form
+ * displays the value in effect for their campus (their override if set,
+ * else the Super Admin's global default). Privacy Policy and Terms &
+ * Conditions stay Super-Admin-only, not shown to a Campus Admin at all.
  */
 
-// Selection window — calendar date + time pickers. Stored as a
-// timestamptz-parseable ISO string (same convention as the deadline keys
-// below), read back by select_problem_statement (supabase/migrations/
-// 0002/0003) to gate the Team Lead selection flow. The window End also acts
-// as the default per-team deadline shown in the Problem Statements module.
 const SELECTION_WINDOW_KEYS = [
   {
     key: "problem_statement.selection_start",
@@ -40,20 +46,12 @@ const SELECTION_WINDOW_KEYS = [
   },
 ] as const;
 
-// Item 23: Super Admin edits the /privacy page content directly from here —
-// plain paragraphs, a blank line starts a new one. Empty = built-in default copy.
+// Super-Admin-only — Item 23: edits the /privacy page content directly from here.
 const PRIVACY_POLICY_KEY = "privacy_policy.content";
 
-// Homepage Instructions section shows the Terms & Conditions box only once
-// this is set — empty means no dead link ships on the live site.
+// Super-Admin-only — homepage Instructions section shows the T&C box only once this is set.
 const TNC_URL_KEY = "terms_and_conditions.url";
 
-// General deadline fields — each read by its own page (PptSection.tsx /
-// NocTeamsView.tsx / NocIndividualsView.tsx) and enforced server-side
-// (record_presentation 0027 / record_noc_metadata 0028) as the default
-// deadline for teams/members without an individually extended one. Stored
-// as a timestamptz-parseable ISO string, same convention as every other
-// datetime config value.
 const DEADLINE_KEYS = [
   {
     key: "ppt.general_deadline",
@@ -76,16 +74,30 @@ function toDatetimeLocal(iso: string | null | undefined): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export function ConfigurationSection({ config }: { config: Record<string, unknown> }) {
+type View = "settings" | "documents";
+
+export function ConfigurationSection({ config, profile }: { config: Record<string, unknown>; profile: ProfileRow }) {
+  const isSuperAdmin = profile.role === "Super Admin";
+  const campus = profile.campus;
+
+  // Campus Admin writes/reads a campus-suffixed key for these four; Super Admin always uses the global key.
+  function writeKeyFor(baseKey: string): string {
+    return !isSuperAdmin && campus ? campusConfigKey(baseKey, campus) : baseKey;
+  }
+
+  const [view, setView] = useState<View>("settings");
+  const fadeRef = useTabFade(view);
+
   const [values, setValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
-    const rawPrivacy = config[PRIVACY_POLICY_KEY];
-    initial[PRIVACY_POLICY_KEY] = typeof rawPrivacy === "string" ? rawPrivacy : "";
-    const rawTnc = config[TNC_URL_KEY];
-    initial[TNC_URL_KEY] = typeof rawTnc === "string" ? rawTnc : "";
+    if (isSuperAdmin) {
+      const rawPrivacy = config[PRIVACY_POLICY_KEY];
+      initial[PRIVACY_POLICY_KEY] = typeof rawPrivacy === "string" ? rawPrivacy : "";
+      const rawTnc = config[TNC_URL_KEY];
+      initial[TNC_URL_KEY] = typeof rawTnc === "string" ? rawTnc : "";
+    }
     for (const { key } of [...SELECTION_WINDOW_KEYS, ...DEADLINE_KEYS]) {
-      const raw = config[key];
-      initial[key] = toDatetimeLocal(typeof raw === "string" ? raw : null);
+      initial[key] = toDatetimeLocal(effectiveConfigValue(config, key, isSuperAdmin ? null : campus));
     }
     return initial;
   });
@@ -118,13 +130,13 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
       setDocsError("Enter both a name and a link.");
       return;
     }
-    saveDocuments([...documents, { name, url }]);
+    saveDocuments([...documents, { name, url, campus: isSuperAdmin ? null : campus }]);
     setNewDocName("");
     setNewDocUrl("");
   }
 
-  function handleRemoveDocument(index: number) {
-    saveDocuments(documents.filter((_, i) => i !== index));
+  function handleRemoveDocument(doc: DocumentLink) {
+    saveDocuments(documents.filter((d) => d !== doc));
   }
 
   async function handleSave(key: string) {
@@ -140,15 +152,15 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
     }
   }
 
-  async function handleSaveDeadline(key: string, description: string) {
-    setSavingKey(key);
-    setMessage((m) => ({ ...m, [key]: "" }));
+  async function handleSaveDeadline(baseKey: string, description: string) {
+    setSavingKey(baseKey);
+    setMessage((m) => ({ ...m, [baseKey]: "" }));
     try {
-      const iso = values[key] ? new Date(values[key]).toISOString() : null;
-      await setConfiguration(key, iso, description);
-      setMessage((m) => ({ ...m, [key]: "Saved." }));
+      const iso = values[baseKey] ? new Date(values[baseKey]).toISOString() : null;
+      await setConfiguration(writeKeyFor(baseKey), iso, description);
+      setMessage((m) => ({ ...m, [baseKey]: isSuperAdmin ? "Saved." : `Saved — applies to ${campus} only.` }));
     } catch (err) {
-      setMessage((m) => ({ ...m, [key]: err instanceof DashboardActionError ? err.message : "Something went wrong." }));
+      setMessage((m) => ({ ...m, [baseKey]: err instanceof DashboardActionError ? err.message : "Something went wrong." }));
     } finally {
       setSavingKey(null);
     }
@@ -169,6 +181,11 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
       <div key={key} className="rounded-xl border border-border bg-surface p-6">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">{label}</span>
         <p className="mt-1 font-heading text-xs text-ink-muted">{hint}</p>
+        {!isSuperAdmin && (
+          <p className="mt-1 font-heading text-xs text-gold">
+            Showing the value in effect for {campus} — your own override if set, otherwise the Super Admin&rsquo;s default. Saving only changes it for {campus}.
+          </p>
+        )}
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <input
             type="datetime-local"
@@ -249,29 +266,40 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
   }
 
   function documentsField() {
+    const visibleDocuments = isSuperAdmin ? documents : documents.filter((d) => !d.campus || d.campus === campus);
     return (
       <div className="rounded-xl border border-border bg-surface p-6">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Documents</span>
         <p className="mt-1 font-heading text-xs text-ink-muted">
-          Shown as cards in every role&rsquo;s Documents module. Add as many links as you need.
+          {isSuperAdmin
+            ? "Shown as cards in every role's Documents module. Add as many links as you need."
+            : `Global links plus your own additions, shown to ${campus}. Yours are removable; the Super Admin's aren't.`}
         </p>
 
-        {documents.length > 0 && (
+        {visibleDocuments.length > 0 && (
           <div className="mt-4 flex flex-col gap-2">
-            {documents.map((doc, i) => (
-              <div key={i} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-void px-4 py-2.5">
-                <span className="font-heading text-sm text-ink">{doc.name}</span>
-                <span className="flex-1 truncate font-heading text-xs text-ink-muted">{doc.url}</span>
-                <button
-                  type="button"
-                  disabled={savingDocs}
-                  onClick={() => handleRemoveDocument(i)}
-                  className="text-danger underline disabled:opacity-60"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
+            {visibleDocuments.map((doc, i) => {
+              const canRemove = isSuperAdmin || doc.campus === campus;
+              return (
+                <div key={i} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-void px-4 py-2.5">
+                  <span className="font-heading text-sm text-ink">{doc.name}</span>
+                  {!doc.campus && !isSuperAdmin && (
+                    <span className="rounded-full bg-gold/10 px-2 py-0.5 font-heading text-[10px] text-gold uppercase">Global</span>
+                  )}
+                  <span className="flex-1 truncate font-heading text-xs text-ink-muted">{doc.url}</span>
+                  {canRemove && (
+                    <button
+                      type="button"
+                      disabled={savingDocs}
+                      onClick={() => handleRemoveDocument(doc)}
+                      className="text-danger underline disabled:opacity-60"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -304,11 +332,27 @@ export function ConfigurationSection({ config }: { config: Record<string, unknow
 
   return (
     <div className="flex flex-col gap-4">
-      {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
-      {DEADLINE_KEYS.map((d) => deadlineField(d))}
-      {tncField()}
-      {privacyField()}
-      {documentsField()}
+      <ViewToggle
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "settings", label: "Settings" },
+          { value: "documents", label: "Documents" },
+        ]}
+      />
+
+      <div ref={fadeRef} className="flex flex-col gap-4">
+        {view === "settings" ? (
+          <>
+            {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
+            {DEADLINE_KEYS.map((d) => deadlineField(d))}
+            {isSuperAdmin && tncField()}
+            {isSuperAdmin && privacyField()}
+          </>
+        ) : (
+          documentsField()
+        )}
+      </div>
     </div>
   );
 }

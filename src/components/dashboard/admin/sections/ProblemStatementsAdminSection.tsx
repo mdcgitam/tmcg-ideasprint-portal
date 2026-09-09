@@ -17,6 +17,7 @@ import {
   upsertProblemStatement,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
+import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -185,8 +186,12 @@ export function ProblemStatementsAdminSection({
   // Displayed team size = active members only (an approved exit deactivates the profile).
   const sizeOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
   const extensionOf = (teamId: string) => localExtensions.find((e) => e.team_id === teamId);
-  // A team's effective deadline: its own extension, else the general selection end.
-  const deadlineOf = (teamId: string) => extensionOf(teamId)?.extended_until ?? selectionEnd;
+  // A team's effective deadline: its own extension, else its campus-scoped
+  // selection end (falling back to the global default, same as select_problem_statement/0048).
+  const deadlineOf = (teamId: string) => {
+    const campus = localTeams.find((t) => t.id === teamId)?.campus ?? null;
+    return extensionOf(teamId)?.extended_until ?? effectiveConfigValue(config, "problem_statement.selection_end", campus);
+  };
 
   const [psDrafts, setPsDrafts] = useState<Record<string, string>>({});
   const [psBusy, setPsBusy] = useState<string | null>(null);
@@ -568,8 +573,9 @@ export function ProblemStatementsAdminSection({
                       const extension = extensionOf(team.id);
                       const psBusyHere = psBusy === team.id;
                       const extendBusyHere = extendBusy === team.id;
+                      const teamSelectionEnd = effectiveConfigValue(config, "problem_statement.selection_end", team.campus);
                       const deadlineFieldValue =
-                        deadlineDrafts[team.id] ?? toDatetimeLocal(extension?.extended_until ?? selectionEnd);
+                        deadlineDrafts[team.id] ?? toDatetimeLocal(extension?.extended_until ?? teamSelectionEnd);
 
                       return (
                         <tr key={team.id} className="border-b border-border align-top last:border-0">
@@ -624,8 +630,8 @@ export function ProblemStatementsAdminSection({
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-1">
                               <span className="font-heading text-[11px] text-ink-muted">
-                                Current: {fmtDateTime(extension?.extended_until ?? selectionEnd)}
-                                {!extension && selectionEnd && " (general)"}
+                                Current: {fmtDateTime(extension?.extended_until ?? teamSelectionEnd)}
+                                {!extension && teamSelectionEnd && " (general)"}
                               </span>
                               <div className="flex items-center gap-1">
                                 <input

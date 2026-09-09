@@ -13,6 +13,7 @@ import {
   uploadNocFile,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
+import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 
@@ -54,9 +55,6 @@ export function NocIndividualsView({
   hideVenueFilter?: boolean;
   hideSpocFilter?: boolean;
 }) {
-  const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
-  const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
-
   const router = useRouter();
   const [localNocs, setLocalNocs] = useState(nocs);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -97,6 +95,11 @@ export function NocIndividualsView({
     () => teams.flatMap((team) => (membersByTeam[team.id] ?? []).map((member) => ({ member, team }))),
     [teams, membersByTeam],
   );
+
+  function generalDeadlineFor(profileId: string): string | null {
+    const campus = allRows.find((r) => r.member.id === profileId)?.member.campus ?? null;
+    return effectiveConfigValue(config, GENERAL_DEADLINE_KEY, campus);
+  }
 
   const campusOptions = useMemo(
     () => Array.from(new Set(allRows.map(({ member }) => member.campus).filter((c): c is NonNullable<typeof c> => Boolean(c)))),
@@ -152,7 +155,7 @@ export function NocIndividualsView({
   }
 
   async function handleRowExtend(profileId: string) {
-    const value = rowDeadlines[profileId] ?? toDatetimeLocal(nocOf(profileId)?.deadline ?? generalDeadline);
+    const value = rowDeadlines[profileId] ?? toDatetimeLocal(nocOf(profileId)?.deadline ?? generalDeadlineFor(profileId));
     if (!value) return;
     setRowBusy(profileId);
     setRowErrors((prev) => ({ ...prev, [profileId]: "" }));
@@ -244,6 +247,7 @@ export function NocIndividualsView({
 
   function deadlineDisplay(profileId: string): string {
     const noc = nocOf(profileId);
+    const generalDeadline = generalDeadlineFor(profileId);
     const currentDeadline = noc?.deadline ?? generalDeadline;
     if (!currentDeadline) return "Not set";
     const isGeneral = !noc?.deadline && !!generalDeadline;
@@ -415,6 +419,7 @@ export function NocIndividualsView({
                 const uploaded = noc?.status === "Uploaded" && noc.file_path;
                 const busy = rowBusy === member.id;
                 const rowError = rowErrors[member.id];
+                const generalDeadline = effectiveConfigValue(config, GENERAL_DEADLINE_KEY, member.campus);
                 return (
                   <tr key={member.id} className="border-b border-border align-top last:border-0">
                     <td className="px-4 py-3">

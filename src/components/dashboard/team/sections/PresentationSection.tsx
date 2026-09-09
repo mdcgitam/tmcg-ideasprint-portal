@@ -10,6 +10,7 @@ import {
   getSignedUrl,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
+import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
 
 const ACCEPT = ".pdf,application/pdf";
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
@@ -40,9 +41,9 @@ export function PresentationSection({
   const uploaded = status === "Uploaded" && local?.file_path;
 
   // Team-specific deadline (record_presentation/0027) wins over the
-  // Configuration-wide General PPT Deadline set by Super Admin.
-  const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
-  const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
+  // team's campus-scoped General PPT Deadline, falling back to the
+  // Super-Admin-set global default (0048).
+  const generalDeadline = effectiveConfigValue(config, GENERAL_DEADLINE_KEY, team.campus);
   const effectiveDeadline = local?.deadline ?? generalDeadline;
   const expired = !!effectiveDeadline && new Date(effectiveDeadline) < new Date();
 

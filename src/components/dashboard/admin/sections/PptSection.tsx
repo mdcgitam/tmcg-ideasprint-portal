@@ -20,6 +20,7 @@ import {
   recordPresentation,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
+import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 
@@ -85,9 +86,6 @@ export function PptSection({
   hideVenueFilter?: boolean;
   hideSpocFilter?: boolean;
 }) {
-  const rawGeneralDeadline = config[GENERAL_DEADLINE_KEY];
-  const generalDeadline = typeof rawGeneralDeadline === "string" && rawGeneralDeadline ? rawGeneralDeadline : null;
-
   const router = useRouter();
   const [localPresentations, setLocalPresentations] = useState(presentations);
   const [filters, setFilters] = useState<PptFilters>(EMPTY_PPT_FILTERS);
@@ -114,10 +112,12 @@ export function PptSection({
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
-  /** Team-specific deadline wins; otherwise the Configuration-wide General PPT Deadline. */
+  /** Team-specific deadline wins; otherwise the team's campus-scoped General PPT Deadline, falling back to the global default. */
   function effectiveDeadline(teamId: string): { iso: string | null; isOverride: boolean } {
     const override = localPresentations.find((p) => p.team_id === teamId)?.deadline ?? null;
-    return override ? { iso: override, isOverride: true } : { iso: generalDeadline, isOverride: false };
+    if (override) return { iso: override, isOverride: true };
+    const campus = teams.find((t) => t.id === teamId)?.campus ?? null;
+    return { iso: effectiveConfigValue(config, GENERAL_DEADLINE_KEY, campus), isOverride: false };
   }
 
   async function handleAdminUpload(teamId: string, file: File) {

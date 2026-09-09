@@ -8,7 +8,7 @@ export async function ConfigurationRoute({ profile }: { profile: ProfileRow }) {
 
   return (
     <SectionPageShell title="Configuration" scope="admin" campus={profile.campus}>
-      <ConfigurationSection config={config} />
+      <ConfigurationSection config={config} profile={profile} />
     </SectionPageShell>
   );
 }
