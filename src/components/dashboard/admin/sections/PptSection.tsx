@@ -351,18 +351,9 @@ export function PptSection({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-heading text-xs text-ink-muted">
-          PPT files must be a PDF, 2 MB or less. Uploadable by the Team Lead, or by an Admin on the team&rsquo;s behalf.
-        </p>
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="rounded-full border border-border px-4 py-2 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
-        >
-          Back
-        </button>
-      </div>
+      <p className="font-heading text-xs text-ink-muted">
+        PPT files must be a PDF, 2 MB or less. Uploadable by the Team Lead, or by an Admin on the team&rsquo;s behalf.
+      </p>
 
       <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Bulk Extend Deadline (selected teams)</span>

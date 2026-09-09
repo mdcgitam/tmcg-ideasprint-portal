@@ -2,9 +2,8 @@ import type { ProfileRow } from "@/types/database";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { PptSection } from "@/components/dashboard/admin/sections/PptSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
-import { ZoneVenueTabs } from "@/components/dashboard/zone/ZoneVenueTabs";
 
-export async function PptRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
+export async function PptRoute({ profile }: { profile: ProfileRow }) {
   const {
     teams,
     membersByTeam,
@@ -14,19 +13,14 @@ export async function PptRoute({ profile, roomId }: { profile: ProfileRow; roomI
     staffAccounts,
     problemStatements,
     config,
-  } = await fetchAdminDashboardData(profile, roomId ? { roomId } : undefined);
+  } = await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
-  const isZoneManager = profile.role === "Zone Manager";
-  const venueTabs = isZoneManager ? (
-    <ZoneVenueTabs rooms={[...rooms].map((r) => ({ id: r.id, name: r.name })).sort((a, b) => a.name.localeCompare(b.name))} />
-  ) : undefined;
 
   return (
-    <SectionPageShell title="PPT" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
+    <SectionPageShell title="PPT" scope={scope} campus={profile.campus}>
       <PptSection
         singleCampus={singleCampus}
-        hideVenue={isZoneManager}
         teams={teams}
         membersByTeam={membersByTeam}
         presentations={presentations}

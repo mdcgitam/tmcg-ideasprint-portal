@@ -2,21 +2,13 @@ import type { ProfileRow } from "@/types/database";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { ApprovalsSection } from "@/components/dashboard/admin/sections/ApprovalsSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
-import { ZoneVenueTabs } from "@/components/dashboard/zone/ZoneVenueTabs";
 
-export async function ApprovalsRoute({ profile, roomId }: { profile: ProfileRow; roomId?: string }) {
-  const { pendingApprovals, teams, membersByTeam, rooms, zones, staffAccounts } = await fetchAdminDashboardData(
-    profile,
-    roomId ? { roomId } : undefined,
-  );
+export async function ApprovalsRoute({ profile }: { profile: ProfileRow }) {
+  const { pendingApprovals, teams, membersByTeam, rooms, zones, staffAccounts } = await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
-  const venueTabs =
-    profile.role === "Zone Manager" ? (
-      <ZoneVenueTabs rooms={[...rooms].map((r) => ({ id: r.id, name: r.name })).sort((a, b) => a.name.localeCompare(b.name))} />
-    ) : undefined;
 
   return (
-    <SectionPageShell title="Approvals" scope={scope} campus={profile.campus} headerExtra={venueTabs}>
+    <SectionPageShell title="Approvals" scope={scope} campus={profile.campus}>
       <ApprovalsSection
         pendingApprovals={pendingApprovals}
         teams={teams}

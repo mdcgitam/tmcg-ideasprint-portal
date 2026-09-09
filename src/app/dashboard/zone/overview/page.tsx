@@ -1,8 +1,7 @@
 import { requireProfile } from "@/lib/auth/require-profile";
 import { OverviewRoute } from "@/components/dashboard/admin/routes/OverviewRoute";
 
-export default async function Page({ searchParams }: { searchParams: Promise<{ room?: string }> }) {
+export default async function Page() {
   const profile = await requireProfile(["Zone Manager"]);
-  const { room } = await searchParams;
-  return <OverviewRoute profile={profile} roomId={room} />;
+  return <OverviewRoute profile={profile} />;
 }

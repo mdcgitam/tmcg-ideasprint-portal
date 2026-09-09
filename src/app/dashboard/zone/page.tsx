@@ -2,26 +2,11 @@ import { requireProfile } from "@/lib/auth/require-profile";
 import { fetchAdminDashboardData, computeDashboardCardCounts } from "@/lib/dashboard/admin-data";
 import { AdminDashboardShell } from "@/components/dashboard/admin/AdminDashboardShell";
 
-export default async function ZoneManagerDashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ room?: string }>;
-}) {
+export default async function ZoneManagerDashboardPage() {
   const profile = await requireProfile(["Zone Manager"]);
-  const { room } = await searchParams;
-  const data = await fetchAdminDashboardData(profile, room ? { roomId: room } : undefined);
+  const data = await fetchAdminDashboardData(profile);
   const counts = computeDashboardCardCounts(data);
-  const zoneRooms = data.rooms
-    .map((r) => ({ id: r.id, name: r.name }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const zoneLabel = data.zones.length > 0 ? `${data.zones.map((z) => z.name).join(", ")}, ${data.zones[0].campus}` : undefined;
 
-  return (
-    <AdminDashboardShell
-      profile={profile}
-      scope="zone"
-      counts={counts}
-      zoneRooms={zoneRooms}
-      activeRoomId={room}
-    />
-  );
+  return <AdminDashboardShell profile={profile} scope="zone" counts={counts} zoneLabel={zoneLabel} />;
 }

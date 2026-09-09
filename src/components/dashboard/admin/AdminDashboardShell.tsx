@@ -26,10 +26,8 @@ export interface AdminDashboardShellProps {
   counts: DashboardCardCounts;
   /** Set for the global Super Admin: which campus module is active ("all" = every campus). */
   superCampus?: "VSP" | "BLR" | "HYD" | "all";
-  /** Zone Manager only: the venues of the zone(s) they manage, rendered as tabs. */
-  zoneRooms?: Array<{ id: string; name: string }>;
-  /** Zone Manager only: the venue tab currently selected (undefined = all venues). */
-  activeRoomId?: string;
+  /** Zone Manager only: "<zone name(s)>, <campus>", shown next to the role label. */
+  zoneLabel?: string;
 }
 
 const CAMPUS_TABS: Array<{ code: "VSP" | "BLR" | "HYD" | "all"; label: string }> = [
@@ -111,8 +109,7 @@ export function AdminDashboardShell({
   scope,
   counts,
   superCampus,
-  zoneRooms,
-  activeRoomId,
+  zoneLabel,
 }: AdminDashboardShellProps) {
   const cards: CardDef[] = scope === "admin" ? ALL_CARDS : ALL_CARDS.filter((c) => !c.adminOnly);
   const isSuper = profile.role === "Super Admin";
@@ -121,16 +118,9 @@ export function AdminDashboardShell({
     : scope === "admin"
       ? "Campus Admin"
       : scope === "zone"
-        ? "Zone Manager"
+        ? `Zone Manager${zoneLabel ? ` (${zoneLabel})` : ""}`
         : "SPOC";
-  const q =
-    scope === "zone"
-      ? activeRoomId
-        ? `?room=${activeRoomId}`
-        : ""
-      : isSuper && superCampus
-        ? `?campus=${superCampus}`
-        : "";
+  const q = isSuper && superCampus ? `?campus=${superCampus}` : "";
 
   return (
     <main className="min-h-screen bg-void px-6 pt-12 pb-16 sm:px-10 sm:pt-14 lg:px-16">
@@ -168,39 +158,10 @@ export function AdminDashboardShell({
           </Reveal>
         )}
 
-        {scope === "zone" && zoneRooms && zoneRooms.length > 0 && (
-          <Reveal className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3">
-            <span className="mr-1 font-mono text-xs tracking-[0.2em] text-ink-faint uppercase">Venue</span>
-            <Link
-              href="/dashboard/zone"
-              className={`rounded-full px-3 py-1 font-heading text-xs transition-colors ${
-                activeRoomId
-                  ? "border border-border text-ink-muted hover:border-gold hover:text-gold"
-                  : "bg-gold text-void"
-              }`}
-            >
-              All venues
-            </Link>
-            {zoneRooms.map((r) => (
-              <Link
-                key={r.id}
-                href={`/dashboard/zone?room=${r.id}`}
-                className={`rounded-full px-3 py-1 font-heading text-xs transition-colors ${
-                  activeRoomId === r.id
-                    ? "bg-gold text-void"
-                    : "border border-border text-ink-muted hover:border-gold hover:text-gold"
-                }`}
-              >
-                {r.name}
-              </Link>
-            ))}
-          </Reveal>
-        )}
-
         <nav aria-label="Dashboard sections" className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {cards.map(({ key, slug, icon: Icon }) => {
-            // Super Admin / Campus Admin see a clean launcher grid — no needs-attention counts, unlike SPOC/Zone Manager.
-            const count = scope === "admin" ? 0 : countForSlug(slug, counts);
+            // Super Admin / Campus Admin / Zone Manager see a clean launcher grid — no needs-attention counts, unlike SPOC.
+            const count = scope === "admin" || scope === "zone" ? 0 : countForSlug(slug, counts);
             const urgent = URGENT_SLUGS.has(slug);
             return (
               <Link

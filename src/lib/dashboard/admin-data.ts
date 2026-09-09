@@ -62,7 +62,7 @@ export interface AdminDashboardData {
  */
 export async function fetchAdminDashboardData(
   profile: ProfileRow,
-  opts?: { campus?: CampusCode | "all"; roomId?: string },
+  opts?: { campus?: CampusCode | "all" },
 ): Promise<AdminDashboardData> {
   const supabase = await createClient();
 
@@ -197,10 +197,6 @@ export async function fetchAdminDashboardData(
     scopedTeams = scopedTeams.filter((t) => t.campus === selectedCampus);
   }
 
-  // Room-tab filter (Zone Manager dashboard) — narrow to a single venue.
-  if (opts?.roomId) {
-    scopedTeams = scopedTeams.filter((t) => t.room_id === opts.roomId);
-  }
   {
     const teamIds = new Set(scopedTeams.map((t) => t.id));
     const n = narrowToTeamIds(teamIds);
