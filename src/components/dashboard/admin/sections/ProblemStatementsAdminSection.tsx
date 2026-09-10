@@ -17,7 +17,7 @@ import {
   upsertProblemStatement,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
-import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
+import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -30,13 +30,14 @@ type View = "team" | "analytics";
 
 interface PsFilters {
   search: string;
+  campus: string;
   teamSize: string;
   zone: string;
   room: string;
   spoc: string;
 }
 
-const EMPTY_PS_FILTERS: PsFilters = { search: "", teamSize: "", zone: "", room: "", spoc: "" };
+const EMPTY_PS_FILTERS: PsFilters = { search: "", campus: "", teamSize: "", zone: "", room: "", spoc: "" };
 
 function toDatetimeLocal(iso: string | null | undefined): string {
   if (!iso) return "";
@@ -211,6 +212,8 @@ export function ProblemStatementsAdminSection({
 
   const [filters, setFilters] = useState<PsFilters>(EMPTY_PS_FILTERS);
 
+  const campusOptions = useMemo(() => sortCampuses(Array.from(new Set(localTeams.map((t) => t.campus)))), [localTeams]);
+
   const visibleTeams = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
     return localTeams.filter((team) => {
@@ -219,6 +222,7 @@ export function ProblemStatementsAdminSection({
         const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""} ${psNumberOf(team)}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
+      if (filters.campus && team.campus !== filters.campus) return false;
       if (filters.teamSize && String(sizeOf(team)) !== filters.teamSize) return false;
       if (filters.zone && zoneOf(roomOf(team))?.id !== filters.zone) return false;
       if (filters.room && team.room_id !== filters.room) return false;
@@ -496,6 +500,14 @@ export function ProblemStatementsAdminSection({
             </div>
 
             <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
+              {!singleCampus && (
+                <FilterSelect
+                  label="Campus"
+                  value={filters.campus}
+                  onChange={(v) => setFilters((f) => ({ ...f, campus: v }))}
+                  options={campusOptions}
+                />
+              )}
               <FilterSelect
                 label="Team Size"
                 value={filters.teamSize}
