@@ -14,7 +14,7 @@ export interface ScheduleEntry {
 }
 
 const SCHEDULE_KEY = "schedule.phase1";
-const CAMPUSES: CampusCode[] = ["VSP", "BLR", "HYD"];
+const CAMPUSES: CampusCode[] = ["VSP", "HYD", "BLR"];
 
 export function parseScheduleEntries(config: Record<string, unknown>): ScheduleEntry[] {
   const raw = config[SCHEDULE_KEY];

@@ -450,8 +450,8 @@ export function RoomsZonesSection({
                     >
                       <option value="">Campus…</option>
                       <option value="VSP">Visakhapatnam</option>
-                      <option value="BLR">Bangalore</option>
                       <option value="HYD">Hyderabad</option>
+                      <option value="BLR">Bangalore</option>
                     </select>
                   )}
                   <input
@@ -487,8 +487,8 @@ export function RoomsZonesSection({
                               aria-label={`Campus for ${z.name}`}
                             >
                               <option value="VSP">Visakhapatnam</option>
-                              <option value="BLR">Bangalore</option>
                               <option value="HYD">Hyderabad</option>
+                              <option value="BLR">Bangalore</option>
                             </select>
                           )}
                           <button type="button" onClick={() => handleSaveZone(z)} disabled={busy === `edit-zone:${z.id}`} className="rounded-full bg-gold px-3 py-1 text-xs font-medium text-void hover:bg-gold-light disabled:opacity-60">
@@ -557,8 +557,8 @@ export function RoomsZonesSection({
                       >
                         <option value="">Campus…</option>
                         <option value="VSP">Visakhapatnam</option>
-                        <option value="BLR">Bangalore</option>
                         <option value="HYD">Hyderabad</option>
+                        <option value="BLR">Bangalore</option>
                       </select>
                     )}
                     <select value={roomZoneId} onChange={(e) => setRoomZoneId(e.target.value)} className={`${selectClass} py-2 text-sm`}>

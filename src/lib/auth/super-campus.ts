@@ -1,6 +1,6 @@
 import type { CampusCode, ProfileRow } from "@/types/database";
 
-const CAMPUS_CODES: CampusCode[] = ["VSP", "BLR", "HYD"];
+const CAMPUS_CODES: CampusCode[] = ["VSP", "HYD", "BLR"];
 
 export type SuperCampusParam = CampusCode | "all";
 

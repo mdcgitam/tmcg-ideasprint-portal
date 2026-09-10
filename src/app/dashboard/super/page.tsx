@@ -6,8 +6,8 @@ import { Reveal } from "@/components/motion/Reveal";
 
 const MODULES: Array<{ code: "VSP" | "BLR" | "HYD" | "all"; label: string; sub: string }> = [
   { code: "VSP", label: "Visakhapatnam", sub: "VSP" },
-  { code: "BLR", label: "Bangalore", sub: "BLR" },
   { code: "HYD", label: "Hyderabad", sub: "HYD" },
+  { code: "BLR", label: "Bangalore", sub: "BLR" },
   { code: "all", label: "All Campuses", sub: "Combined view" },
 ];
 

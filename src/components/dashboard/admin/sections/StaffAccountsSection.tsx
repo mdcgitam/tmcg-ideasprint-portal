@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { CampusCode, ProfileRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
 import {
   createSpoc,
@@ -13,10 +13,17 @@ import {
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
+import { FilterSelect } from "./TeamFormFields";
 
 type NewRole = "SPOC" | "Zone Manager" | "Campus Admin";
 
-const CAMPUSES: CampusCode[] = ["VSP", "BLR", "HYD"];
+const CAMPUSES: CampusCode[] = ["VSP", "HYD", "BLR"];
+
+// Display/sort order everywhere a staff list is shown: Super Admin, Campus Admin, Zone Manager, SPOC.
+const ROLE_ORDER: Record<string, number> = { "Super Admin": 0, "Campus Admin": 1, "Zone Manager": 2, SPOC: 3 };
+function sortByRole(list: ProfileRow[]): ProfileRow[] {
+  return [...list].sort((a, b) => (ROLE_ORDER[a.role] ?? 9) - (ROLE_ORDER[b.role] ?? 9));
+}
 
 /**
  * Staff accounts don't go through team registration — this is the only way to
@@ -42,12 +49,15 @@ export function StaffAccountsSection({
   const [local, setLocal] = useState(staffAccounts);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<NewRole>("SPOC");
+  const [role, setRole] = useState<NewRole | "">("");
   const [newCampus, setNewCampus] = useState<CampusCode | "">("");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [changingId, setChangingId] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
+
+  const [campusFilter, setCampusFilter] = useState("");
+  const [search, setSearch] = useState("");
 
   const roleChangeOptions: UserRole[] = canManageCampusAdmins
     ? ["Zone Manager", "SPOC", "Campus Admin"]
@@ -66,11 +76,26 @@ export function StaffAccountsSection({
     return "—";
   };
 
+  const visibleStaff = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return sortByRole(
+      local.filter((s) => {
+        if (campusFilter && s.campus !== campusFilter) return false;
+        if (q && !`${s.name} ${s.gitam_email}`.toLowerCase().includes(q)) return false;
+        return true;
+      }),
+    );
+  }, [local, campusFilter, search]);
+
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     const effectiveCampus = campus ?? (newCampus || null);
     if (!effectiveCampus) {
       setCreateError("Pick a campus first.");
+      return;
+    }
+    if (!role) {
+      setCreateError("Pick a role first.");
       return;
     }
     setCreating(true);
@@ -112,6 +137,7 @@ export function StaffAccountsSection({
       setName("");
       setEmail("");
       setNewCampus("");
+      setRole("");
     } catch (err) {
       setCreateError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
@@ -170,15 +196,6 @@ export function StaffAccountsSection({
             required
             className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
           />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as NewRole)}
-            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-          >
-            <option value="Zone Manager">Zone Manager</option>
-            <option value="SPOC">SPOC</option>
-            {canManageCampusAdmins && <option value="Campus Admin">Campus Admin</option>}
-          </select>
           {campus == null && (
             <select
               value={newCampus}
@@ -194,6 +211,17 @@ export function StaffAccountsSection({
               ))}
             </select>
           )}
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as NewRole | "")}
+            required
+            className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+          >
+            <option value="">Role…</option>
+            {canManageCampusAdmins && <option value="Campus Admin">Campus Admin</option>}
+            <option value="Zone Manager">Zone Manager</option>
+            <option value="SPOC">SPOC</option>
+          </select>
         </div>
         {campus && (
           <p className="mt-2 font-heading text-xs text-ink-faint">New account will be created in <span className="text-gold">{campus}</span>.</p>
@@ -210,26 +238,38 @@ export function StaffAccountsSection({
 
       <div className="flex flex-col gap-2">
         {rowError && <p className="font-heading text-sm text-danger">{rowError}</p>}
+
         {local.length > 0 && (
-          <button
-            type="button"
-            onClick={() =>
-              downloadCsv(
-                "staff-accounts",
-                local.map((s) => ({
-                  Campus: s.campus ?? "—",
-                  Name: s.name,
-                  Email: s.gitam_email,
-                  Role: s.role,
-                  Assignment: assignmentOf(s),
-                  "User ID": s.user_id,
-                })),
-              )
-            }
-            className="w-fit rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
-          >
-            Download CSV
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {campus == null && (
+              <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={CAMPUSES} valueOptions={CAMPUSES} />
+            )}
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by name or email…"
+              className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+            />
+            <button
+              type="button"
+              onClick={() =>
+                downloadCsv(
+                  "staff-accounts",
+                  visibleStaff.map((s) => ({
+                    Campus: s.campus ?? "—",
+                    Name: s.name,
+                    Email: s.gitam_email,
+                    Role: s.role,
+                    Assignment: assignmentOf(s),
+                    "User ID": s.user_id,
+                  })),
+                )
+              }
+              className="w-fit rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+            >
+              Download CSV
+            </button>
+          </div>
         )}
         {local.length === 0 ? (
           <div className="rounded-xl border border-border bg-surface p-8 text-center">
@@ -253,45 +293,53 @@ export function StaffAccountsSection({
                   </tr>
                 </thead>
                 <tbody>
-                  {local.map((s) => (
-                    <tr key={s.id} className="border-b border-border align-top last:border-0">
-                      <td className="px-4 py-3 text-ink-muted">{s.campus ?? "—"}</td>
-                      <td className="px-4 py-3 text-ink">{s.name}</td>
-                      <td className="px-4 py-3 text-ink-muted">{s.gitam_email}</td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={s.role}
-                          disabled={changingId === s.id}
-                          onChange={(e) => handleRoleChange(s.id, e.target.value as UserRole)}
-                          className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
-                        >
-                          {roleChangeOptions.map((r) => (
-                            <option key={r} value={r}>
-                              {r}
-                            </option>
-                          ))}
-                          {!roleChangeOptions.includes(s.role) && (
-                            <option value={s.role} disabled>
-                              {s.role}
-                            </option>
-                          )}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 text-ink-muted">{assignmentOf(s)}</td>
-                      <td className="px-4 py-3">
-                        {(s.role === "SPOC" || s.role === "Zone Manager" || (s.role === "Campus Admin" && canManageCampusAdmins)) && (
-                          <button
-                            type="button"
-                            disabled={changingId === s.id}
-                            onClick={() => handleDeleteStaff(s)}
-                            className="rounded-full border border-danger/50 px-3 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
-                          >
-                            Delete
-                          </button>
-                        )}
+                  {visibleStaff.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-ink-muted">
+                        No staff match the current filters.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    visibleStaff.map((s) => (
+                      <tr key={s.id} className="border-b border-border align-top last:border-0">
+                        <td className="px-4 py-3 text-ink-muted">{s.campus ?? "—"}</td>
+                        <td className="px-4 py-3 text-ink">{s.name}</td>
+                        <td className="px-4 py-3 text-ink-muted">{s.gitam_email}</td>
+                        <td className="px-4 py-3">
+                          <select
+                            value={s.role}
+                            disabled={changingId === s.id}
+                            onChange={(e) => handleRoleChange(s.id, e.target.value as UserRole)}
+                            className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                          >
+                            {roleChangeOptions.map((r) => (
+                              <option key={r} value={r}>
+                                {r}
+                              </option>
+                            ))}
+                            {!roleChangeOptions.includes(s.role) && (
+                              <option value={s.role} disabled>
+                                {s.role}
+                              </option>
+                            )}
+                          </select>
+                        </td>
+                        <td className="px-4 py-3 text-ink-muted">{assignmentOf(s)}</td>
+                        <td className="px-4 py-3">
+                          {(s.role === "SPOC" || s.role === "Zone Manager" || (s.role === "Campus Admin" && canManageCampusAdmins)) && (
+                            <button
+                              type="button"
+                              disabled={changingId === s.id}
+                              onClick={() => handleDeleteStaff(s)}
+                              className="rounded-full border border-danger/50 px-3 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
+                            >
+                              Delete
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

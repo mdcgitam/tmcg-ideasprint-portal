@@ -31,8 +31,8 @@ export const MAX_TEAM_SIZE = 4;
 // labels are display-only (registration UI).
 export const CAMPUS_OPTIONS = [
   { code: "VSP", label: "Visakhapatnam" },
-  { code: "BLR", label: "Bangalore" },
   { code: "HYD", label: "Hyderabad" },
+  { code: "BLR", label: "Bangalore" },
 ] as const;
 
 export type CampusCode = (typeof CAMPUS_OPTIONS)[number]["code"];

@@ -34,8 +34,8 @@ export interface AdminDashboardShellProps {
 
 const CAMPUS_TABS: Array<{ code: "VSP" | "BLR" | "HYD" | "all"; label: string }> = [
   { code: "VSP", label: "Visakhapatnam" },
-  { code: "BLR", label: "Bangalore" },
   { code: "HYD", label: "Hyderabad" },
+  { code: "BLR", label: "Bangalore" },
   { code: "all", label: "All" },
 ];
 
