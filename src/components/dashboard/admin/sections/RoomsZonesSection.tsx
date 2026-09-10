@@ -22,16 +22,16 @@ import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
 
-type View = "create" | "assign" | "view";
+type View = "create" | "teams";
 
 /**
- * Zones and Venues module. Three tabs:
+ * Zones and Venues module. Two tabs:
  *  - Create: make Zones and Venues, each editable/deletable inline.
- *  - Assign: put *unassigned* teams into a Venue — assigned teams drop off
- *    this list.
- *  - View: every team with its Zone / Zone Manager / Venue / SPOC, filterable
- *    and searchable, with per-team Edit (change Venue) and Delete (pull it
- *    out of its Venue).
+ *  - Teams: every team with its Zone / Zone Manager / Venue / SPOC,
+ *    filterable and searchable (including an "Unassigned only" toggle),
+ *    with per-team Edit (change Venue) / Delete (pull it out of its Venue),
+ *    plus a checkbox + bulk "assign selected to venue" action for handling
+ *    several teams (e.g. a batch of newly-registered ones) at once.
  */
 export function RoomsZonesSection({
   campus,
@@ -79,7 +79,7 @@ export function RoomsZonesSection({
   const [editZoneId, setEditZoneId] = useState<string | null>(null);
   const [zoneDraft, setZoneDraft] = useState<{ name: string; campus: CampusCode | "" }>({ name: "", campus: "" });
 
-  // View tab
+  // Teams tab
   const [search, setSearch] = useState("");
   const [fCampus, setFCampus] = useState("");
   const [fSize, setFSize] = useState("");
@@ -87,6 +87,7 @@ export function RoomsZonesSection({
   const [fZoneMgr, setFZoneMgr] = useState("");
   const [fVenue, setFVenue] = useState("");
   const [fSpoc, setFSpoc] = useState("");
+  const [unassignedOnly, setUnassignedOnly] = useState(false);
   const [editTeamId, setEditTeamId] = useState<string | null>(null);
   const [teamVenueDraft, setTeamVenueDraft] = useState("");
 
@@ -114,13 +115,12 @@ export function RoomsZonesSection({
     };
   }
 
-  const unassignedTeams = localTeams.filter((t) => !t.room_id);
-
   const viewRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return localTeams.filter((team) => {
       const lead = leadOf(team);
       const { room, zone } = teamContext(team);
+      if (unassignedOnly && team.room_id) return false;
       if (q) {
         const hay = `${team.team_name} ${team.team_id} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
         if (!hay.includes(q)) return false;
@@ -134,7 +134,7 @@ export function RoomsZonesSection({
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localTeams, localRooms, localZones, search, fCampus, fSize, fZone, fZoneMgr, fVenue, fSpoc]);
+  }, [localTeams, localRooms, localZones, search, unassignedOnly, fCampus, fSize, fZone, fZoneMgr, fVenue, fSpoc]);
 
   const campusFilterOptions = sortCampuses(Array.from(new Set(localTeams.map((t) => campusOf(t)))));
   const sizeFilterOptions = Array.from(new Set(localTeams.map((t) => sizeOf(t)))).sort((a, b) => a - b);
@@ -234,6 +234,18 @@ export function RoomsZonesSection({
     });
   }
 
+  function toggleSelectAllVisible() {
+    setSelectedTeamIds((prev) => {
+      const allSelected = viewRows.length > 0 && viewRows.every((t) => prev.has(t.id));
+      const next = new Set(prev);
+      for (const t of viewRows) {
+        if (allSelected) next.delete(t.id);
+        else next.add(t.id);
+      }
+      return next;
+    });
+  }
+
   async function handleBulkAssignRoom() {
     if (!bulkRoomId || selectedTeamIds.size === 0) return;
     setBulkAssignBusy(true);
@@ -256,11 +268,17 @@ export function RoomsZonesSection({
 
   async function handleCreateZone(e: React.FormEvent) {
     e.preventDefault();
-    if (!zoneName.trim()) return;
-    const zoneCampus = singleCampus ? campus : zoneCampusDraft || null;
-    if (!zoneCampus) return;
-    setCreatingZone(true);
     setError(null);
+    if (!zoneName.trim()) {
+      setError("Enter a zone name first.");
+      return;
+    }
+    const zoneCampus = singleCampus ? campus : zoneCampusDraft || null;
+    if (!zoneCampus) {
+      setError("Pick a campus first.");
+      return;
+    }
+    setCreatingZone(true);
     try {
       const id = await createZone(zoneName.trim(), null, zoneCampus);
       setLocalZones((prev) => [
@@ -278,17 +296,31 @@ export function RoomsZonesSection({
 
   async function handleCreateRoom(e: React.FormEvent) {
     e.preventDefault();
-    if (!roomName.trim()) return;
-    const roomCampus = singleCampus ? campus : roomCampusDraft || null;
-    if (!roomCampus) return;
-    setCreatingRoom(true);
     setError(null);
+    if (!roomName.trim()) {
+      setError("Enter a venue name first.");
+      return;
+    }
+    const roomCampus = singleCampus ? campus : roomCampusDraft || null;
+    if (!roomCampus) {
+      setError("Pick a campus first.");
+      return;
+    }
+    if (!roomZoneId) {
+      setError("Pick a zone first.");
+      return;
+    }
+    if (!roomSpocId) {
+      setError("Pick a SPOC first.");
+      return;
+    }
+    setCreatingRoom(true);
     try {
-      const zoneId = roomZoneId || null;
-      const spocId = roomSpocId || null;
+      const zoneId = roomZoneId;
+      const spocId = roomSpocId;
       const id = await createRoom(roomName.trim(), zoneId, roomCampus);
 
-      if (spocId) await assignSpocToRoom(id, spocId);
+      await assignSpocToRoom(id, spocId);
 
       setLocalRooms((prev) => [
         ...prev,
@@ -429,8 +461,7 @@ export function RoomsZonesSection({
         onChange={setView}
         options={[
           { value: "create", label: "Create" },
-          { value: "assign", label: "Assign" },
-          { value: "view", label: "View" },
+          { value: "teams", label: "Teams" },
         ]}
       />
 
@@ -563,7 +594,7 @@ export function RoomsZonesSection({
                       </select>
                     )}
                     <select value={roomZoneId} onChange={(e) => setRoomZoneId(e.target.value)} className={`${selectClass} py-2 text-sm`}>
-                      <option value="">No zone</option>
+                      <option value="">Zone…</option>
                       {(singleCampus ? localZones : localZones.filter((z) => z.campus === roomCampusDraft)).map((z) => (
                         <option key={z.id} value={z.id}>
                           {z.name}
@@ -571,7 +602,7 @@ export function RoomsZonesSection({
                       ))}
                     </select>
                     <select value={roomSpocId} onChange={(e) => setRoomSpocId(e.target.value)} className={`${selectClass} py-2 text-sm`}>
-                      <option value="">No SPOC</option>
+                      <option value="">SPOC…</option>
                       {(singleCampus ? spocs : spocs.filter((s) => s.campus === roomCampusDraft)).map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.name}
@@ -581,14 +612,14 @@ export function RoomsZonesSection({
                   </div>
                   <button
                     type="submit"
-                    disabled={creatingRoom || (!singleCampus && !roomCampusDraft)}
+                    disabled={creatingRoom || (!singleCampus && !roomCampusDraft) || !roomZoneId || !roomSpocId}
                     className="w-fit rounded-full bg-gold px-5 py-2 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
                   >
                     {creatingRoom ? "Adding…" : "Add Venue"}
                   </button>
                 </form>
                 <p className="mt-3 font-heading text-xs text-ink-faint">
-                  Put teams into this Venue afterwards, in the Assign tab.
+                  Put teams into this Venue afterwards, in the Teams tab.
                 </p>
               </div>
             </div>
@@ -738,94 +769,37 @@ export function RoomsZonesSection({
               </table>
             </div>
           </div>
-        ) : view === "assign" ? (
-          <div className="flex flex-col gap-6">
-            {/* Teams → Venues */}
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Add Teams Into Venues</span>
-              <p className="mt-2 font-heading text-xs text-ink-muted">
-                Check one or more teams, pick a Venue, and assign — this is the only place team-to-venue assignment
-                happens. A team immediately inherits that Venue&rsquo;s SPOC. Once a team has a Venue it drops off this
-                list; move or remove it from the View tab.
-              </p>
-
-              <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border p-3">
-                <span className="font-heading text-xs text-ink-muted">Assign selected teams to:</span>
-                <select value={bulkRoomId} onChange={(e) => setBulkRoomId(e.target.value)} className={selectClass}>
-                  <option value="">Choose a venue…</option>
-                  {localRooms.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  disabled={bulkAssignBusy || !bulkRoomId || selectedTeamIds.size === 0}
-                  onClick={handleBulkAssignRoom}
-                  className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-                >
-                  {bulkAssignBusy ? "Working…" : "Assign Selected"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedTeamIds(new Set())}
-                  className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
-                >
-                  Clear
-                </button>
-                <span className="font-heading text-xs text-ink-muted">Selected: {selectedTeamIds.size} team(s)</span>
-              </div>
-
-              <div className="mt-4 overflow-x-auto rounded-xl border border-border">
-                <table className="w-full text-left font-heading text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                      <th className="px-4 py-3" />
-                      {!singleCampus && <th className="px-4 py-3">Campus</th>}
-                      <th className="px-4 py-3">Team ID</th>
-                      <th className="px-4 py-3">Team Name</th>
-                      <th className="px-4 py-3">Team Size</th>
-                      <th className="px-4 py-3">Team Lead</th>
-                      <th className="px-4 py-3">Lead Phone Number</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {unassignedTeams.length === 0 ? (
-                      <tr>
-                        <td colSpan={singleCampus ? 6 : 7} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
-                          Every team has a venue.
-                        </td>
-                      </tr>
-                    ) : (
-                      unassignedTeams.map((team) => {
-                        const lead = leadOf(team);
-                        return (
-                          <tr key={team.id} className="border-b border-border bg-surface last:border-0">
-                            <td className="px-4 py-3">
-                              <input
-                                type="checkbox"
-                                checked={selectedTeamIds.has(team.id)}
-                                onChange={() => toggleTeamSelected(team.id)}
-                              />
-                            </td>
-                            {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>}
-                            <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
-                            <td className="px-4 py-3 text-ink">{team.team_name}</td>
-                            <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>
-                            <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
-                            <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
         ) : (
           <div className="flex flex-col gap-4">
+            {/* Bulk assign selected teams to a venue */}
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
+              <span className="font-heading text-xs text-ink-muted">Assign selected teams to:</span>
+              <select value={bulkRoomId} onChange={(e) => setBulkRoomId(e.target.value)} className={selectClass}>
+                <option value="">Choose a venue…</option>
+                {localRooms.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                disabled={bulkAssignBusy || !bulkRoomId || selectedTeamIds.size === 0}
+                onClick={handleBulkAssignRoom}
+                className="rounded-full bg-gold px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+              >
+                {bulkAssignBusy ? "Working…" : "Assign Selected"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedTeamIds(new Set())}
+                className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
+              >
+                Clear Selection
+              </button>
+              <span className="font-heading text-xs text-ink-muted">Selected: {selectedTeamIds.size} team(s)</span>
+            </div>
+
             {/* Filters + search */}
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
               <input
@@ -884,7 +858,11 @@ export function RoomsZonesSection({
                   </option>
                 ))}
               </select>
-              {(search || fCampus || fSize || fZone || fZoneMgr || fVenue || fSpoc) && (
+              <label className="flex items-center gap-1.5 font-heading text-xs text-ink-muted">
+                <input type="checkbox" checked={unassignedOnly} onChange={(e) => setUnassignedOnly(e.target.checked)} />
+                Unassigned only
+              </label>
+              {(search || fCampus || fSize || fZone || fZoneMgr || fVenue || fSpoc || unassignedOnly) && (
                 <button
                   type="button"
                   onClick={() => {
@@ -895,10 +873,11 @@ export function RoomsZonesSection({
                     setFZoneMgr("");
                     setFVenue("");
                     setFSpoc("");
+                    setUnassignedOnly(false);
                   }}
                   className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
                 >
-                  Clear
+                  Clear Filters
                 </button>
               )}
               <button
@@ -914,6 +893,14 @@ export function RoomsZonesSection({
               <table className="w-full text-left font-heading text-sm">
                 <thead>
                   <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+                    <th className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={viewRows.length > 0 && viewRows.every((t) => selectedTeamIds.has(t.id))}
+                        onChange={toggleSelectAllVisible}
+                        aria-label="Select all visible teams"
+                      />
+                    </th>
                     {!singleCampus && <th className="px-4 py-3">Campus</th>}
                     <th className="px-4 py-3">Team Id</th>
                     <th className="px-4 py-3">Team Name</th>
@@ -930,7 +917,7 @@ export function RoomsZonesSection({
                 <tbody>
                   {viewRows.length === 0 ? (
                     <tr>
-                      <td colSpan={singleCampus ? 10 : 11} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                      <td colSpan={singleCampus ? 11 : 12} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
                         No teams match these filters.
                       </td>
                     </tr>
@@ -941,6 +928,13 @@ export function RoomsZonesSection({
                       const editing = editTeamId === team.id;
                       return (
                         <tr key={team.id} className="border-b border-border last:border-0">
+                          <td className="px-4 py-3">
+                            <input
+                              type="checkbox"
+                              checked={selectedTeamIds.has(team.id)}
+                              onChange={() => toggleTeamSelected(team.id)}
+                            />
+                          </td>
                           {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>}
                           <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                           <td className="px-4 py-3 text-ink">{team.team_name}</td>
