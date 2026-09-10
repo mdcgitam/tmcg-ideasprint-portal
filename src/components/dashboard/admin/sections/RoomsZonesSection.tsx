@@ -122,7 +122,7 @@ export function RoomsZonesSection({
 
   const viewRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return localTeams.filter((team) => {
+    const filtered = localTeams.filter((team) => {
       const lead = leadOf(team);
       const { room, zone } = teamContext(team);
       if (unassignedOnly && team.room_id) return false;
@@ -138,8 +138,27 @@ export function RoomsZonesSection({
       if (fSpoc && (team.spoc_profile_id ?? "") !== fSpoc) return false;
       return true;
     });
+
+    // Assigned teams first — grouped by Campus (VSP -> HYD -> BLR, skipped in a
+    // single-campus view) -> Zone name -> Venue name; unassigned teams at the bottom.
+    return [...filtered].sort((a, b) => {
+      const aAssigned = a.room_id != null;
+      const bAssigned = b.room_id != null;
+      if (aAssigned !== bAssigned) return aAssigned ? -1 : 1;
+
+      if (!singleCampus) {
+        const campusDiff = CAMPUS_ORDER.indexOf(campusOf(a)) - CAMPUS_ORDER.indexOf(campusOf(b));
+        if (campusDiff !== 0) return campusDiff;
+      }
+
+      const aCtx = teamContext(a);
+      const bCtx = teamContext(b);
+      const zoneDiff = (aCtx.zoneName ?? "").localeCompare(bCtx.zoneName ?? "");
+      if (zoneDiff !== 0) return zoneDiff;
+      return (aCtx.venueName ?? "").localeCompare(bCtx.venueName ?? "");
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localTeams, localRooms, localZones, search, unassignedOnly, fCampus, fSize, fZone, fZoneMgr, fVenue, fSpoc]);
+  }, [localTeams, localRooms, localZones, search, unassignedOnly, fCampus, fSize, fZone, fZoneMgr, fVenue, fSpoc, singleCampus]);
 
   const campusFilterOptions = sortCampuses(Array.from(new Set(localTeams.map((t) => campusOf(t)))));
   const sizeFilterOptions = Array.from(new Set(localTeams.map((t) => sizeOf(t)))).sort((a, b) => a - b);
@@ -333,9 +352,7 @@ export function RoomsZonesSection({
     try {
       const zoneId = roomZoneId;
       const spocId = roomSpocId;
-      const id = await createRoom(roomName.trim(), zoneId, roomCampus);
-
-      await assignSpocToRoom(id, spocId);
+      const id = await createRoom(roomName.trim(), zoneId, roomCampus, spocId);
 
       setLocalRooms((prev) => [
         ...prev,

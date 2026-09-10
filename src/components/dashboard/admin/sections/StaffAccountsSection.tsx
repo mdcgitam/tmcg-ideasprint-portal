@@ -1,12 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { CampusCode, ProfileRow, RoomRow, UserRole, ZoneRow } from "@/types/database";
 import {
   createSpoc,
   createCampusAdmin,
   createZoneManager,
-  updateUserRole,
+  updateStaffProfile,
   deleteSpoc,
   deleteZoneManager,
   deleteCampusAdmin,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/dashboard/admin-actions";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
+import { CAMPUS_ORDER } from "@/lib/dashboard/campus-config";
 
 type NewRole = "SPOC" | "Zone Manager" | "Campus Admin";
 
@@ -21,8 +22,14 @@ const CAMPUSES: CampusCode[] = ["VSP", "HYD", "BLR"];
 
 // Display/sort order everywhere a staff list is shown: Super Admin, Campus Admin, Zone Manager, SPOC.
 const ROLE_ORDER: Record<string, number> = { "Super Admin": 0, "Campus Admin": 1, "Zone Manager": 2, SPOC: 3 };
-function sortByRole(list: ProfileRow[]): ProfileRow[] {
-  return [...list].sort((a, b) => (ROLE_ORDER[a.role] ?? 9) - (ROLE_ORDER[b.role] ?? 9));
+// Groups by campus first (VSP -> HYD -> BLR, Super Admins with no campus first), then by role within each campus.
+function sortStaff(list: ProfileRow[]): ProfileRow[] {
+  const campusRank = (c: CampusCode | null) => (c == null ? -1 : CAMPUS_ORDER.indexOf(c));
+  return [...list].sort((a, b) => {
+    const campusDiff = campusRank(a.campus) - campusRank(b.campus);
+    if (campusDiff !== 0) return campusDiff;
+    return (ROLE_ORDER[a.role] ?? 9) - (ROLE_ORDER[b.role] ?? 9);
+  });
 }
 
 /**
@@ -57,11 +64,27 @@ export function StaffAccountsSection({
   const [rowError, setRowError] = useState<string | null>(null);
 
   const [campusFilter, setCampusFilter] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
   const [search, setSearch] = useState("");
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editRole, setEditRole] = useState<UserRole>("SPOC");
+  const [editError, setEditError] = useState<string | null>(null);
 
   const roleChangeOptions: UserRole[] = canManageCampusAdmins
     ? ["Zone Manager", "SPOC", "Campus Admin"]
     : ["Zone Manager", "SPOC"];
+
+  const canEditOrDelete = (s: ProfileRow) =>
+    s.role === "SPOC" || s.role === "Zone Manager" || (s.role === "Campus Admin" && canManageCampusAdmins);
+
+  const roleFilterOptions = useMemo(
+    () =>
+      Array.from(new Set(local.map((s) => s.role))).sort((a, b) => (ROLE_ORDER[a] ?? 9) - (ROLE_ORDER[b] ?? 9)),
+    [local],
+  );
 
   const assignmentOf = (s: ProfileRow): string => {
     if (s.role === "Campus Admin") return s.campus ?? "—";
@@ -78,14 +101,15 @@ export function StaffAccountsSection({
 
   const visibleStaff = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return sortByRole(
+    return sortStaff(
       local.filter((s) => {
         if (campusFilter && s.campus !== campusFilter) return false;
+        if (roleFilter && s.role !== roleFilter) return false;
         if (q && !`${s.name} ${s.gitam_email}`.toLowerCase().includes(q)) return false;
         return true;
       }),
     );
-  }, [local, campusFilter, search]);
+  }, [local, campusFilter, roleFilter, search]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -145,14 +169,32 @@ export function StaffAccountsSection({
     }
   }
 
-  async function handleRoleChange(profileId: string, newRole: UserRole) {
+  function handleStartEdit(s: ProfileRow) {
+    setEditingId(s.id);
+    setEditName(s.name);
+    setEditEmail(s.gitam_email);
+    setEditRole(s.role);
+    setEditError(null);
+  }
+
+  function handleCancelEdit() {
+    setEditingId(null);
+    setEditError(null);
+  }
+
+  async function handleSaveEdit(profileId: string) {
     setChangingId(profileId);
-    setRowError(null);
+    setEditError(null);
     try {
-      await updateUserRole(profileId, newRole);
-      setLocal((prev) => prev.map((p) => (p.id === profileId ? { ...p, role: newRole } : p)));
+      await updateStaffProfile(profileId, editName, editEmail, editRole);
+      setLocal((prev) =>
+        prev.map((p) =>
+          p.id === profileId ? { ...p, name: editName.trim(), gitam_email: editEmail.trim().toLowerCase(), role: editRole } : p,
+        ),
+      );
+      setEditingId(null);
     } catch (err) {
-      setRowError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+      setEditError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
       setChangingId(null);
     }
@@ -244,6 +286,9 @@ export function StaffAccountsSection({
             {campus == null && (
               <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={CAMPUSES} valueOptions={CAMPUSES} />
             )}
+            {roleFilterOptions.length > 1 && (
+              <FilterSelect label="Role" value={roleFilter} onChange={setRoleFilter} options={roleFilterOptions} valueOptions={roleFilterOptions} />
+            )}
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -300,45 +345,112 @@ export function StaffAccountsSection({
                       </td>
                     </tr>
                   ) : (
-                    visibleStaff.map((s) => (
-                      <tr key={s.id} className="border-b border-border align-top last:border-0">
-                        <td className="px-4 py-3 text-ink-muted">{s.campus ?? "—"}</td>
-                        <td className="px-4 py-3 text-ink">{s.name}</td>
-                        <td className="px-4 py-3 text-ink-muted">{s.gitam_email}</td>
-                        <td className="px-4 py-3">
-                          <select
-                            value={s.role}
-                            disabled={changingId === s.id}
-                            onChange={(e) => handleRoleChange(s.id, e.target.value as UserRole)}
-                            className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
-                          >
-                            {roleChangeOptions.map((r) => (
-                              <option key={r} value={r}>
-                                {r}
-                              </option>
-                            ))}
-                            {!roleChangeOptions.includes(s.role) && (
-                              <option value={s.role} disabled>
-                                {s.role}
-                              </option>
-                            )}
-                          </select>
-                        </td>
-                        <td className="px-4 py-3 text-ink-muted">{assignmentOf(s)}</td>
-                        <td className="px-4 py-3">
-                          {(s.role === "SPOC" || s.role === "Zone Manager" || (s.role === "Campus Admin" && canManageCampusAdmins)) && (
-                            <button
-                              type="button"
-                              disabled={changingId === s.id}
-                              onClick={() => handleDeleteStaff(s)}
-                              className="rounded-full border border-danger/50 px-3 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
-                            >
-                              Delete
-                            </button>
+                    visibleStaff.map((s) => {
+                      const isEditing = editingId === s.id;
+                      return (
+                        <Fragment key={s.id}>
+                          <tr className="border-b border-border align-top last:border-0">
+                            <td className="px-4 py-3 text-ink-muted">{s.campus ?? "—"}</td>
+                            <td className="px-4 py-3 text-ink">
+                              {isEditing ? (
+                                <input
+                                  value={editName}
+                                  onChange={(e) => setEditName(e.target.value)}
+                                  className="w-full min-w-[140px] rounded-lg border border-border bg-void px-2.5 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                                />
+                              ) : (
+                                s.name
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-ink-muted">
+                              {isEditing ? (
+                                <input
+                                  type="email"
+                                  value={editEmail}
+                                  onChange={(e) => setEditEmail(e.target.value)}
+                                  className="w-full min-w-[200px] rounded-lg border border-border bg-void px-2.5 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                                />
+                              ) : (
+                                s.gitam_email
+                              )}
+                            </td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <select
+                                  value={editRole}
+                                  onChange={(e) => setEditRole(e.target.value as UserRole)}
+                                  className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                                >
+                                  {roleChangeOptions.map((r) => (
+                                    <option key={r} value={r}>
+                                      {r}
+                                    </option>
+                                  ))}
+                                  {!roleChangeOptions.includes(s.role) && (
+                                    <option value={s.role} disabled>
+                                      {s.role}
+                                    </option>
+                                  )}
+                                </select>
+                              ) : (
+                                <span className="text-ink">{s.role}</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-ink-muted">{assignmentOf(s)}</td>
+                            <td className="px-4 py-3">
+                              {isEditing ? (
+                                <div className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    disabled={changingId === s.id}
+                                    onClick={() => handleSaveEdit(s.id)}
+                                    className="rounded-full bg-gold px-3 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                                  >
+                                    {changingId === s.id ? "Saving…" : "Save"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={changingId === s.id}
+                                    onClick={handleCancelEdit}
+                                    className="rounded-full border border-border px-3 py-1.5 font-heading text-xs font-medium text-ink-muted transition-colors hover:bg-void disabled:opacity-60"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
+                                canEditOrDelete(s) && (
+                                  <div className="flex gap-2">
+                                    <button
+                                      type="button"
+                                      disabled={changingId === s.id}
+                                      onClick={() => handleStartEdit(s)}
+                                      className="rounded-full border border-gold/50 px-3 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={changingId === s.id}
+                                      onClick={() => handleDeleteStaff(s)}
+                                      className="rounded-full border border-danger/50 px-3 py-1.5 font-heading text-xs font-medium text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                )
+                              )}
+                            </td>
+                          </tr>
+                          {isEditing && editError && (
+                            <tr className="border-b border-border last:border-0">
+                              <td colSpan={6} className="px-4 pb-3 -mt-1 text-sm text-danger">
+                                {editError}
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                      </tr>
-                    ))
+                        </Fragment>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

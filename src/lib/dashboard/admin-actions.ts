@@ -47,6 +47,9 @@ function friendlyError(raw: string): string {
   if (raw.includes("CROSS_CAMPUS")) return "That record belongs to another campus.";
   if (raw.includes("CAMPUS_REQUIRED")) return "Pick a campus first.";
   if (raw.includes("INVALID_CAMPUS")) return "That isn't a valid campus.";
+  if (raw.includes("NAME_REQUIRED")) return "Name can't be empty.";
+  if (raw.includes("EMAIL_REQUIRED")) return "Email can't be empty.";
+  if (raw.includes("NOT_FOUND")) return "That account couldn't be found — refresh the page.";
   // validate_member_academics (supabase/migrations/0026) raises
   // `CODE: <member> — <field-specific sentence>` — show the sentence.
   const academic = raw.match(
@@ -126,8 +129,14 @@ export function upsertProblemStatement(input: UpsertProblemStatementInput) {
   });
 }
 
-export function updateUserRole(profileId: string, newRole: UserRole) {
-  return callRpc<null>("update_user_role", { p_profile_id: profileId, p_new_role: newRole });
+/** Edits a staff account's name/email/role together — Staff Accounts' Edit action. */
+export function updateStaffProfile(profileId: string, name: string, email: string, newRole: UserRole) {
+  return callRpc<null>("update_staff_profile", {
+    p_profile_id: profileId,
+    p_name: name,
+    p_email: email,
+    p_new_role: newRole,
+  });
 }
 
 export function setConfiguration(key: string, value: unknown, description: string) {
@@ -198,8 +207,14 @@ export function createZoneManager(input: CreateStaffInput) {
 
 // ── Rooms & Zones (item 11: SPOC is assigned to a room only, never a team/person) ──
 
-export function createRoom(name: string, zoneId: string | null, campus?: "VSP" | "BLR" | "HYD" | null) {
-  return callRpc<string>("create_room", { p_name: name, p_zone_id: zoneId, p_campus: campus ?? null });
+/** spocProfileId, if given, is validated and assigned atomically with the room — no separate assign call, so a taken SPOC means no room is created at all. */
+export function createRoom(name: string, zoneId: string | null, campus?: "VSP" | "BLR" | "HYD" | null, spocProfileId?: string | null) {
+  return callRpc<string>("create_room", {
+    p_name: name,
+    p_zone_id: zoneId,
+    p_campus: campus ?? null,
+    p_spoc_profile_id: spocProfileId ?? null,
+  });
 }
 
 export function createZone(name: string, managerProfileId: string | null, campus?: "VSP" | "BLR" | "HYD" | null) {
