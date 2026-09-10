@@ -17,6 +17,7 @@ import {
   updateZoneName,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
+import { sortCampuses } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -135,7 +136,7 @@ export function RoomsZonesSection({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localTeams, localRooms, localZones, search, fCampus, fSize, fZone, fZoneMgr, fVenue, fSpoc]);
 
-  const campusFilterOptions = Array.from(new Set(localTeams.map((t) => campusOf(t))));
+  const campusFilterOptions = sortCampuses(Array.from(new Set(localTeams.map((t) => campusOf(t)))));
   const sizeFilterOptions = Array.from(new Set(localTeams.map((t) => sizeOf(t)))).sort((a, b) => a - b);
 
   function handleExportViewCsv() {

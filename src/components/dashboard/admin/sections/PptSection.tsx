@@ -20,7 +20,7 @@ import {
   recordPresentation,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
-import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
+import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 
@@ -281,11 +281,13 @@ export function PptSection({
 
   const campusOptions = useMemo(
     () =>
-      Array.from(
-        new Set(
-          teams
-            .map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)
-            .filter((c): c is NonNullable<typeof c> => Boolean(c)),
+      sortCampuses(
+        Array.from(
+          new Set(
+            teams
+              .map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)
+              .filter((c): c is NonNullable<typeof c> => Boolean(c)),
+          ),
         ),
       ),
     [teams, membersByTeam],

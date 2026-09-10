@@ -5,6 +5,7 @@ import { ChevronDown, ChevronRight } from "lucide-react";
 import type { IdCardCertItem, IdCardCertRecordRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { recordIdCardCertificate, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { sortCampuses } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { FilterSelect } from "@/components/dashboard/admin/sections/TeamFormFields";
@@ -208,7 +209,7 @@ export function IdCardsSection({
   // ── Teams tab ────────────────────────────────────────────────────────
 
   const teamCampusOptions = useMemo(
-    () => uniqueValues(teams.map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)),
+    () => sortCampuses(uniqueValues(teams.map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus))),
     [teams, membersByTeam],
   );
 
@@ -269,7 +270,7 @@ export function IdCardsSection({
   // ── Members tab ──────────────────────────────────────────────────────
 
   const allMembers = useMemo(() => teams.flatMap((t) => membersByTeam[t.id] ?? []), [teams, membersByTeam]);
-  const memberCampusOptions = useMemo(() => uniqueValues(allMembers.map((m) => m.campus)), [allMembers]);
+  const memberCampusOptions = useMemo(() => sortCampuses(uniqueValues(allMembers.map((m) => m.campus))), [allMembers]);
 
   const filteredMembers = useMemo(() => {
     const q = memberFilters.search.trim().toLowerCase();

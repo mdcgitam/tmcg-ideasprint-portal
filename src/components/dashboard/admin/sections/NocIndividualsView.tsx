@@ -13,7 +13,7 @@ import {
   uploadNocFile,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
-import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
+import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 
@@ -102,7 +102,7 @@ export function NocIndividualsView({
   }
 
   const campusOptions = useMemo(
-    () => Array.from(new Set(allRows.map(({ member }) => member.campus).filter((c): c is NonNullable<typeof c> => Boolean(c)))),
+    () => sortCampuses(Array.from(new Set(allRows.map(({ member }) => member.campus).filter((c): c is NonNullable<typeof c> => Boolean(c))))),
     [allRows],
   );
 

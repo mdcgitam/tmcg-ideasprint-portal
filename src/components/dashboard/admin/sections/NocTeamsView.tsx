@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { NocRow, ProblemStatementRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { extendNocDeadline, DashboardActionError } from "@/lib/dashboard/team-actions";
-import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
+import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 import { TeamDetailModal } from "./TeamDetailModal";
@@ -115,11 +115,13 @@ export function NocTeamsView({
 
   const campusOptions = useMemo(
     () =>
-      Array.from(
-        new Set(
-          teams
-            .map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)
-            .filter((c): c is NonNullable<typeof c> => Boolean(c)),
+      sortCampuses(
+        Array.from(
+          new Set(
+            teams
+              .map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)
+              .filter((c): c is NonNullable<typeof c> => Boolean(c)),
+          ),
         ),
       ),
     [teams, membersByTeam],

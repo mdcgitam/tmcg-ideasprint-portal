@@ -1,6 +1,7 @@
 import { type ReactNode, useMemo } from "react";
 import type { ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
+import { sortCampuses } from "@/lib/dashboard/campus-config";
 import { FilterSelect, YEAR_OPTIONS } from "./TeamFormFields";
 import { MEMBER_STATUS_OPTIONS, memberStatusLabel } from "./ExitStatusBadge";
 
@@ -118,7 +119,7 @@ export function MembersFilterBar({
     onChange({ ...filters, [key]: value });
   }
 
-  const campusOptions = useMemo(() => uniqueOptions(rows, (m) => m.campus ?? ""), [rows]);
+  const campusOptions = useMemo(() => sortCampuses(uniqueOptions(rows, (m) => m.campus ?? "")), [rows]);
   const graduationOptions = useMemo(() => uniqueOptions(rows, (m) => m.graduation ?? ""), [rows]);
   const programOptions = useMemo(() => uniqueOptions(rows, (m) => m.program ?? ""), [rows]);
   const schoolOptions = useMemo(() => uniqueOptions(rows, (m) => m.school), [rows]);

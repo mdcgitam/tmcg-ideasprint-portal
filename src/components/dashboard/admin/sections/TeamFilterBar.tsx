@@ -1,6 +1,7 @@
 import { type ReactNode, useMemo } from "react";
 import type { ExitRequestRow, RoomRow, TeamRow, ProfileRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
+import { sortCampuses } from "@/lib/dashboard/campus-config";
 import { FilterSelect } from "./TeamFormFields";
 import { TEAM_STATUS_OPTIONS, activeMemberCount, teamActiveStatus } from "./ExitStatusBadge";
 
@@ -98,11 +99,13 @@ export function TeamFilterBar({
 
   const campusOptions = useMemo(
     () =>
-      Array.from(
-        new Set(
-          teams
-            .map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)
-            .filter((c): c is NonNullable<typeof c> => Boolean(c)),
+      sortCampuses(
+        Array.from(
+          new Set(
+            teams
+              .map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus)
+              .filter((c): c is NonNullable<typeof c> => Boolean(c)),
+          ),
         ),
       ),
     [teams, membersByTeam],

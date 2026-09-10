@@ -5,6 +5,18 @@ export function campusConfigKey(baseKey: string, campus: CampusCode): string {
   return `${baseKey}.${campus}`;
 }
 
+/** Canonical display order for campus codes, everywhere one is listed — VSP, then HYD, then BLR. */
+export const CAMPUS_ORDER: CampusCode[] = ["VSP", "HYD", "BLR"];
+
+/** Sorts a list of campus codes (e.g. options derived from data, in whatever order they happened to appear) into CAMPUS_ORDER. Unrecognized values sort last, in their original relative order. */
+export function sortCampuses<T extends string>(campuses: T[]): T[] {
+  return [...campuses].sort((a, b) => {
+    const ai = CAMPUS_ORDER.indexOf(a as CampusCode);
+    const bi = CAMPUS_ORDER.indexOf(b as CampusCode);
+    return (ai === -1 ? CAMPUS_ORDER.length : ai) - (bi === -1 ? CAMPUS_ORDER.length : bi);
+  });
+}
+
 const UPDATED_AT_SUFFIX = "__updated_at";
 
 /**
