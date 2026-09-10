@@ -114,6 +114,10 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
   const [savingDocs, setSavingDocs] = useState(false);
   const [docsError, setDocsError] = useState<string | null>(null);
 
+  const [editingDoc, setEditingDoc] = useState<DocumentLink | null>(null);
+  const [editDocName, setEditDocName] = useState("");
+  const [editDocUrl, setEditDocUrl] = useState("");
+
   async function saveDocuments(next: DocumentLink[]) {
     setSavingDocs(true);
     setDocsError(null);
@@ -141,6 +145,29 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
 
   function handleRemoveDocument(doc: DocumentLink) {
     saveDocuments(documents.filter((d) => d !== doc));
+  }
+
+  function startEditDocument(doc: DocumentLink) {
+    setEditingDoc(doc);
+    setEditDocName(doc.name);
+    setEditDocUrl(doc.url);
+    setDocsError(null);
+  }
+
+  function cancelEditDocument() {
+    setEditingDoc(null);
+  }
+
+  function handleSaveEditDocument() {
+    if (!editingDoc) return;
+    const name = editDocName.trim();
+    const url = editDocUrl.trim();
+    if (!name || !url) {
+      setDocsError("Enter both a name and a link.");
+      return;
+    }
+    saveDocuments(documents.map((d) => (d === editingDoc ? { ...d, name, url } : d)));
+    setEditingDoc(null);
   }
 
   async function handleSave(key: string) {
@@ -307,7 +334,40 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
         {visibleDocuments.length > 0 && (
           <div className="mt-4 flex flex-col gap-2">
             {visibleDocuments.map((doc, i) => {
-              const canRemove = isAllMode || doc.campus === campus;
+              const canEditOrRemove = isAllMode || doc.campus === campus;
+              const isEditing = editingDoc === doc;
+              if (isEditing) {
+                return (
+                  <div key={i} className="flex flex-wrap items-center gap-3 rounded-lg border border-gold/50 bg-void px-4 py-2.5">
+                    <input
+                      value={editDocName}
+                      onChange={(e) => setEditDocName(e.target.value)}
+                      className="min-w-[160px] flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                    />
+                    <input
+                      value={editDocUrl}
+                      onChange={(e) => setEditDocUrl(e.target.value)}
+                      className="min-w-[220px] flex-1 rounded-lg border border-border bg-surface px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                    />
+                    <button
+                      type="button"
+                      disabled={savingDocs}
+                      onClick={handleSaveEditDocument}
+                      className="rounded-full border border-gold/50 px-3 py-1 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
+                    >
+                      {savingDocs ? "Saving…" : "Save"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={savingDocs}
+                      onClick={cancelEditDocument}
+                      className="text-ink-muted underline disabled:opacity-60"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                );
+              }
               return (
                 <div key={i} className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-void px-4 py-2.5">
                   <span className="font-heading text-sm text-ink">{doc.name}</span>
@@ -315,15 +375,25 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
                     <span className="rounded-full bg-gold/10 px-2 py-0.5 font-heading text-[10px] text-gold uppercase">Global</span>
                   )}
                   <span className="flex-1 truncate font-heading text-xs text-ink-muted">{doc.url}</span>
-                  {canRemove && (
-                    <button
-                      type="button"
-                      disabled={savingDocs}
-                      onClick={() => handleRemoveDocument(doc)}
-                      className="text-danger underline disabled:opacity-60"
-                    >
-                      Remove
-                    </button>
+                  {canEditOrRemove && (
+                    <>
+                      <button
+                        type="button"
+                        disabled={savingDocs}
+                        onClick={() => startEditDocument(doc)}
+                        className="text-gold underline disabled:opacity-60"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        disabled={savingDocs}
+                        onClick={() => handleRemoveDocument(doc)}
+                        className="text-danger underline disabled:opacity-60"
+                      >
+                        Remove
+                      </button>
+                    </>
                   )}
                 </div>
               );
