@@ -17,7 +17,7 @@ import {
   updateZoneName,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
-import { sortCampuses } from "@/lib/dashboard/campus-config";
+import { CAMPUS_ORDER, sortCampuses } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -70,6 +70,11 @@ export function RoomsZonesSection({
   const fadeRef = useTabFade(view);
 
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
+  // Campus/Zone narrow the Venue list before picking — only shown/used when
+  // !singleCampus, since a Campus Admin (or a Super Admin scoped to one
+  // campus module) already has few enough venues that Venue alone is fine.
+  const [bulkCampusFilter, setBulkCampusFilter] = useState<CampusCode | "">("");
+  const [bulkZoneFilter, setBulkZoneFilter] = useState("");
   const [bulkRoomId, setBulkRoomId] = useState("");
   const [bulkAssignBusy, setBulkAssignBusy] = useState(false);
 
@@ -138,6 +143,14 @@ export function RoomsZonesSection({
 
   const campusFilterOptions = sortCampuses(Array.from(new Set(localTeams.map((t) => campusOf(t)))));
   const sizeFilterOptions = Array.from(new Set(localTeams.map((t) => sizeOf(t)))).sort((a, b) => a - b);
+
+  // Cascading Campus → Zone → Venue for the bulk-assign bar (Super Admin "All" only).
+  const bulkZoneOptions = bulkCampusFilter ? localZones.filter((z) => z.campus === bulkCampusFilter) : localZones;
+  const bulkRoomOptions = localRooms.filter((r) => {
+    if (bulkZoneFilter) return r.zone_id === bulkZoneFilter;
+    if (bulkCampusFilter) return r.campus === bulkCampusFilter;
+    return true;
+  });
 
   function handleExportViewCsv() {
     downloadCsv(
@@ -259,6 +272,8 @@ export function RoomsZonesSection({
       );
       setSelectedTeamIds(new Set());
       setBulkRoomId("");
+      setBulkCampusFilter("");
+      setBulkZoneFilter("");
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
@@ -774,9 +789,44 @@ export function RoomsZonesSection({
             {/* Bulk assign selected teams to a venue */}
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
               <span className="font-heading text-xs text-ink-muted">Assign selected teams to:</span>
+              {!singleCampus && (
+                <>
+                  <select
+                    value={bulkCampusFilter}
+                    onChange={(e) => {
+                      setBulkCampusFilter(e.target.value as CampusCode | "");
+                      setBulkZoneFilter("");
+                      setBulkRoomId("");
+                    }}
+                    className={selectClass}
+                  >
+                    <option value="">Campus…</option>
+                    {CAMPUS_ORDER.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={bulkZoneFilter}
+                    onChange={(e) => {
+                      setBulkZoneFilter(e.target.value);
+                      setBulkRoomId("");
+                    }}
+                    className={selectClass}
+                  >
+                    <option value="">Zone…</option>
+                    {bulkZoneOptions.map((z) => (
+                      <option key={z.id} value={z.id}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
               <select value={bulkRoomId} onChange={(e) => setBulkRoomId(e.target.value)} className={selectClass}>
                 <option value="">Choose a venue…</option>
-                {localRooms.map((r) => (
+                {bulkRoomOptions.map((r) => (
                   <option key={r.id} value={r.id}>
                     {r.name}
                   </option>
@@ -951,7 +1001,9 @@ export function RoomsZonesSection({
                                 className={selectClass}
                               >
                                 <option value="">No venue</option>
-                                {localRooms.map((r) => (
+                                {localRooms
+                                  .filter((r) => r.campus === campusOf(team))
+                                  .map((r) => (
                                   <option key={r.id} value={r.id}>
                                     {r.name}
                                   </option>
