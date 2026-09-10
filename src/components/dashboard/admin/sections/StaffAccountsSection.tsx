@@ -7,6 +7,7 @@ import {
   createCampusAdmin,
   createZoneManager,
   updateStaffProfile,
+  reorderStaff,
   deleteSpoc,
   deleteZoneManager,
   deleteCampusAdmin,
@@ -23,13 +24,26 @@ const CAMPUSES: CampusCode[] = ["VSP", "HYD", "BLR"];
 // Display/sort order everywhere a staff list is shown: Super Admin, Campus Admin, Zone Manager, SPOC.
 const ROLE_ORDER: Record<string, number> = { "Super Admin": 0, "Campus Admin": 1, "Zone Manager": 2, SPOC: 3 };
 // Groups by campus first (VSP -> HYD -> BLR, Super Admins with no campus first), then by role within each campus.
+// Within a group, a row someone has dragged (staff_sort_order set) sorts by that; untouched rows keep falling
+// back to their existing relative order (stable sort — created_at desc from the query) and sort after any that
+// have been manually placed.
 function sortStaff(list: ProfileRow[]): ProfileRow[] {
   const campusRank = (c: CampusCode | null) => (c == null ? -1 : CAMPUS_ORDER.indexOf(c));
   return [...list].sort((a, b) => {
     const campusDiff = campusRank(a.campus) - campusRank(b.campus);
     if (campusDiff !== 0) return campusDiff;
-    return (ROLE_ORDER[a.role] ?? 9) - (ROLE_ORDER[b.role] ?? 9);
+    const roleDiff = (ROLE_ORDER[a.role] ?? 9) - (ROLE_ORDER[b.role] ?? 9);
+    if (roleDiff !== 0) return roleDiff;
+    if (a.staff_sort_order != null && b.staff_sort_order != null) return a.staff_sort_order - b.staff_sort_order;
+    if (a.staff_sort_order != null) return -1;
+    if (b.staff_sort_order != null) return 1;
+    return 0;
   });
+}
+
+/** A row can only be dragged among others in the same campus+role bucket. */
+function groupKey(s: ProfileRow): string {
+  return `${s.campus ?? "none"}::${s.role}`;
 }
 
 /**
@@ -72,6 +86,12 @@ export function StaffAccountsSection({
   const [editEmail, setEditEmail] = useState("");
   const [editRole, setEditRole] = useState<UserRole>("SPOC");
   const [editError, setEditError] = useState<string | null>(null);
+
+  const [dragId, setDragId] = useState<string | null>(null);
+  const draggedRow = useMemo(() => (dragId ? (local.find((p) => p.id === dragId) ?? null) : null), [local, dragId]);
+  // Reordering reads the group's full membership straight off `visibleStaff` (see handleDrop) — only safe
+  // while search can't be hiding some of that group's rows, so dragging is off while a search is typed in.
+  const canReorder = search.trim() === "";
 
   const roleChangeOptions: UserRole[] = canManageCampusAdmins
     ? ["Zone Manager", "SPOC", "Campus Admin"]
@@ -153,6 +173,7 @@ export function StaffAccountsSection({
           stay: "",
           is_active: true,
           deactivated_at: null,
+          staff_sort_order: null,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         },
@@ -197,6 +218,31 @@ export function StaffAccountsSection({
       setEditError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
       setChangingId(null);
+    }
+  }
+
+  async function handleDrop(target: ProfileRow) {
+    const draggedId = dragId;
+    setDragId(null);
+    if (!draggedId || draggedId === target.id) return;
+    const dragged = local.find((p) => p.id === draggedId);
+    if (!dragged || groupKey(dragged) !== groupKey(target)) return;
+
+    const groupIds = visibleStaff.filter((p) => groupKey(p) === groupKey(target)).map((p) => p.id);
+    const fromIdx = groupIds.indexOf(draggedId);
+    const toIdx = groupIds.indexOf(target.id);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const reordered = [...groupIds];
+    reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, draggedId);
+
+    const orderById = new Map(reordered.map((id, i) => [id, i]));
+    setLocal((prev) => prev.map((p) => (orderById.has(p.id) ? { ...p, staff_sort_order: orderById.get(p.id)! } : p)));
+    setRowError(null);
+    try {
+      await reorderStaff(reordered);
+    } catch (err) {
+      setRowError(err instanceof DashboardActionError ? err.message : "Something went wrong reordering.");
     }
   }
 
@@ -295,6 +341,9 @@ export function StaffAccountsSection({
               placeholder="Search by name or email…"
               className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
             />
+            {!canReorder && (
+              <span className="font-heading text-xs text-ink-faint">Clear search to drag-reorder rows.</span>
+            )}
             <button
               type="button"
               onClick={() =>
@@ -329,6 +378,7 @@ export function StaffAccountsSection({
               <table className="w-full text-left font-heading text-sm">
                 <thead>
                   <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+                    <th className="w-8 px-2 py-3" />
                     <th className="px-4 py-3">Campus</th>
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Email</th>
@@ -340,16 +390,44 @@ export function StaffAccountsSection({
                 <tbody>
                   {visibleStaff.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-ink-muted">
+                      <td colSpan={7} className="px-4 py-8 text-center text-ink-muted">
                         No staff match the current filters.
                       </td>
                     </tr>
                   ) : (
                     visibleStaff.map((s) => {
                       const isEditing = editingId === s.id;
+                      const draggableRow = canReorder && !isEditing && canEditOrDelete(s);
                       return (
                         <Fragment key={s.id}>
-                          <tr className="border-b border-border align-top last:border-0">
+                          <tr
+                            className={`border-b border-border align-top last:border-0 ${dragId === s.id ? "opacity-40" : ""}`}
+                            onDragOver={(e) => {
+                              if (draggedRow && draggedRow.id !== s.id && groupKey(s) === groupKey(draggedRow)) {
+                                e.preventDefault();
+                              }
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              void handleDrop(s);
+                            }}
+                          >
+                            <td className="px-2 py-3 text-center text-ink-faint">
+                              {draggableRow && (
+                                <span
+                                  draggable
+                                  onDragStart={(e) => {
+                                    setDragId(s.id);
+                                    e.dataTransfer.effectAllowed = "move";
+                                  }}
+                                  onDragEnd={() => setDragId(null)}
+                                  title="Drag to reorder within this campus/role group"
+                                  className="inline-block cursor-grab select-none px-1 active:cursor-grabbing"
+                                >
+                                  ⠿
+                                </span>
+                              )}
+                            </td>
                             <td className="px-4 py-3 text-ink-muted">{s.campus ?? "—"}</td>
                             <td className="px-4 py-3 text-ink">
                               {isEditing ? (
@@ -443,7 +521,7 @@ export function StaffAccountsSection({
                           </tr>
                           {isEditing && editError && (
                             <tr className="border-b border-border last:border-0">
-                              <td colSpan={6} className="px-4 pb-3 -mt-1 text-sm text-danger">
+                              <td colSpan={7} className="px-4 pb-3 -mt-1 text-sm text-danger">
                                 {editError}
                               </td>
                             </tr>

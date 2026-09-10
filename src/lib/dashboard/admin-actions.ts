@@ -139,6 +139,11 @@ export function updateStaffProfile(profileId: string, name: string, email: strin
   });
 }
 
+/** Persists a drag-reordered Staff Accounts group — profileIds in display order, all from the same (campus, role) group. */
+export function reorderStaff(profileIds: string[]) {
+  return callRpc<null>("reorder_staff", { p_profile_ids: profileIds });
+}
+
 export function setConfiguration(key: string, value: unknown, description: string) {
   return callRpc<null>("set_configuration", { p_key: key, p_value: value, p_description: description });
 }

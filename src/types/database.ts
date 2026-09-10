@@ -41,6 +41,8 @@ export interface ProfileRow {
   stay: string;
   is_active: boolean;
   deactivated_at: string | null;
+  /** Manual drag-order within a (campus, role) group on Staff Accounts — null until someone drags a row. */
+  staff_sort_order: number | null;
   created_at: string;
   updated_at: string;
 }
