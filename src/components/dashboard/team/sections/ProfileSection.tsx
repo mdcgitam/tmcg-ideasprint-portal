@@ -107,6 +107,10 @@ export function ProfileSection({
     <div className="flex flex-col gap-6">
       <div className="grid gap-6 rounded-xl border border-border bg-surface p-6 sm:grid-cols-2 lg:grid-cols-4">
         <div>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Campus</span>
+          <p className="mt-2 font-heading text-ink">{team.campus}</p>
+        </div>
+        <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Team ID</span>
           <p className="mt-2 font-heading text-ink">{team.team_id}</p>
         </div>
@@ -119,10 +123,6 @@ export function ProfileSection({
           <p className={`mt-2 font-heading ${teamActiveStatus(members) === "Inactive" ? "text-danger" : "text-ink"}`}>
             {teamActiveStatus(members)}
           </p>
-        </div>
-        <div>
-          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Campus</span>
-          <p className="mt-2 font-heading text-ink">{team.campus}</p>
         </div>
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Zone</span>

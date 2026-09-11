@@ -28,7 +28,7 @@ export function AttendanceSection({
       <table className="w-full text-left font-heading text-sm">
         <thead>
           <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-            <th className="px-4 py-3">Member</th>
+            <th className="px-4 py-3">Participant Name</th>
             {attendanceSessions.map((s) => (
               <th key={s.id} className="px-4 py-3">
                 {s.name}
