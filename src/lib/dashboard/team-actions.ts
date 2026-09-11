@@ -14,8 +14,14 @@ export class DashboardActionError extends Error {}
 function friendlyError(raw: string): string {
   if (raw.includes("NOT_TEAM_LEAD")) return "Only the Team Lead can do this.";
   if (raw.includes("NOT_ALLOWED")) return "You don't have permission to do this.";
+  if (raw.includes("EXIT_REQUEST_ALREADY_PENDING")) {
+    return "There's already an exit request awaiting review for this person.";
+  }
   if (raw.includes("REQUEST_ALREADY_PENDING")) {
     return "You already have a pending edit request — wait for it to be reviewed before submitting another.";
+  }
+  if (raw.includes("TEAM_MIN_SIZE")) {
+    return "This team is at the 3-member minimum — every other active member must also submit (and have approved) an exit request before this one can go through. A single member can't exit alone from a 3-person team.";
   }
   if (raw.includes("SELECTION_NOT_CONFIGURED")) return "Problem statement selection hasn't been opened yet.";
   if (raw.includes("SELECTION_CLOSED")) return "The problem statement selection window is currently closed.";

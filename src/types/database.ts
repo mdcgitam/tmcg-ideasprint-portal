@@ -171,6 +171,7 @@ export interface ExitRequestRow {
   status: MemberExitStatus;
   reason: string | null;
   requested_at: string;
+  requested_by: string;
   reviewed_by: string | null;
   reviewed_at: string | null;
 }

@@ -1,120 +1,104 @@
 "use client";
 
 import { useState } from "react";
-import type { ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { ApprovalRequestRow, ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
-import { resolveMemberExit, DashboardActionError } from "@/lib/dashboard/admin-actions";
-import { getSignedUrl } from "@/lib/dashboard/team-actions";
+import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
+import { useTabFade } from "@/hooks/useTabFade";
+import { ExitTeamsView } from "./ExitTeamsView";
+import { ExitIndividualsView } from "./ExitIndividualsView";
+import { ExitHistorySection } from "./ExitHistorySection";
+
+type View = "teams" | "individuals" | "history";
 
 /**
- * Exit form submissions — split out from Approvals so a reviewer sees only
- * exit requests here (team-edit requests stay in Approvals). Same
- * approve/reject flow as before, just its own module.
+ * Exit Requests — Teams / Participants / History, same shape as the NOC
+ * module. A team can't have a single member exit once it's down to 3
+ * active members — every one of them must also be exiting (enforced
+ * server-side in resolve_member_exit) — the Teams tab flags that in
+ * progress; Participants is a flat, filterable queue; History is a
+ * read-only, merged timeline of resolved exit AND profile-edit requests.
  */
 export function ExitSubmissionsSection({
-  exitRequests,
   teams,
   membersByTeam,
+  exitRequests,
+  approvalRequests,
   rooms,
   zones,
   staffAccounts,
+  singleCampus = false,
+  hideZoneFilters = false,
+  hideVenueFilter = false,
+  hideSpocFilter = false,
 }: {
-  exitRequests: ExitRequestRow[];
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
+  exitRequests: ExitRequestRow[];
+  approvalRequests: ApprovalRequestRow[];
   rooms: RoomRow[];
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
+  singleCampus?: boolean;
+  hideZoneFilters?: boolean;
+  hideVenueFilter?: boolean;
+  hideSpocFilter?: boolean;
 }) {
-  const [localExitRequests, setLocalExitRequests] = useState(exitRequests.filter((r) => r.status === "Requested"));
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  const leadOf = (team: TeamRow | undefined) => (team ? (membersByTeam[team.id] ?? []).find((m) => m.is_lead) : null) ?? null;
-  const campusOf = (team: TeamRow | undefined) => leadOf(team)?.campus ?? team?.campus ?? "—";
-  const roomOf = (team: TeamRow | undefined) => (team?.room_id ? (rooms.find((r) => r.id === team.room_id) ?? null) : null);
-  const zoneOf = (team: TeamRow | undefined) => {
-    const room = roomOf(team);
-    return room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null;
-  };
-  const spocName = (team: TeamRow | undefined) =>
-    team?.spoc_profile_id ? (staffAccounts.find((s) => s.id === team.spoc_profile_id)?.name ?? null) : null;
-
-  async function handleResolveExit(requestId: string, decision: "Approved" | "Rejected") {
-    setBusyId(requestId);
-    setError(null);
-    try {
-      await resolveMemberExit(requestId, decision);
-      setLocalExitRequests((prev) => prev.filter((r) => r.id !== requestId));
-    } catch (err) {
-      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleViewExitFile(filePath: string) {
-    const url = await getSignedUrl("exit-requests", filePath);
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
-  }
-
-  if (localExitRequests.length === 0) {
-    return (
-      <div className="rounded-xl border border-border bg-surface p-8 text-center">
-        <p className="font-heading text-sm text-ink-muted">No pending exit form submissions.</p>
-      </div>
-    );
-  }
+  const [view, setView] = useState<View>("teams");
+  const fadeRef = useTabFade(view);
 
   return (
     <div className="flex flex-col gap-4">
-      {error && <p className="font-heading text-sm text-danger">{error}</p>}
+      <ViewToggle
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "teams", label: "View by Team" },
+          { value: "individuals", label: "View by Participants" },
+          { value: "history", label: "History" },
+        ]}
+      />
 
-      {localExitRequests.map((req) => {
-        const team = teams.find((t) => t.id === req.team_id);
-        const member = (membersByTeam[req.team_id] ?? []).find((m) => m.id === req.profile_id);
-        return (
-          <div key={req.id} className="rounded-xl border border-danger/40 bg-danger/5 p-6">
-            <div className="flex flex-col gap-1">
-              <p className="font-heading text-sm text-gold">{team?.team_name ?? "Unknown team"}</p>
-              <p className="font-heading text-xs text-ink-muted">
-                Campus: {campusOf(team)} · Zone: {zoneOf(team)?.name ?? "Unassigned"} · Venue:{" "}
-                {roomOf(team)?.name ?? "Unassigned"} · SPOC: {spocName(team) ?? "Unassigned"} · Team Lead:{" "}
-                {leadOf(team)?.name ?? "—"}
-              </p>
-            </div>
-            <p className="mt-2 font-heading text-xs text-ink-muted">Exit request received · {member?.name ?? "Unknown member"}</p>
-            {req.reason && <p className="mt-1 font-heading text-xs text-ink-muted">Reason: {req.reason}</p>}
-            {req.file_path && (
-              <button
-                type="button"
-                onClick={() => handleViewExitFile(req.file_path!)}
-                className="mt-2 font-heading text-sm text-gold underline"
-              >
-                View Exit Form
-              </button>
-            )}
-            <div className="mt-4 flex gap-3">
-              <button
-                type="button"
-                disabled={busyId === req.id}
-                onClick={() => handleResolveExit(req.id, "Approved")}
-                className="rounded-full bg-gitam px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:opacity-90 disabled:opacity-60"
-              >
-                Approve Exit
-              </button>
-              <button
-                type="button"
-                disabled={busyId === req.id}
-                onClick={() => handleResolveExit(req.id, "Rejected")}
-                className="rounded-full border border-danger/40 px-6 py-2.5 font-heading text-sm text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
-              >
-                Reject
-              </button>
-            </div>
-          </div>
-        );
-      })}
+      <div ref={fadeRef}>
+        {view === "teams" && (
+          <ExitTeamsView
+            teams={teams}
+            membersByTeam={membersByTeam}
+            exitRequests={exitRequests}
+            rooms={rooms}
+            zones={zones}
+            staffAccounts={staffAccounts}
+            singleCampus={singleCampus}
+            hideZoneFilters={hideZoneFilters}
+            hideVenueFilter={hideVenueFilter}
+            hideSpocFilter={hideSpocFilter}
+          />
+        )}
+        {view === "individuals" && (
+          <ExitIndividualsView
+            teams={teams}
+            membersByTeam={membersByTeam}
+            exitRequests={exitRequests}
+            rooms={rooms}
+            zones={zones}
+            staffAccounts={staffAccounts}
+            singleCampus={singleCampus}
+            hideZoneFilters={hideZoneFilters}
+            hideVenueFilter={hideVenueFilter}
+            hideSpocFilter={hideSpocFilter}
+          />
+        )}
+        {view === "history" && (
+          <ExitHistorySection
+            teams={teams}
+            membersByTeam={membersByTeam}
+            exitRequests={exitRequests}
+            approvalRequests={approvalRequests}
+            staffAccounts={staffAccounts}
+            singleCampus={singleCampus}
+          />
+        )}
+      </div>
     </div>
   );
 }

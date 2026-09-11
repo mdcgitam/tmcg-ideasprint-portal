@@ -69,6 +69,7 @@ export default async function TeamDashboardPage() {
     { data: pendingRequestRow },
     { data: configRows },
     { data: idCardCertRows },
+    { data: approvalHistoryRows },
   ] = await Promise.all([
     supabase.from("teams").select("*").eq("id", teamId).single(),
     supabase.from("team_members").select("profile_id, is_lead, profiles(*)").eq("team_id", teamId),
@@ -85,6 +86,9 @@ export default async function TeamDashboardPage() {
     supabase.from("approval_requests").select("*").eq("team_id", teamId).eq("status", "Pending").maybeSingle(),
     supabase.from("configuration").select("*"),
     supabase.from("id_card_certificate_records").select("*").eq("team_id", teamId),
+    // Unfiltered by status (unlike pendingRequestRow above) — feeds the Exit
+    // Request tab's History view, which needs resolved rows too.
+    supabase.from("approval_requests").select("*").eq("team_id", teamId),
   ]);
 
   const teamRow = team as TeamRow;
@@ -144,6 +148,7 @@ export default async function TeamDashboardPage() {
       zoneManagerName={zoneManagerName}
       zoneManagerEmail={zoneManagerEmail}
       idCardCertRecords={(idCardCertRows ?? []) as IdCardCertRecordRow[]}
+      approvalRequestsHistory={(approvalHistoryRows ?? []) as ApprovalRequestRow[]}
     />
   );
 }

@@ -19,8 +19,8 @@ export function memberStatusLabel(member: MemberActiveState): MemberStatusLabel 
 export const TEAM_STATUS_OPTIONS = ["Active", "Inactive"] as const;
 export type TeamStatusLabel = (typeof TEAM_STATUS_OPTIONS)[number];
 
-/** Below this many active members, a team is Inactive. */
-export const TEAM_MIN_ACTIVE = 2;
+/** Below this many active members, a team is Inactive — matches the backend floor enforced in resolve_member_exit/record_attendance (0038). */
+export const TEAM_MIN_ACTIVE = 3;
 
 /** Active roster size — members whose registration is still active. */
 export function activeMemberCount(members: MemberActiveState[]): number {

@@ -55,6 +55,7 @@ export interface TeamDashboardShellProps {
   zoneManagerName: string | null;
   zoneManagerEmail: string | null;
   idCardCertRecords: IdCardCertRecordRow[];
+  approvalRequestsHistory: ApprovalRequestRow[];
 }
 
 const TABS = [
@@ -159,8 +160,10 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
           {tab === "Exit Request" && (
             <ExitRequestSection
               profile={props.profile}
+              teamId={props.team.id}
               members={props.members}
               exitRequests={props.exitRequests}
+              approvalRequests={props.approvalRequestsHistory}
               isLead={isLead}
             />
           )}
