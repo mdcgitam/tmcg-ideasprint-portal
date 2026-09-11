@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import type { ApprovalRequestRow, ExitRequestRow, ProfileRow } from "@/types/database";
+import type { ExitRequestRow, ProfileRow } from "@/types/database";
 import type { TeamMemberProfile } from "../TeamDashboardShell";
 import {
   uploadExitRequestFile,
@@ -16,38 +16,30 @@ import { useTabFade } from "@/hooks/useTabFade";
 
 type View = "requests" | "history";
 
-interface HistoryRow {
-  id: string;
-  type: "Exit" | "Profile Edit";
-  requestedByProfileId: string;
-  sentAt: string;
-  status: "Approved" | "Rejected";
-  reviewedBy: string | null;
-  reviewedAt: string | null;
-}
-
 /**
  * Not a mandatory submission — a member requests to exit the event by
  * uploading their signed exit form; a SPOC/Zone Manager/Campus Admin/Super
- * Admin then approves or rejects it. Team Lead can upload/withdraw on
- * behalf of any teammate (mirrors NocSection); a Member can only act on
- * their own. A History tab shows past resolved exit AND profile-edit
- * requests — a Member sees their own exit history plus the team's
- * (team-wide) profile-edit history; a Lead sees everyone's.
+ * Admin then approves or rejects it. Team Lead can act on any teammate; a
+ * Member can only act on their own. While a request is still `Requested`
+ * (open), the requester can Replace the file/reason in place, or Withdraw
+ * it entirely — both now work for the member themselves, not just their
+ * Team Lead (request_member_exit/delete_exit_request, 0059). History shows
+ * this team's resolved exit requests — a Member sees only their own.
  */
 export function ExitRequestSection({
   profile,
   teamId,
   members,
   exitRequests,
-  approvalRequests,
+  reviewerNames,
   isLead,
 }: {
   profile: ProfileRow;
   teamId: string;
   members: TeamMemberProfile[];
   exitRequests: ExitRequestRow[];
-  approvalRequests: ApprovalRequestRow[];
+  /** id -> name for whoever reviewed a request — may not be a team member (SPOC/Zone Manager/Campus Admin/Super Admin). */
+  reviewerNames: Record<string, string>;
   isLead: boolean;
 }) {
   const [localRequests, setLocalRequests] = useState(exitRequests);
@@ -72,36 +64,16 @@ export function ExitRequestSection({
   function nameOf(profileId: string): string {
     return members.find((m) => m.id === profileId)?.name ?? "Unknown";
   }
+  function positionOf(profileId: string): string {
+    return members.find((m) => m.id === profileId)?.is_lead ? "Team Lead" : "Member";
+  }
 
-  const historyRows: HistoryRow[] = useMemo(() => {
+  const historyRows = useMemo(() => {
     const visibleIds = new Set(visibleMembers.map((m) => m.id));
-    const exitRows: HistoryRow[] = localRequests
+    return localRequests
       .filter((r): r is ExitRequestRow & { status: "Approved" | "Rejected" } => (r.status === "Approved" || r.status === "Rejected") && visibleIds.has(r.profile_id))
-      .map((r) => ({
-        id: r.id,
-        type: "Exit",
-        requestedByProfileId: r.requested_by,
-        sentAt: r.requested_at,
-        status: r.status,
-        reviewedBy: r.reviewed_by,
-        reviewedAt: r.reviewed_at,
-      }));
-    // Profile-edit requests are team-wide (not per-member), so everyone sees the full list regardless of isLead.
-    const editRows: HistoryRow[] = approvalRequests
-      .filter((r): r is ApprovalRequestRow & { status: "Approved" | "Rejected" } => r.status === "Approved" || r.status === "Rejected")
-      .map((r) => ({
-        id: r.id,
-        type: "Profile Edit",
-        requestedByProfileId: r.requested_by,
-        sentAt: r.created_at,
-        status: r.status,
-        reviewedBy: r.reviewed_by,
-        reviewedAt: r.reviewed_at,
-      }));
-    return [...exitRows, ...editRows].sort(
-      (a, b) => new Date(b.reviewedAt ?? b.sentAt).getTime() - new Date(a.reviewedAt ?? a.sentAt).getTime(),
-    );
-  }, [localRequests, approvalRequests, visibleMembers]);
+      .sort((a, b) => new Date(b.reviewed_at ?? b.requested_at).getTime() - new Date(a.reviewed_at ?? a.requested_at).getTime());
+  }, [localRequests, visibleMembers]);
 
   async function handleUpload(profileId: string, file: File) {
     setBusyProfileId(profileId);
@@ -109,21 +81,30 @@ export function ExitRequestSection({
     try {
       const path = await uploadExitRequestFile(profileId, file);
       await requestMemberExit(profileId, path, reason[profileId] ?? "");
-      setLocalRequests((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          profile_id: profileId,
-          team_id: teamId,
-          file_path: path,
-          status: "Requested",
-          reason: reason[profileId] ?? null,
-          requested_at: new Date().toISOString(),
-          requested_by: profile.id,
-          reviewed_by: null,
-          reviewed_at: null,
-        },
-      ]);
+      const openExisting = localRequests.find((r) => r.profile_id === profileId && r.status === "Requested");
+      setLocalRequests((prev) =>
+        openExisting
+          ? prev.map((r) =>
+              r.id === openExisting.id
+                ? { ...r, file_path: path, reason: reason[profileId] ?? null, requested_at: new Date().toISOString(), requested_by: profile.id }
+                : r,
+            )
+          : [
+              ...prev,
+              {
+                id: crypto.randomUUID(),
+                profile_id: profileId,
+                team_id: teamId,
+                file_path: path,
+                status: "Requested",
+                reason: reason[profileId] ?? null,
+                requested_at: new Date().toISOString(),
+                requested_by: profile.id,
+                reviewed_by: null,
+                reviewed_at: null,
+              },
+            ],
+      );
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
@@ -187,8 +168,9 @@ export function ExitRequestSection({
               const status = request?.status ?? "No Request";
               const busy = busyProfileId === m.id;
               const canAct = isLead || m.id === profile.id;
-              const canUpload = canAct && (!request || request.status === "Rejected");
-              const canWithdraw = isLead && request?.status === "Requested";
+              const isOpen = request?.status === "Requested";
+              const canUpload = canAct && request?.status !== "Approved";
+              const canWithdraw = canAct && isOpen;
 
               return (
                 <div
@@ -243,7 +225,7 @@ export function ExitRequestSection({
                           onClick={() => fileInputRefs.current[m.id]?.click()}
                           className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
                         >
-                          {busy ? "Working…" : "Request Exit"}
+                          {busy ? "Working…" : isOpen ? "Replace" : "Request Exit"}
                         </button>
                       </>
                     )}
@@ -271,20 +253,21 @@ export function ExitRequestSection({
                 <table className="w-full text-left font-heading text-sm">
                   <thead>
                     <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                      <th className="px-4 py-3">Type</th>
                       <th className="px-4 py-3">Requested By</th>
-                      <th className="px-4 py-3">Sent At</th>
+                      <th className="px-4 py-3">Position</th>
+                      <th className="px-4 py-3">Requested At</th>
                       <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Reviewed By</th>
                       <th className="px-4 py-3">Reviewed At</th>
                     </tr>
                   </thead>
                   <tbody>
                     {historyRows.map((r) => (
-                      <tr key={`${r.type}-${r.id}`} className="border-b border-border align-top last:border-0">
-                        <td className="px-4 py-3 text-ink-muted">{r.type}</td>
-                        <td className="px-4 py-3 text-ink">{nameOf(r.requestedByProfileId)}</td>
+                      <tr key={r.id} className="border-b border-border align-top last:border-0">
+                        <td className="px-4 py-3 text-ink">{nameOf(r.requested_by)}</td>
+                        <td className="px-4 py-3 text-ink-muted">{positionOf(r.requested_by)}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
-                          {new Date(r.sentAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                          {new Date(r.requested_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
                         </td>
                         <td className="px-4 py-3">
                           <span
@@ -295,8 +278,9 @@ export function ExitRequestSection({
                             {r.status}
                           </span>
                         </td>
+                        <td className="px-4 py-3 text-ink-muted">{r.reviewed_by ? (reviewerNames[r.reviewed_by] ?? nameOf(r.reviewed_by)) : "—"}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
-                          {r.reviewedAt ? new Date(r.reviewedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                          {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
                         </td>
                       </tr>
                     ))}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ApprovalRequestRow, ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -17,13 +17,13 @@ type View = "teams" | "individuals" | "history";
  * active members — every one of them must also be exiting (enforced
  * server-side in resolve_member_exit) — the Teams tab flags that in
  * progress; Participants is a flat, filterable queue; History is a
- * read-only, merged timeline of resolved exit AND profile-edit requests.
+ * read-only timeline of resolved exit requests. (Profile-edit request
+ * history is planned separately, not merged in here.)
  */
 export function ExitSubmissionsSection({
   teams,
   membersByTeam,
   exitRequests,
-  approvalRequests,
   rooms,
   zones,
   staffAccounts,
@@ -35,7 +35,6 @@ export function ExitSubmissionsSection({
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   exitRequests: ExitRequestRow[];
-  approvalRequests: ApprovalRequestRow[];
   rooms: RoomRow[];
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
@@ -93,7 +92,6 @@ export function ExitSubmissionsSection({
             teams={teams}
             membersByTeam={membersByTeam}
             exitRequests={exitRequests}
-            approvalRequests={approvalRequests}
             staffAccounts={staffAccounts}
             singleCampus={singleCampus}
           />

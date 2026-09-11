@@ -69,14 +69,14 @@ export default async function TeamDashboardPage() {
     { data: pendingRequestRow },
     { data: configRows },
     { data: idCardCertRows },
-    { data: approvalHistoryRows },
   ] = await Promise.all([
     supabase.from("teams").select("*").eq("id", teamId).single(),
     supabase.from("team_members").select("profile_id, is_lead, profiles(*)").eq("team_id", teamId),
     // No .eq(team_id)/.eq(recipient_profile_id) filters below — RLS alone
     // correctly scopes each of these to what this caller's role is allowed
     // to see (e.g. a Member only gets their own NOC row and notifications,
-    // a Team Lead gets every teammate's).
+    // a Team Lead gets every teammate's). exit_requests is unfiltered by
+    // status too — feeds the Exit Request tab's History view.
     supabase.from("nocs").select("*"),
     supabase.from("attendance").select("*").eq("team_id", teamId),
     supabase.from("attendance_sessions").select("*").order("sort_order"),
@@ -86,9 +86,6 @@ export default async function TeamDashboardPage() {
     supabase.from("approval_requests").select("*").eq("team_id", teamId).eq("status", "Pending").maybeSingle(),
     supabase.from("configuration").select("*"),
     supabase.from("id_card_certificate_records").select("*").eq("team_id", teamId),
-    // Unfiltered by status (unlike pendingRequestRow above) — feeds the Exit
-    // Request tab's History view, which needs resolved rows too.
-    supabase.from("approval_requests").select("*").eq("team_id", teamId),
   ]);
 
   const teamRow = team as TeamRow;
@@ -127,6 +124,18 @@ export default async function TeamDashboardPage() {
 
   const config = buildConfigMap((configRows ?? []) as ConfigurationRow[]);
 
+  // Exit Request History's "Reviewed By" column — the reviewer may be a
+  // Campus Admin/Super Admin outside the team's own SPOC/Zone Manager.
+  const reviewerIds = Array.from(
+    new Set(((exitRequestRows ?? []) as ExitRequestRow[]).map((r) => r.reviewed_by).filter((id): id is string => Boolean(id))),
+  );
+  const { data: reviewerRows } = reviewerIds.length > 0
+    ? await supabase.from("profiles").select("id, name").in("id", reviewerIds)
+    : { data: [] };
+  const reviewerNames = Object.fromEntries(
+    ((reviewerRows ?? []) as { id: string; name: string }[]).map((r) => [r.id, r.name]),
+  );
+
   return (
     <TeamDashboardShell
       profile={profile}
@@ -148,7 +157,7 @@ export default async function TeamDashboardPage() {
       zoneManagerName={zoneManagerName}
       zoneManagerEmail={zoneManagerEmail}
       idCardCertRecords={(idCardCertRows ?? []) as IdCardCertRecordRow[]}
-      approvalRequestsHistory={(approvalHistoryRows ?? []) as ApprovalRequestRow[]}
+      reviewerNames={reviewerNames}
     />
   );
 }

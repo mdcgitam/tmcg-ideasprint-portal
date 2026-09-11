@@ -1,50 +1,31 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { ApprovalRequestRow, ExitRequestRow, ProfileRow, TeamRow } from "@/types/database";
+import type { ExitRequestRow, ProfileRow, TeamRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { sortCampuses } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 
-interface HistoryRow {
-  id: string;
-  type: "Exit" | "Profile Edit";
-  team: TeamRow | null;
-  requestedByProfileId: string;
-  sentAt: string;
-  status: "Approved" | "Rejected";
-  reviewedBy: string | null;
-  reviewedAt: string | null;
-}
+const POSITION_OPTIONS = ["Team Lead", "Member"];
 
-const TYPE_OPTIONS = ["Exit", "Profile Edit"];
-const STATUS_OPTIONS = ["Approved", "Rejected"];
-
-/**
- * Combined History — resolved Exit requests and resolved Profile Edit
- * (approval_requests) requests in one chronological timeline. Read-only;
- * the live Teams/Participants tabs (exit) and Approvals module (edit) are
- * where an open request actually gets acted on.
- */
+/** Resolved exit requests only — a merged history with Profile Edit requests is planned separately. */
 export function ExitHistorySection({
   teams,
   membersByTeam,
   exitRequests,
-  approvalRequests,
   staffAccounts,
   singleCampus = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   exitRequests: ExitRequestRow[];
-  approvalRequests: ApprovalRequestRow[];
   staffAccounts: ProfileRow[];
   singleCampus?: boolean;
 }) {
   const [campusFilter, setCampusFilter] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [positionFilter, setPositionFilter] = useState("");
+  const [reviewerFilter, setReviewerFilter] = useState("");
   const [search, setSearch] = useState("");
 
   const teamOf = (teamId: string) => teams.find((t) => t.id === teamId) ?? null;
@@ -58,70 +39,52 @@ export function ExitHistorySection({
       "Unknown"
     );
   }
-  function positionOf(profileId: string, teamId: string): string {
+  function positionOf(profileId: string, teamId: string): "Team Lead" | "Member" | "—" {
     const member = (membersByTeam[teamId] ?? []).find((m) => m.id === profileId);
-    if (member) return member.is_lead ? "Team Lead" : "Member";
-    const staff = staffAccounts.find((s) => s.id === profileId);
-    return staff?.role ?? "—";
+    return member ? (member.is_lead ? "Team Lead" : "Member") : "—";
+  }
+  function reviewerName(reviewedBy: string | null): string {
+    return reviewedBy ? (staffAccounts.find((s) => s.id === reviewedBy)?.name ?? "Unknown") : "—";
   }
 
-  const rows: HistoryRow[] = useMemo(() => {
-    const exitRows: HistoryRow[] = exitRequests
-      .filter((r): r is ExitRequestRow & { status: "Approved" | "Rejected" } => r.status === "Approved" || r.status === "Rejected")
-      .map((r) => ({
-        id: r.id,
-        type: "Exit",
-        team: teamOf(r.team_id),
-        requestedByProfileId: r.requested_by,
-        sentAt: r.requested_at,
-        status: r.status,
-        reviewedBy: r.reviewed_by,
-        reviewedAt: r.reviewed_at,
-      }));
+  const resolvedRequests = useMemo(
+    () => exitRequests.filter((r): r is ExitRequestRow & { status: "Approved" | "Rejected" } => r.status === "Approved" || r.status === "Rejected"),
+    [exitRequests],
+  );
 
-    const editRows: HistoryRow[] = approvalRequests
-      .filter((r): r is ApprovalRequestRow & { status: "Approved" | "Rejected" } => r.status === "Approved" || r.status === "Rejected")
-      .map((r) => ({
-        id: r.id,
-        type: "Profile Edit",
-        team: teamOf(r.team_id),
-        requestedByProfileId: r.requested_by,
-        sentAt: r.created_at,
-        status: r.status,
-        reviewedBy: r.reviewed_by,
-        reviewedAt: r.reviewed_at,
-      }));
-
-    return [...exitRows, ...editRows].sort(
-      (a, b) => new Date(b.reviewedAt ?? b.sentAt).getTime() - new Date(a.reviewedAt ?? a.sentAt).getTime(),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exitRequests, approvalRequests, teams, membersByTeam]);
-
-  const campusOptions = useMemo(() => sortCampuses(Array.from(new Set(rows.map((r) => campusOf(r.team)).filter((c): c is NonNullable<typeof c> => Boolean(c))))), [rows]); // eslint-disable-line react-hooks/exhaustive-deps
+  const campusOptions = useMemo(() => sortCampuses(Array.from(new Set(resolvedRequests.map((r) => campusOf(teamOf(r.team_id))).filter((c): c is NonNullable<typeof c> => Boolean(c))))), [resolvedRequests]); // eslint-disable-line react-hooks/exhaustive-deps
+  const reviewerOptions = useMemo(
+    () => Array.from(new Set(resolvedRequests.map((r) => r.reviewed_by).filter((id): id is string => Boolean(id)))),
+    [resolvedRequests],
+  );
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return rows.filter((r) => {
-      if (typeFilter && r.type !== typeFilter) return false;
-      if (statusFilter && r.status !== statusFilter) return false;
-      if (campusFilter && campusOf(r.team) !== campusFilter) return false;
-      if (q) {
-        const haystack = `${r.team?.team_name ?? ""} ${r.team?.team_id ?? ""} ${personName(r.requestedByProfileId, r.team?.id ?? "")}`.toLowerCase();
-        if (!haystack.includes(q)) return false;
-      }
-      return true;
-    });
+    return [...resolvedRequests]
+      .sort((a, b) => new Date(b.reviewed_at ?? b.requested_at).getTime() - new Date(a.reviewed_at ?? a.requested_at).getTime())
+      .filter((r) => {
+        const team = teamOf(r.team_id);
+        if (campusFilter && campusOf(team) !== campusFilter) return false;
+        if (positionFilter && positionOf(r.requested_by, r.team_id) !== positionFilter) return false;
+        if (reviewerFilter && r.reviewed_by !== reviewerFilter) return false;
+        if (q) {
+          const haystack = `${r.id} ${team?.team_name ?? ""} ${personName(r.requested_by, r.team_id)}`.toLowerCase();
+          if (!haystack.includes(q)) return false;
+        }
+        return true;
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, search, typeFilter, statusFilter, campusFilter]);
+  }, [resolvedRequests, search, campusFilter, positionFilter, reviewerFilter]);
 
-  if (rows.length === 0) {
+  if (resolvedRequests.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-surface p-8 text-center">
-        <p className="font-heading text-sm text-ink-muted">No resolved requests yet.</p>
+        <p className="font-heading text-sm text-ink-muted">No resolved exit requests yet.</p>
       </div>
     );
   }
+
+  const columnCount = 9 + (singleCampus ? 0 : 1);
 
   return (
     <div className="flex flex-col gap-4">
@@ -129,33 +92,40 @@ export function ExitHistorySection({
         {!singleCampus && (
           <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} valueOptions={campusOptions} />
         )}
-        <FilterSelect label="Type" value={typeFilter} onChange={setTypeFilter} options={TYPE_OPTIONS} valueOptions={TYPE_OPTIONS} />
-        <FilterSelect label="Status" value={statusFilter} onChange={setStatusFilter} options={STATUS_OPTIONS} valueOptions={STATUS_OPTIONS} />
+        <FilterSelect label="Position" value={positionFilter} onChange={setPositionFilter} options={POSITION_OPTIONS} valueOptions={POSITION_OPTIONS} />
+        <FilterSelect
+          label="Reviewed By"
+          value={reviewerFilter}
+          onChange={setReviewerFilter}
+          options={reviewerOptions.map((id) => staffAccounts.find((s) => s.id === id)?.name ?? "Unknown")}
+          valueOptions={reviewerOptions}
+        />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search team or requester…"
-          className="min-w-[200px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+          placeholder="Search request ID, team, or requester…"
+          className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
         <button
           type="button"
           onClick={() =>
             downloadCsv(
-              "request-history",
-              filteredRows.map((r) => ({
-                "Request ID": r.id,
-                ...(singleCampus ? {} : { Campus: campusOf(r.team) ?? "—" }),
-                "Team ID": r.team?.team_id ?? "—",
-                "Team Name": r.team?.team_name ?? "—",
-                "Team Lead": leadOf(r.team)?.name ?? "—",
-                "Requested By": personName(r.requestedByProfileId, r.team?.id ?? ""),
-                Position: positionOf(r.requestedByProfileId, r.team?.id ?? ""),
-                Type: r.type,
-                "Sent At": r.sentAt,
-                Status: r.status,
-                "Reviewed By": r.reviewedBy ? (staffAccounts.find((s) => s.id === r.reviewedBy)?.name ?? "—") : "—",
-                "Reviewed At": r.reviewedAt ?? "—",
-              })),
+              "exit-request-history",
+              filteredRows.map((r) => {
+                const team = teamOf(r.team_id);
+                return {
+                  "Request ID": r.id,
+                  ...(singleCampus ? {} : { Campus: campusOf(team) ?? "—" }),
+                  "Team ID": team?.team_id ?? "—",
+                  "Team Name": team?.team_name ?? "—",
+                  "Requested By": personName(r.requested_by, r.team_id),
+                  Position: positionOf(r.requested_by, r.team_id),
+                  "Requested At": r.requested_at,
+                  Status: r.status,
+                  "Reviewed By": reviewerName(r.reviewed_by),
+                  "Reviewed At": r.reviewed_at ?? "—",
+                };
+              }),
             )
           }
           className="w-fit rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
@@ -171,12 +141,11 @@ export function ExitHistorySection({
               <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                 <th className="px-4 py-3">Request ID</th>
                 {!singleCampus && <th className="px-4 py-3">Campus</th>}
-                <th className="px-4 py-3">Team</th>
-                <th className="px-4 py-3">Team Lead</th>
+                <th className="px-4 py-3">Team ID</th>
+                <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Requested By</th>
                 <th className="px-4 py-3">Position</th>
-                <th className="px-4 py-3">Type</th>
-                <th className="px-4 py-3">Sent At</th>
+                <th className="px-4 py-3">Requested At</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Reviewed By</th>
                 <th className="px-4 py-3">Reviewed At</th>
@@ -185,42 +154,42 @@ export function ExitHistorySection({
             <tbody>
               {filteredRows.length === 0 ? (
                 <tr>
-                  <td colSpan={singleCampus ? 10 : 11} className="px-4 py-8 text-center text-ink-muted">
+                  <td colSpan={columnCount} className="px-4 py-8 text-center text-ink-muted">
                     No requests match the current filters.
                   </td>
                 </tr>
               ) : (
-                filteredRows.map((r) => (
-                  <tr key={`${r.type}-${r.id}`} className="border-b border-border align-top last:border-0">
-                    <td className="px-4 py-3 text-ink-faint" title={r.id}>
-                      {r.id.slice(0, 8)}
-                    </td>
-                    {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(r.team) ?? "—"}</td>}
-                    <td className="px-4 py-3 text-ink">
-                      {r.team?.team_name ?? "Unknown"} <span className="text-ink-faint">· {r.team?.team_id ?? "—"}</span>
-                    </td>
-                    <td className="px-4 py-3 text-ink-muted">{leadOf(r.team)?.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-muted">{personName(r.requestedByProfileId, r.team?.id ?? "")}</td>
-                    <td className="px-4 py-3 text-ink-muted">{positionOf(r.requestedByProfileId, r.team?.id ?? "")}</td>
-                    <td className="px-4 py-3 text-ink-muted">{r.type}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
-                      {new Date(r.sentAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={`rounded-full border px-3 py-1 text-xs ${
-                          r.status === "Approved" ? "border-gitam/40 bg-gitam/10 text-gitam" : "border-danger/40 bg-danger/10 text-danger"
-                        }`}
-                      >
-                        {r.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-ink-muted">{r.reviewedBy ? (staffAccounts.find((s) => s.id === r.reviewedBy)?.name ?? "—") : "—"}</td>
-                    <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
-                      {r.reviewedAt ? new Date(r.reviewedAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
-                    </td>
-                  </tr>
-                ))
+                filteredRows.map((r) => {
+                  const team = teamOf(r.team_id);
+                  return (
+                    <tr key={r.id} className="border-b border-border align-top last:border-0">
+                      <td className="px-4 py-3 text-ink-faint" title={r.id}>
+                        {r.id.slice(0, 8)}
+                      </td>
+                      {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team) ?? "—"}</td>}
+                      <td className="px-4 py-3 text-ink-muted">{team?.team_id ?? "—"}</td>
+                      <td className="px-4 py-3 text-ink">{team?.team_name ?? "Unknown"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{personName(r.requested_by, r.team_id)}</td>
+                      <td className="px-4 py-3 text-ink-muted">{positionOf(r.requested_by, r.team_id)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                        {new Date(r.requested_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs ${
+                            r.status === "Approved" ? "border-gitam/40 bg-gitam/10 text-gitam" : "border-danger/40 bg-danger/10 text-danger"
+                          }`}
+                        >
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-ink-muted">{reviewerName(r.reviewed_by)}</td>
+                      <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                        {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

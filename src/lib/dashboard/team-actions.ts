@@ -14,9 +14,6 @@ export class DashboardActionError extends Error {}
 function friendlyError(raw: string): string {
   if (raw.includes("NOT_TEAM_LEAD")) return "Only the Team Lead can do this.";
   if (raw.includes("NOT_ALLOWED")) return "You don't have permission to do this.";
-  if (raw.includes("EXIT_REQUEST_ALREADY_PENDING")) {
-    return "There's already an exit request awaiting review for this person.";
-  }
   if (raw.includes("REQUEST_ALREADY_PENDING")) {
     return "You already have a pending edit request — wait for it to be reviewed before submitting another.";
   }

@@ -55,7 +55,8 @@ export interface TeamDashboardShellProps {
   zoneManagerName: string | null;
   zoneManagerEmail: string | null;
   idCardCertRecords: IdCardCertRecordRow[];
-  approvalRequestsHistory: ApprovalRequestRow[];
+  /** id -> name for exit-request reviewers who aren't team members (SPOC/Zone Manager/Campus Admin/Super Admin). */
+  reviewerNames: Record<string, string>;
 }
 
 const TABS = [
@@ -163,7 +164,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
               teamId={props.team.id}
               members={props.members}
               exitRequests={props.exitRequests}
-              approvalRequests={props.approvalRequestsHistory}
+              reviewerNames={props.reviewerNames}
               isLead={isLead}
             />
           )}

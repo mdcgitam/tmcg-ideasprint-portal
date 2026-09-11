@@ -3,12 +3,11 @@
 import { useMemo, useState } from "react";
 import type { ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
-import { resolveMemberExit, DashboardActionError } from "@/lib/dashboard/admin-actions";
-import { getSignedUrl } from "@/lib/dashboard/team-actions";
 import { sortCampuses } from "@/lib/dashboard/campus-config";
 import { FilterSelect } from "./TeamFormFields";
+import { ExitReviewModal } from "./ExitReviewModal";
 
-/** "Teams" view of Exit Requests — one card per team that has any exit-request activity, every member's status inline. */
+/** "Teams" view of Exit Requests — every team, with how many active members currently have an open exit form; View opens the review popup. */
 export function ExitTeamsView({
   teams,
   membersByTeam,
@@ -33,11 +32,12 @@ export function ExitTeamsView({
   hideSpocFilter?: boolean;
 }) {
   const [localRequests, setLocalRequests] = useState(exitRequests);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [openTeamId, setOpenTeamId] = useState<string | null>(null);
 
   const [campusFilter, setCampusFilter] = useState("");
+  const [sizeFilter, setSizeFilter] = useState("");
   const [zoneFilter, setZoneFilter] = useState("");
+  const [zoneManagerFilter, setZoneManagerFilter] = useState("");
   const [venueFilter, setVenueFilter] = useState("");
   const [spocFilter, setSpocFilter] = useState("");
   const [search, setSearch] = useState("");
@@ -50,55 +50,42 @@ export function ExitTeamsView({
     return room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null;
   };
   const spocName = (team: TeamRow) => (team.spoc_profile_id ? (staffAccounts.find((s) => s.id === team.spoc_profile_id)?.name ?? null) : null);
+  const zoneManagerName = (team: TeamRow) => {
+    const zm = zoneOf(team)?.zone_manager_profile_id;
+    return zm ? (staffAccounts.find((s) => s.id === zm)?.name ?? null) : null;
+  };
 
-  const teamsWithActivity = useMemo(() => {
-    const teamIds = new Set(localRequests.map((r) => r.team_id));
-    return teams.filter((t) => teamIds.has(t.id));
-  }, [teams, localRequests]);
+  function openRequestCountFor(team: TeamRow): { open: number; active: number } {
+    const active = (membersByTeam[team.id] ?? []).filter((m) => m.is_active);
+    const open = active.filter((m) => localRequests.some((r) => r.profile_id === m.id && r.status === "Requested")).length;
+    return { open, active: active.length };
+  }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const campusOptions = useMemo(() => sortCampuses(Array.from(new Set(teamsWithActivity.map(campusOf)))), [teamsWithActivity]);
+  const campusOptions = useMemo(() => sortCampuses(Array.from(new Set(teams.map(campusOf)))), [teams]); // eslint-disable-line react-hooks/exhaustive-deps
+  const sizeOptions = useMemo(() => Array.from(new Set(teams.map((t) => t.member_count))).sort((a, b) => a - b), [teams]);
 
   const filteredTeams = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return teamsWithActivity.filter((t) => {
-      if (q && !`${t.team_name} ${t.team_id}`.toLowerCase().includes(q)) return false;
+    return teams.filter((t) => {
+      const lead = leadOf(t);
+      if (q) {
+        const haystack = `${t.team_name} ${t.team_id} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       if (campusFilter && campusOf(t) !== campusFilter) return false;
+      if (sizeFilter && String(t.member_count) !== sizeFilter) return false;
       if (zoneFilter && zoneOf(t)?.id !== zoneFilter) return false;
+      if (zoneManagerFilter && zoneOf(t)?.zone_manager_profile_id !== zoneManagerFilter) return false;
       if (venueFilter && t.room_id !== venueFilter) return false;
       if (spocFilter && t.spoc_profile_id !== spocFilter) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teamsWithActivity, search, campusFilter, zoneFilter, venueFilter, spocFilter]);
+  }, [teams, membersByTeam, search, campusFilter, sizeFilter, zoneFilter, zoneManagerFilter, venueFilter, spocFilter]);
 
-  async function handleResolve(requestId: string, decision: "Approved" | "Rejected") {
-    setBusyId(requestId);
-    setError(null);
-    try {
-      await resolveMemberExit(requestId, decision);
-      setLocalRequests((prev) =>
-        prev.map((r) => (r.id === requestId ? { ...r, status: decision, reviewed_at: new Date().toISOString() } : r)),
-      );
-    } catch (err) {
-      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  async function handleView(filePath: string) {
-    const url = await getSignedUrl("exit-requests", filePath);
-    if (url) window.open(url, "_blank", "noopener,noreferrer");
-  }
-
-  if (teamsWithActivity.length === 0) {
-    return (
-      <div className="rounded-xl border border-border bg-surface p-8 text-center">
-        <p className="font-heading text-sm text-ink-muted">No exit form activity yet.</p>
-      </div>
-    );
-  }
+  const openTeam = openTeamId ? (teams.find((t) => t.id === openTeamId) ?? null) : null;
+  const columnCount =
+    (singleCampus ? 0 : 1) + 5 + (hideZoneFilters ? 0 : 2) + (hideVenueFilter ? 0 : 1) + (hideSpocFilter ? 0 : 1) + 2;
 
   return (
     <div className="flex flex-col gap-4">
@@ -106,23 +93,21 @@ export function ExitTeamsView({
         {!singleCampus && (
           <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} valueOptions={campusOptions} />
         )}
+        <FilterSelect label="Team Size" value={sizeFilter} onChange={setSizeFilter} options={sizeOptions.map(String)} valueOptions={sizeOptions.map(String)} />
         {!hideZoneFilters && (
-          <FilterSelect
-            label="Zone"
-            value={zoneFilter}
-            onChange={setZoneFilter}
-            options={zones.map((z) => z.name)}
-            valueOptions={zones.map((z) => z.id)}
-          />
+          <>
+            <FilterSelect label="Zone" value={zoneFilter} onChange={setZoneFilter} options={zones.map((z) => z.name)} valueOptions={zones.map((z) => z.id)} />
+            <FilterSelect
+              label="Zone Manager"
+              value={zoneManagerFilter}
+              onChange={setZoneManagerFilter}
+              options={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.name)}
+              valueOptions={staffAccounts.filter((s) => s.role === "Zone Manager").map((s) => s.id)}
+            />
+          </>
         )}
         {!hideVenueFilter && (
-          <FilterSelect
-            label="Venue"
-            value={venueFilter}
-            onChange={setVenueFilter}
-            options={rooms.map((r) => r.name)}
-            valueOptions={rooms.map((r) => r.id)}
-          />
+          <FilterSelect label="Venue" value={venueFilter} onChange={setVenueFilter} options={rooms.map((r) => r.name)} valueOptions={rooms.map((r) => r.id)} />
         )}
         {!hideSpocFilter && (
           <FilterSelect
@@ -136,106 +121,95 @@ export function ExitTeamsView({
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search team…"
+          placeholder="Search team, lead, or phone…"
           className="min-w-[200px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
       </div>
 
-      {error && <p className="font-heading text-sm text-danger">{error}</p>}
-
-      {filteredTeams.length === 0 ? (
-        <div className="rounded-xl border border-border bg-surface p-8 text-center">
-          <p className="font-heading text-sm text-ink-muted">No teams match the current filters.</p>
-        </div>
-      ) : (
-        filteredTeams.map((team) => {
-          const members = membersByTeam[team.id] ?? [];
-          const activeMembers = members.filter((m) => m.is_active);
-          const requestFor = (profileId: string) =>
-            localRequests
-              .filter((r) => r.profile_id === profileId)
-              .sort((a, b) => new Date(b.requested_at).getTime() - new Date(a.requested_at).getTime())[0] ?? null;
-          const exitingCount = activeMembers.filter((m) => {
-            const r = requestFor(m.id);
-            return r && (r.status === "Requested" || r.status === "Approved");
-          }).length;
-          const dissolving = activeMembers.length <= 3 && exitingCount > 0;
-
-          return (
-            <div key={team.id} className="rounded-xl border border-border bg-surface p-6">
-              <div className="flex flex-col gap-1">
-                <p className="font-heading text-sm text-gold">{team.team_name}</p>
-                <p className="font-heading text-xs text-ink-muted">
-                  Campus: {campusOf(team)} · Zone: {zoneOf(team)?.name ?? "Unassigned"} · Venue:{" "}
-                  {roomOf(team)?.name ?? "Unassigned"} · SPOC: {spocName(team) ?? "Unassigned"} · Team Lead:{" "}
-                  {leadOf(team)?.name ?? "—"}
-                </p>
-              </div>
-
-              {dissolving && (
-                <p className="mt-3 rounded-lg border border-gold/40 bg-gold/5 px-4 py-2 font-heading text-xs text-gold">
-                  {exitingCount} of {activeMembers.length} active members have an exit request in progress —
-                  approving any one of them requires every active member to also be exiting.
-                </p>
-              )}
-
-              <div className="mt-4 flex flex-col gap-2">
-                {members.map((m) => {
-                  const req = requestFor(m.id);
-                  const busy = req ? busyId === req.id : false;
+      <div className="overflow-hidden rounded-xl border border-border bg-surface">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left font-heading text-sm">
+            <thead>
+              <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+                {!singleCampus && <th className="px-4 py-3">Campus</th>}
+                <th className="px-4 py-3">Team ID</th>
+                <th className="px-4 py-3">Team Name</th>
+                <th className="px-4 py-3">Team Lead</th>
+                <th className="px-4 py-3">Lead Phone</th>
+                <th className="px-4 py-3">Team Size</th>
+                {!hideZoneFilters && (
+                  <>
+                    <th className="px-4 py-3">Zone</th>
+                    <th className="px-4 py-3">Zone Manager</th>
+                  </>
+                )}
+                {!hideVenueFilter && <th className="px-4 py-3">Venue</th>}
+                {!hideSpocFilter && <th className="px-4 py-3">SPOC</th>}
+                <th className="px-4 py-3">Uploads</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody>
+              {filteredTeams.length === 0 ? (
+                <tr>
+                  <td colSpan={columnCount} className="px-4 py-8 text-center text-ink-muted">
+                    No teams match the current filters.
+                  </td>
+                </tr>
+              ) : (
+                filteredTeams.map((team) => {
+                  const lead = leadOf(team);
+                  const { open, active } = openRequestCountFor(team);
                   return (
-                    <div
-                      key={m.id}
-                      className={`flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-void/40 px-4 py-3 ${m.is_active ? "" : "opacity-60"}`}
-                    >
-                      <div>
-                        <p className="font-heading text-sm text-ink">
-                          {m.name} {m.is_lead && <span className="text-xs text-gold">(Lead)</span>}
-                          {!m.is_active && <span className="ml-1 text-xs text-danger">(Inactive)</span>}
-                        </p>
-                        <p
-                          className={`mt-0.5 font-heading text-xs ${
-                            req?.status === "Approved" ? "text-danger" : req?.status === "Requested" ? "text-gold" : "text-ink-faint"
-                          }`}
+                    <tr key={team.id} className="border-b border-border align-top last:border-0">
+                      {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>}
+                      <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
+                      <td className="px-4 py-3 text-ink">{team.team_name}</td>
+                      <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
+                      {!hideZoneFilters && (
+                        <>
+                          <td className="px-4 py-3 text-ink-muted">{zoneOf(team)?.name ?? "Unassigned"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{zoneManagerName(team) ?? "Unassigned"}</td>
+                        </>
+                      )}
+                      {!hideVenueFilter && <td className="px-4 py-3 text-ink-muted">{roomOf(team)?.name ?? "Unassigned"}</td>}
+                      {!hideSpocFilter && <td className="px-4 py-3 text-ink-muted">{spocName(team) ?? "Unassigned"}</td>}
+                      <td className="px-4 py-3">
+                        <span className={`rounded-full border px-3 py-1 text-xs ${open > 0 ? "border-gold/40 bg-gold/10 text-gold" : "border-border text-ink-muted"}`}>
+                          {open}/{active}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => setOpenTeamId(team.id)}
+                          className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
                         >
-                          {req?.status ?? "No Request"}
-                          {req?.reason && ` · ${req.reason}`}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {req?.file_path && (
-                          <button type="button" onClick={() => handleView(req.file_path!)} className="font-heading text-xs text-gold underline">
-                            View Form
-                          </button>
-                        )}
-                        {req?.status === "Requested" && (
-                          <>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => handleResolve(req.id, "Approved")}
-                              className="rounded-full bg-gitam px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:opacity-90 disabled:opacity-60"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              type="button"
-                              disabled={busy}
-                              onClick={() => handleResolve(req.id, "Rejected")}
-                              className="rounded-full border border-danger/40 px-4 py-1.5 font-heading text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
-                            >
-                              Reject
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                          View
+                        </button>
+                      </td>
+                    </tr>
                   );
-                })}
-              </div>
-            </div>
-          );
-        })
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {openTeam && (
+        <ExitReviewModal
+          team={openTeam}
+          members={membersByTeam[openTeam.id] ?? []}
+          exitRequests={localRequests}
+          rooms={rooms}
+          zones={zones}
+          staffAccounts={staffAccounts}
+          onRequestsChanged={setLocalRequests}
+          onClose={() => setOpenTeamId(null)}
+        />
       )}
     </div>
   );
