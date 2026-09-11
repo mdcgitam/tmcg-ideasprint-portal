@@ -62,6 +62,7 @@ export function ProfileSection({
   room,
   zone,
   spocName,
+  zoneManagerName,
 }: {
   profile: ProfileRow;
   team: TeamRow;
@@ -71,6 +72,7 @@ export function ProfileSection({
   room: RoomRow | null;
   zone: ZoneRow | null;
   spocName: string | null;
+  zoneManagerName: string | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [teamName, setTeamName] = useState(team.team_name);
@@ -103,7 +105,7 @@ export function ProfileSection({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-6 rounded-xl border border-border bg-surface p-6 sm:grid-cols-3 lg:grid-cols-6">
+      <div className="grid gap-6 rounded-xl border border-border bg-surface p-6 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Team ID</span>
           <p className="mt-2 font-heading text-ink">{team.team_id}</p>
@@ -119,12 +121,20 @@ export function ProfileSection({
           </p>
         </div>
         <div>
-          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Room</span>
-          <p className="mt-2 font-heading text-ink">{room?.name ?? "Not yet assigned"}</p>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Campus</span>
+          <p className="mt-2 font-heading text-ink">{team.campus}</p>
         </div>
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Zone</span>
-          <p className="mt-2 font-heading text-ink">{zone?.name ?? "—"}</p>
+          <p className="mt-2 font-heading text-ink">{zone?.name ?? "Not yet assigned"}</p>
+        </div>
+        <div>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Zone Manager</span>
+          <p className="mt-2 font-heading text-ink">{zoneManagerName ?? "Not yet assigned"}</p>
+        </div>
+        <div>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Venue</span>
+          <p className="mt-2 font-heading text-ink">{room?.name ?? "Not yet assigned"}</p>
         </div>
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">SPOC</span>

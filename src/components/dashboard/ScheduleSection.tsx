@@ -93,6 +93,8 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
   const [editTime, setEditTime] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
   type View = "manage" | CampusCode;
   const [view, setView] = useState<View>("manage");
   const fadeRef = useTabFade(view);
@@ -128,12 +130,13 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
     save(entries.filter((e) => e !== entry));
   }
 
-  function handleMove(entry: ScheduleEntry, direction: -1 | 1) {
-    const index = entries.indexOf(entry);
-    const target = index + direction;
-    if (target < 0 || target >= entries.length) return;
+  function handleReorderDrop(targetIndex: number) {
+    const fromIndex = dragIndex;
+    setDragIndex(null);
+    if (fromIndex === null || fromIndex === targetIndex) return;
     const next = [...entries];
-    [next[index], next[target]] = [next[target], next[index]];
+    const [moved] = next.splice(fromIndex, 1);
+    next.splice(targetIndex, 0, moved);
     save(next);
   }
 
@@ -268,8 +271,19 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
             ) : (
               visibleEntries.map((entry, i) => {
                 const isEditing = editingEntry === entry;
+                const canDragRow = isAllMode && !isEditing;
                 return (
-                  <tr key={i} className="border-b border-border align-top last:border-0">
+                  <tr
+                    key={i}
+                    className={`border-b border-border align-top last:border-0 ${dragIndex === i ? "opacity-40" : ""}`}
+                    onDragOver={(e) => {
+                      if (dragIndex !== null && isAllMode) e.preventDefault();
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      handleReorderDrop(i);
+                    }}
+                  >
                     {isEditing ? (
                       <>
                         <td className="px-4 py-3">
@@ -317,25 +331,19 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
                         {canManage && (
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              {isAllMode && (
-                                <>
-                                  <button
-                                    type="button"
-                                    disabled={saving}
-                                    onClick={() => handleMove(entry, -1)}
-                                    className="rounded border border-border px-2 py-1 text-xs text-ink-muted hover:border-gold hover:text-gold disabled:opacity-60"
-                                  >
-                                    ↑
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={saving}
-                                    onClick={() => handleMove(entry, 1)}
-                                    className="rounded border border-border px-2 py-1 text-xs text-ink-muted hover:border-gold hover:text-gold disabled:opacity-60"
-                                  >
-                                    ↓
-                                  </button>
-                                </>
+                              {canDragRow && (
+                                <span
+                                  draggable
+                                  onDragStart={(e) => {
+                                    setDragIndex(i);
+                                    e.dataTransfer.effectAllowed = "move";
+                                  }}
+                                  onDragEnd={() => setDragIndex(null)}
+                                  title="Drag to reorder"
+                                  className="inline-block cursor-grab select-none px-1 text-ink-faint active:cursor-grabbing"
+                                >
+                                  ⠿
+                                </span>
                               )}
                               {canEditOrRemove(entry) && (
                                 <>

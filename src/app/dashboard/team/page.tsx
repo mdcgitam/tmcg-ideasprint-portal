@@ -18,6 +18,7 @@ import type {
   ConfigurationRow,
   RoomRow,
   ZoneRow,
+  IdCardCertRecordRow,
 } from "@/types/database";
 
 export default async function TeamDashboardPage() {
@@ -67,6 +68,7 @@ export default async function TeamDashboardPage() {
     { data: presentationRow },
     { data: pendingRequestRow },
     { data: configRows },
+    { data: idCardCertRows },
   ] = await Promise.all([
     supabase.from("teams").select("*").eq("id", teamId).single(),
     supabase.from("team_members").select("profile_id, is_lead, profiles(*)").eq("team_id", teamId),
@@ -82,6 +84,7 @@ export default async function TeamDashboardPage() {
     supabase.from("presentations").select("*").eq("team_id", teamId).maybeSingle(),
     supabase.from("approval_requests").select("*").eq("team_id", teamId).eq("status", "Pending").maybeSingle(),
     supabase.from("configuration").select("*"),
+    supabase.from("id_card_certificate_records").select("*").eq("team_id", teamId),
   ]);
 
   const teamRow = team as TeamRow;
@@ -100,6 +103,11 @@ export default async function TeamDashboardPage() {
     ? await supabase.from("profiles").select("name").eq("id", teamRow.spoc_profile_id).maybeSingle()
     : { data: null };
   const spocName = (spocProfile as { name: string } | null)?.name ?? null;
+
+  const { data: zoneManagerProfile } = zone?.zone_manager_profile_id
+    ? await supabase.from("profiles").select("name").eq("id", zone.zone_manager_profile_id).maybeSingle()
+    : { data: null };
+  const zoneManagerName = (zoneManagerProfile as { name: string } | null)?.name ?? null;
 
   const members = ((memberRows ?? []) as unknown as { profile_id: string; is_lead: boolean; profiles: ProfileRow }[])
     .map((row) => ({ ...row.profiles, is_lead: row.is_lead }))
@@ -128,6 +136,8 @@ export default async function TeamDashboardPage() {
       room={room}
       zone={zone}
       spocName={spocName}
+      zoneManagerName={zoneManagerName}
+      idCardCertRecords={(idCardCertRows ?? []) as IdCardCertRecordRow[]}
     />
   );
 }

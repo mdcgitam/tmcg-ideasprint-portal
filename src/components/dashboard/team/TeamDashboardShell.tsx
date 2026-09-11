@@ -14,6 +14,7 @@ import type {
   ApprovalRequestRow,
   RoomRow,
   ZoneRow,
+  IdCardCertRecordRow,
 } from "@/types/database";
 import { Reveal } from "@/components/motion/Reveal";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
@@ -50,24 +51,26 @@ export interface TeamDashboardShellProps {
   room: RoomRow | null;
   zone: ZoneRow | null;
   spocName: string | null;
+  zoneManagerName: string | null;
+  idCardCertRecords: IdCardCertRecordRow[];
 }
 
 const TABS = [
-  "Profile",
   "Schedule",
-  "Problem Statement",
+  "Profile",
   "Attendance",
   "NOC",
+  "Problem Statement",
   "Presentation",
-  "Exit Request",
-  "Notifications",
   "ID Cards",
+  "Notifications",
+  "Exit Request",
   "Documents",
 ] as const;
 type Tab = (typeof TABS)[number];
 
 export function TeamDashboardShell(props: TeamDashboardShellProps) {
-  const [tab, setTab] = useState<Tab>("Profile");
+  const [tab, setTab] = useState<Tab>(TABS[0]);
   const isLead = props.profile.role === "Team Lead";
   const fadeRef = useTabFade(tab);
   const unreadCount = props.notifications.filter((n) => !n.read).length;
@@ -120,6 +123,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
               room={props.room}
               zone={props.zone}
               spocName={props.spocName}
+              zoneManagerName={props.zoneManagerName}
             />
           )}
           {tab === "Schedule" && <ScheduleSection config={props.config} profile={props.profile} />}
@@ -159,7 +163,14 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
           {tab === "Notifications" && (
             <NotificationsSection profileId={props.profile.id} notifications={props.notifications} />
           )}
-          {tab === "ID Cards" && <IdCardsSection />}
+          {tab === "ID Cards" && (
+            <IdCardsSection
+              profile={props.profile}
+              members={props.members}
+              records={props.idCardCertRecords}
+              isLead={isLead}
+            />
+          )}
           {tab === "Documents" && <DocumentsSection config={props.config} campus={props.profile.campus} />}
         </div>
       </div>
