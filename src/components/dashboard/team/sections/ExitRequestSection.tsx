@@ -21,10 +21,13 @@ type View = "requests" | "history";
  * uploading their signed exit form; a SPOC/Zone Manager/Campus Admin/Super
  * Admin then approves or rejects it. Team Lead can act on any teammate; a
  * Member can only act on their own. While a request is still `Requested`
- * (open), the requester can Replace the file/reason in place, or Withdraw
- * it entirely — both now work for the member themselves, not just their
- * Team Lead (request_member_exit/delete_exit_request, 0059). History shows
- * this team's resolved exit requests — a Member sees only their own.
+ * (open), the requester can Replace the file in place, or Withdraw it
+ * entirely — both now work for the member themselves, not just their Team
+ * Lead (request_member_exit/delete_exit_request, 0059). "View" the form is
+ * only offered here while the request is still open — once it's resolved
+ * (Approved/Rejected), that submission moves to History, where it can
+ * still be viewed. History shows this team's resolved exit requests — a
+ * Member sees only their own.
  */
 export function ExitRequestSection({
   profile,
@@ -45,7 +48,6 @@ export function ExitRequestSection({
   const [localRequests, setLocalRequests] = useState(exitRequests);
   const [busyProfileId, setBusyProfileId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [reason, setReason] = useState<Record<string, string>>({});
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [view, setView] = useState<View>("requests");
   const fadeRef = useTabFade(view);
@@ -80,14 +82,12 @@ export function ExitRequestSection({
     setError(null);
     try {
       const path = await uploadExitRequestFile(profileId, file);
-      await requestMemberExit(profileId, path, reason[profileId] ?? "");
+      await requestMemberExit(profileId, path);
       const openExisting = localRequests.find((r) => r.profile_id === profileId && r.status === "Requested");
       setLocalRequests((prev) =>
         openExisting
           ? prev.map((r) =>
-              r.id === openExisting.id
-                ? { ...r, file_path: path, reason: reason[profileId] ?? null, requested_at: new Date().toISOString(), requested_by: profile.id }
-                : r,
+              r.id === openExisting.id ? { ...r, file_path: path, requested_at: new Date().toISOString(), requested_by: profile.id } : r,
             )
           : [
               ...prev,
@@ -97,7 +97,7 @@ export function ExitRequestSection({
                 team_id: teamId,
                 file_path: path,
                 status: "Requested",
-                reason: reason[profileId] ?? null,
+                reason: null,
                 requested_at: new Date().toISOString(),
                 requested_by: profile.id,
                 reviewed_by: null,
@@ -193,19 +193,13 @@ export function ExitRequestSection({
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    {request?.file_path && (
+                    {isOpen && request?.file_path && (
                       <button type="button" onClick={() => handleView(request.file_path!)} className="font-heading text-sm text-gold underline">
                         View
                       </button>
                     )}
                     {canUpload && (
                       <>
-                        <input
-                          value={reason[m.id] ?? ""}
-                          onChange={(e) => setReason((r) => ({ ...r, [m.id]: e.target.value }))}
-                          placeholder="Reason (optional)"
-                          className="w-40 rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-xs text-ink outline-none focus:border-gold"
-                        />
                         <input
                           ref={(el) => {
                             fileInputRefs.current[m.id] = el;
@@ -259,6 +253,7 @@ export function ExitRequestSection({
                       <th className="px-4 py-3">Status</th>
                       <th className="px-4 py-3">Reviewed By</th>
                       <th className="px-4 py-3">Reviewed At</th>
+                      <th className="px-4 py-3" />
                     </tr>
                   </thead>
                   <tbody>
@@ -281,6 +276,13 @@ export function ExitRequestSection({
                         <td className="px-4 py-3 text-ink-muted">{r.reviewed_by ? (reviewerNames[r.reviewed_by] ?? nameOf(r.reviewed_by)) : "—"}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
                           {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          {r.file_path && (
+                            <button type="button" onClick={() => handleView(r.file_path!)} className="font-heading text-xs text-gold underline">
+                              View
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}

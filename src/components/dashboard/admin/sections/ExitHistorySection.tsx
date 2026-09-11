@@ -5,6 +5,7 @@ import type { ExitRequestRow, ProfileRow, TeamRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { sortCampuses } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
+import { getSignedUrl } from "@/lib/dashboard/team-actions";
 import { FilterSelect } from "./TeamFormFields";
 
 const POSITION_OPTIONS = ["Team Lead", "Member"];
@@ -46,6 +47,10 @@ export function ExitHistorySection({
   function reviewerName(reviewedBy: string | null): string {
     return reviewedBy ? (staffAccounts.find((s) => s.id === reviewedBy)?.name ?? "Unknown") : "—";
   }
+  async function handleView(filePath: string) {
+    const url = await getSignedUrl("exit-requests", filePath);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   const resolvedRequests = useMemo(
     () => exitRequests.filter((r): r is ExitRequestRow & { status: "Approved" | "Rejected" } => r.status === "Approved" || r.status === "Rejected"),
@@ -84,7 +89,7 @@ export function ExitHistorySection({
     );
   }
 
-  const columnCount = 9 + (singleCampus ? 0 : 1);
+  const columnCount = 10 + (singleCampus ? 0 : 1);
 
   return (
     <div className="flex flex-col gap-4">
@@ -149,6 +154,7 @@ export function ExitHistorySection({
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Reviewed By</th>
                 <th className="px-4 py-3">Reviewed At</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
@@ -186,6 +192,13 @@ export function ExitHistorySection({
                       <td className="px-4 py-3 text-ink-muted">{reviewerName(r.reviewed_by)}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
                         {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                      </td>
+                      <td className="px-4 py-3">
+                        {r.file_path && (
+                          <button type="button" onClick={() => handleView(r.file_path!)} className="font-heading text-xs text-gold underline">
+                            View
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

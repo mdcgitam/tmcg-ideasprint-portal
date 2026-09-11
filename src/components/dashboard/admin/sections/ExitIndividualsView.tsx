@@ -270,7 +270,7 @@ export function ExitIndividualsView({
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
-                          {r.file_path && (
+                          {r.status === "Requested" && r.file_path && (
                             <button type="button" onClick={() => handleView(r.file_path!)} className="font-heading text-xs text-gold underline">
                               View
                             </button>

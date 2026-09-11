@@ -121,11 +121,10 @@ export function ExitReviewModal({
                       }`}
                     >
                       {req?.status ?? "No Request"}
-                      {req?.reason && ` · ${req.reason}`}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
-                    {req?.file_path && (
+                    {req?.status === "Requested" && req.file_path && (
                       <button type="button" onClick={() => handleView(req.file_path!)} className="font-heading text-xs text-gold underline">
                         View Form
                       </button>

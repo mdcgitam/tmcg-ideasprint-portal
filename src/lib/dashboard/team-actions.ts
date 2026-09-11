@@ -70,8 +70,8 @@ export function extendNocDeadline(profileId: string, deadlineIso: string) {
   return callRpc<null>("extend_noc_deadline", { p_profile_id: profileId, p_deadline: deadlineIso });
 }
 
-export function requestMemberExit(profileId: string, filePath: string, reason: string) {
-  return callRpc<null>("request_member_exit", { p_profile_id: profileId, p_file_path: filePath, p_reason: reason });
+export function requestMemberExit(profileId: string, filePath: string) {
+  return callRpc<null>("request_member_exit", { p_profile_id: profileId, p_file_path: filePath });
 }
 
 export function deleteExitRequest(profileId: string) {
