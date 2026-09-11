@@ -100,14 +100,18 @@ export default async function TeamDashboardPage() {
   const zone = (zoneRow ?? null) as ZoneRow | null;
 
   const { data: spocProfile } = teamRow.spoc_profile_id
-    ? await supabase.from("profiles").select("name").eq("id", teamRow.spoc_profile_id).maybeSingle()
+    ? await supabase.from("profiles").select("name, gitam_email").eq("id", teamRow.spoc_profile_id).maybeSingle()
     : { data: null };
-  const spocName = (spocProfile as { name: string } | null)?.name ?? null;
+  const spocProfileRow = spocProfile as { name: string; gitam_email: string } | null;
+  const spocName = spocProfileRow?.name ?? null;
+  const spocEmail = spocProfileRow?.gitam_email ?? null;
 
   const { data: zoneManagerProfile } = zone?.zone_manager_profile_id
-    ? await supabase.from("profiles").select("name").eq("id", zone.zone_manager_profile_id).maybeSingle()
+    ? await supabase.from("profiles").select("name, gitam_email").eq("id", zone.zone_manager_profile_id).maybeSingle()
     : { data: null };
-  const zoneManagerName = (zoneManagerProfile as { name: string } | null)?.name ?? null;
+  const zoneManagerProfileRow = zoneManagerProfile as { name: string; gitam_email: string } | null;
+  const zoneManagerName = zoneManagerProfileRow?.name ?? null;
+  const zoneManagerEmail = zoneManagerProfileRow?.gitam_email ?? null;
 
   const members = ((memberRows ?? []) as unknown as { profile_id: string; is_lead: boolean; profiles: ProfileRow }[])
     .map((row) => ({ ...row.profiles, is_lead: row.is_lead }))
@@ -136,7 +140,9 @@ export default async function TeamDashboardPage() {
       room={room}
       zone={zone}
       spocName={spocName}
+      spocEmail={spocEmail}
       zoneManagerName={zoneManagerName}
+      zoneManagerEmail={zoneManagerEmail}
       idCardCertRecords={(idCardCertRows ?? []) as IdCardCertRecordRow[]}
     />
   );

@@ -1,25 +1,19 @@
-import type { IdCardCertRecordRow, ProfileRow } from "@/types/database";
+import type { IdCardCertRecordRow } from "@/types/database";
 import type { TeamMemberProfile } from "../TeamDashboardShell";
 
 /**
  * Read-only — recording a status is SPOC/Zone Manager/Campus Admin/Super
- * Admin only (record_id_card_certificate, 0044). A Team Lead sees every
- * member's status; a Member sees only their own. Same table shape as
- * AttendanceSection.
+ * Admin only (record_id_card_certificate, 0044). Same shape as
+ * AttendanceSection: every team member sees the whole team, not just
+ * themselves.
  */
 export function IdCardsSection({
-  profile,
   members,
   records,
-  isLead,
 }: {
-  profile: ProfileRow;
   members: TeamMemberProfile[];
   records: IdCardCertRecordRow[];
-  isLead: boolean;
 }) {
-  const visibleMembers = isLead ? members : members.filter((m) => m.id === profile.id);
-
   function statusFor(profileId: string, item: "ID Card" | "Certificate") {
     return records.find((r) => r.profile_id === profileId && r.item === item)?.status ?? "Pending";
   }
@@ -35,7 +29,7 @@ export function IdCardsSection({
           </tr>
         </thead>
         <tbody>
-          {visibleMembers.map((m) => {
+          {members.map((m) => {
             const idCard = statusFor(m.id, "ID Card");
             const certificate = statusFor(m.id, "Certificate");
             return (

@@ -62,7 +62,9 @@ export function ProfileSection({
   room,
   zone,
   spocName,
+  spocEmail,
   zoneManagerName,
+  zoneManagerEmail,
 }: {
   profile: ProfileRow;
   team: TeamRow;
@@ -72,7 +74,9 @@ export function ProfileSection({
   room: RoomRow | null;
   zone: ZoneRow | null;
   spocName: string | null;
+  spocEmail: string | null;
   zoneManagerName: string | null;
+  zoneManagerEmail: string | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [teamName, setTeamName] = useState(team.team_name);
@@ -130,7 +134,15 @@ export function ProfileSection({
         </div>
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Zone Manager</span>
-          <p className="mt-2 font-heading text-ink">{zoneManagerName ?? "Not yet assigned"}</p>
+          <p className="mt-2 font-heading text-ink">
+            {zoneManagerName ? (
+              <>
+                {zoneManagerName} {zoneManagerEmail && <span className="text-ink-muted">({zoneManagerEmail})</span>}
+              </>
+            ) : (
+              "Not yet assigned"
+            )}
+          </p>
         </div>
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Venue</span>
@@ -138,7 +150,15 @@ export function ProfileSection({
         </div>
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">SPOC</span>
-          <p className="mt-2 font-heading text-ink">{spocName ?? "Not yet assigned"}</p>
+          <p className="mt-2 font-heading text-ink">
+            {spocName ? (
+              <>
+                {spocName} {spocEmail && <span className="text-ink-muted">({spocEmail})</span>}
+              </>
+            ) : (
+              "Not yet assigned"
+            )}
+          </p>
         </div>
       </div>
 

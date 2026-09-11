@@ -51,7 +51,9 @@ export interface TeamDashboardShellProps {
   room: RoomRow | null;
   zone: ZoneRow | null;
   spocName: string | null;
+  spocEmail: string | null;
   zoneManagerName: string | null;
+  zoneManagerEmail: string | null;
   idCardCertRecords: IdCardCertRecordRow[];
 }
 
@@ -123,7 +125,9 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
               room={props.room}
               zone={props.zone}
               spocName={props.spocName}
+              spocEmail={props.spocEmail}
               zoneManagerName={props.zoneManagerName}
+              zoneManagerEmail={props.zoneManagerEmail}
             />
           )}
           {tab === "Schedule" && <ScheduleSection config={props.config} profile={props.profile} />}
@@ -163,14 +167,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
           {tab === "Notifications" && (
             <NotificationsSection profileId={props.profile.id} notifications={props.notifications} />
           )}
-          {tab === "ID Cards" && (
-            <IdCardsSection
-              profile={props.profile}
-              members={props.members}
-              records={props.idCardCertRecords}
-              isLead={isLead}
-            />
-          )}
+          {tab === "ID Cards" && <IdCardsSection members={props.members} records={props.idCardCertRecords} />}
           {tab === "Documents" && <DocumentsSection config={props.config} campus={props.profile.campus} />}
         </div>
       </div>

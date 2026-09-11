@@ -25,7 +25,7 @@ function friendlyError(raw: string): string {
   if (raw.includes("REQUEST_NOT_FOUND")) return "That request couldn't be found.";
   if (raw.includes("INVALID_DECISION")) return "Invalid decision.";
   if (raw.includes("DEADLINE_PASSED")) {
-    return "Time exceeded — the upload deadline has passed. Ask your SPOC or Super Admin to extend it.";
+    return "Time exceeded — the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.";
   }
   return "Something went wrong. Please try again.";
 }

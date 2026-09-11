@@ -49,7 +49,7 @@ export function PresentationSection({
 
   async function handleUpload(file: File) {
     if (expired) {
-      setError("Time exceeded — the upload deadline has passed. Ask your SPOC or Super Admin to extend it.");
+      setError("Time exceeded — the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.");
       return;
     }
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
@@ -140,7 +140,7 @@ export function PresentationSection({
               type="button"
               disabled={busy || expired}
               onClick={() => fileInputRef.current?.click()}
-              title={expired ? "Deadline passed — ask your SPOC or Super Admin to extend it." : undefined}
+              title={expired ? "Deadline passed — ask your SPOC, Zone Manager, or Super Admin to extend it." : undefined}
               className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
             >
               {busy ? "Working…" : expired ? "Time Exceeded" : uploaded ? "Replace" : "Upload"}
