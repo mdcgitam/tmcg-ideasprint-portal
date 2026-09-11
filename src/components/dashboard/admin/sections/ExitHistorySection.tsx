@@ -15,12 +15,15 @@ export function ExitHistorySection({
   teams,
   membersByTeam,
   exitRequests,
+  reviewerNames,
   staffAccounts,
   singleCampus = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   exitRequests: ExitRequestRow[];
+  /** id -> name for reviewers, unscoped by campus (a Super Admin may review any campus's request). */
+  reviewerNames: Record<string, string>;
   staffAccounts: ProfileRow[];
   singleCampus?: boolean;
 }) {
@@ -45,7 +48,7 @@ export function ExitHistorySection({
     return member ? (member.is_lead ? "Team Lead" : "Member") : "—";
   }
   function reviewerName(reviewedBy: string | null): string {
-    return reviewedBy ? (staffAccounts.find((s) => s.id === reviewedBy)?.name ?? "Unknown") : "—";
+    return reviewedBy ? (reviewerNames[reviewedBy] ?? staffAccounts.find((s) => s.id === reviewedBy)?.name ?? "Unknown") : "—";
   }
   async function handleView(filePath: string) {
     const url = await getSignedUrl("exit-requests", filePath);
@@ -102,7 +105,7 @@ export function ExitHistorySection({
           label="Reviewed By"
           value={reviewerFilter}
           onChange={setReviewerFilter}
-          options={reviewerOptions.map((id) => staffAccounts.find((s) => s.id === id)?.name ?? "Unknown")}
+          options={reviewerOptions.map((id) => reviewerName(id))}
           valueOptions={reviewerOptions}
         />
         <input

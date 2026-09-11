@@ -24,6 +24,7 @@ export function ExitSubmissionsSection({
   teams,
   membersByTeam,
   exitRequests,
+  reviewerNames,
   rooms,
   zones,
   staffAccounts,
@@ -35,6 +36,8 @@ export function ExitSubmissionsSection({
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   exitRequests: ExitRequestRow[];
+  /** id -> name for reviewers, unscoped by campus (a Super Admin may review any campus's request). */
+  reviewerNames: Record<string, string>;
   rooms: RoomRow[];
   zones: ZoneRow[];
   staffAccounts: ProfileRow[];
@@ -92,6 +95,7 @@ export function ExitSubmissionsSection({
             teams={teams}
             membersByTeam={membersByTeam}
             exitRequests={exitRequests}
+            reviewerNames={reviewerNames}
             staffAccounts={staffAccounts}
             singleCampus={singleCampus}
           />
