@@ -20,7 +20,7 @@ import {
   recordPresentation,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
-import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
+import { effectivePresentationDeadlineDetailed, nowDatetimeLocalValue, sortCampuses } from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
@@ -55,7 +55,6 @@ function toDatetimeLocal(iso: string | null | undefined): string {
 }
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const GENERAL_DEADLINE_KEY = "ppt.general_deadline";
 
 /** Presentation (PPT) tracker — one row per team, matching the admin NOC Teams table's format. Files must be a PDF, 2MB or less; uploadable by the Team Lead, or by an Admin on the team's behalf (mirroring NOC's admin-upload path). */
 export function PptSection({
@@ -113,12 +112,17 @@ export function PptSection({
   const spocName = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
-  /** Team-specific deadline wins; otherwise the team's campus-scoped General PPT Deadline, falling back to the global default. */
+  /** Whichever of {global general default, campus-scoped general default, this team's individual override} was edited most recently wins (0066). */
   function effectiveDeadline(teamId: string): { iso: string | null; isOverride: boolean } {
-    const override = localPresentations.find((p) => p.team_id === teamId)?.deadline ?? null;
-    if (override) return { iso: override, isOverride: true };
+    const presentation = localPresentations.find((p) => p.team_id === teamId);
     const campus = teams.find((t) => t.id === teamId)?.campus ?? null;
-    return { iso: effectiveConfigValue(config, GENERAL_DEADLINE_KEY, campus), isOverride: false };
+    const { value, fromIndividualOverride } = effectivePresentationDeadlineDetailed(
+      config,
+      campus,
+      presentation?.deadline,
+      presentation?.deadline_updated_at,
+    );
+    return { iso: value, isOverride: fromIndividualOverride };
   }
 
   async function handleAdminUpload(teamId: string, file: File) {
@@ -154,6 +158,7 @@ export function PptSection({
                 uploaded_by: null,
                 uploaded_at: new Date().toISOString(),
                 deadline: null,
+                deadline_updated_at: null,
               } as PresentationRow,
             ];
       });
@@ -177,10 +182,11 @@ export function PptSection({
     try {
       const deadlineIso = new Date(value).toISOString();
       await extendPresentationDeadline(teamId, deadlineIso);
+      const now = new Date().toISOString();
       setLocalPresentations((prev) => {
         const exists = prev.find((p) => p.team_id === teamId);
         return exists
-          ? prev.map((p) => (p.team_id === teamId ? { ...p, deadline: deadlineIso } : p))
+          ? prev.map((p) => (p.team_id === teamId ? { ...p, deadline: deadlineIso, deadline_updated_at: now } : p))
           : [
               ...prev,
               {
@@ -191,6 +197,7 @@ export function PptSection({
                 uploaded_by: null,
                 uploaded_at: null,
                 deadline: deadlineIso,
+                deadline_updated_at: now,
               } as PresentationRow,
             ];
       });
@@ -221,9 +228,10 @@ export function PptSection({
       const deadlineIso = new Date(bulkDeadline).toISOString();
       const teamIds = Array.from(selected);
       await Promise.all(teamIds.map((teamId) => extendPresentationDeadline(teamId, deadlineIso)));
+      const now = new Date().toISOString();
       setLocalPresentations((prev) => {
         const touched = new Set(teamIds);
-        const updated = prev.map((p) => (touched.has(p.team_id) ? { ...p, deadline: deadlineIso } : p));
+        const updated = prev.map((p) => (touched.has(p.team_id) ? { ...p, deadline: deadlineIso, deadline_updated_at: now } : p));
         const missing = teamIds.filter((id) => !prev.some((p) => p.team_id === id));
         return [
           ...updated,
@@ -237,6 +245,7 @@ export function PptSection({
                 uploaded_by: null,
                 uploaded_at: null,
                 deadline: deadlineIso,
+                deadline_updated_at: now,
               }) as PresentationRow,
           ),
         ];
@@ -375,6 +384,7 @@ export function PptSection({
         <div className="flex flex-wrap items-center gap-3">
           <input
             type="datetime-local"
+            min={nowDatetimeLocalValue()}
             value={bulkDeadline}
             onChange={(e) => setBulkDeadline(e.target.value)}
             className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
@@ -602,6 +612,7 @@ export function PptSection({
                           <div className="flex items-center gap-1">
                             <input
                               type="datetime-local"
+                              min={nowDatetimeLocalValue()}
                               value={deadlineDrafts[team.id] ?? toDatetimeLocal(currentDeadline)}
                               onChange={(e) => setDeadlineDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
                               className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"

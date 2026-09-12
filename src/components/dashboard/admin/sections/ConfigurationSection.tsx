@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { ProfileRow } from "@/types/database";
 import { setConfiguration, DashboardActionError } from "@/lib/dashboard/admin-actions";
-import { effectiveConfigValue, campusConfigKey } from "@/lib/dashboard/campus-config";
+import { effectiveConfigValue, campusConfigKey, nowDatetimeLocalValue } from "@/lib/dashboard/campus-config";
 import { parseDocumentLinks, type DocumentLink } from "@/components/dashboard/DocumentsSection";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -220,6 +220,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <input
             type="datetime-local"
+            min={nowDatetimeLocalValue()}
             value={values[key] ?? ""}
             onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
             className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"

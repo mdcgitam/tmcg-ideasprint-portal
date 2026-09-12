@@ -10,11 +10,10 @@ import {
   getSignedUrl,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
-import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
+import { effectivePresentationDeadline } from "@/lib/dashboard/campus-config";
 
 const ACCEPT = ".pdf,application/pdf";
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const GENERAL_DEADLINE_KEY = "ppt.general_deadline";
 
 /**
  * Team Lead uploads the team's pitch deck; Members see status only — same
@@ -40,11 +39,10 @@ export function PresentationSection({
   const status: PresentationStatus = local?.status ?? "Not Uploaded";
   const uploaded = status === "Uploaded" && local?.file_path;
 
-  // Team-specific deadline (record_presentation/0027) wins over the
-  // team's campus-scoped General PPT Deadline, falling back to the
-  // Super-Admin-set global default (0048).
-  const generalDeadline = effectiveConfigValue(config, GENERAL_DEADLINE_KEY, team.campus);
-  const effectiveDeadline = local?.deadline ?? generalDeadline;
+  // Whichever of {global general default, campus-scoped general default,
+  // this team's individual override} was edited most recently wins (0066) —
+  // same rule NOC uses.
+  const effectiveDeadline = effectivePresentationDeadline(config, team.campus, local?.deadline, local?.deadline_updated_at);
   const notConfigured = !effectiveDeadline;
   const expired = !!effectiveDeadline && new Date(effectiveDeadline) < new Date();
 
@@ -78,6 +76,7 @@ export function PresentationSection({
         uploaded_by: null,
         uploaded_at: new Date().toISOString(),
         deadline: local?.deadline ?? null,
+        deadline_updated_at: local?.deadline_updated_at ?? null,
       });
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");

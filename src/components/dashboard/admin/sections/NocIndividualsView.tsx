@@ -13,7 +13,7 @@ import {
   uploadNocFile,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
-import { effectiveNocDeadlineDetailed, sortCampuses } from "@/lib/dashboard/campus-config";
+import { effectiveNocDeadlineDetailed, nowDatetimeLocalValue, sortCampuses } from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
@@ -299,6 +299,7 @@ export function NocIndividualsView({
         <div className="flex flex-wrap items-center gap-3">
           <input
             type="datetime-local"
+            min={nowDatetimeLocalValue()}
             value={bulkDeadline}
             onChange={(e) => setBulkDeadline(e.target.value)}
             className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
@@ -524,6 +525,7 @@ export function NocIndividualsView({
                         <div className="flex items-center gap-1">
                           <input
                             type="datetime-local"
+                            min={nowDatetimeLocalValue()}
                             value={rowDeadlines[member.id] ?? toDatetimeLocal(currentDeadline)}
                             onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [member.id]: e.target.value }))}
                             className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"

@@ -185,6 +185,7 @@ export interface PresentationRow {
   uploaded_by: string | null;
   uploaded_at: string | null;
   deadline: string | null;
+  deadline_updated_at: string | null;
 }
 
 export interface NotificationRow {

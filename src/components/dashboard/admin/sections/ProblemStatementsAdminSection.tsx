@@ -17,7 +17,7 @@ import {
   upsertProblemStatement,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
-import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
+import { effectiveProblemStatementEndDetailed, nowDatetimeLocalValue, sortCampuses } from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
@@ -188,12 +188,15 @@ export function ProblemStatementsAdminSection({
   // Displayed team size = active members only (an approved exit deactivates the profile).
   const sizeOf = (team: TeamRow) => (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length || team.member_count;
   const extensionOf = (teamId: string) => localExtensions.find((e) => e.team_id === teamId);
-  // A team's effective deadline: its own extension, else its campus-scoped
-  // selection end (falling back to the global default, same as select_problem_statement/0048).
-  const deadlineOf = (teamId: string) => {
+  // A team's effective deadline: whichever of {global selection end,
+  // campus-scoped selection end, this team's extension} was edited most
+  // recently wins (0066) — same rule NOC/PPT use.
+  function effectiveDeadlineDetailed(teamId: string): { value: string | null; fromIndividualOverride: boolean } {
     const campus = localTeams.find((t) => t.id === teamId)?.campus ?? null;
-    return extensionOf(teamId)?.extended_until ?? effectiveConfigValue(config, "problem_statement.selection_end", campus);
-  };
+    const extension = extensionOf(teamId);
+    return effectiveProblemStatementEndDetailed(config, campus, extension?.extended_until, extension?.granted_at);
+  }
+  const deadlineOf = (teamId: string) => effectiveDeadlineDetailed(teamId).value;
 
   const [psDrafts, setPsDrafts] = useState<Record<string, string>>({});
   const [psBusy, setPsBusy] = useState<string | null>(null);
@@ -251,9 +254,10 @@ export function ProblemStatementsAdminSection({
   }
 
   function applyLocalExtension(teamId: string, iso: string) {
+    const now = new Date().toISOString();
     setLocalExtensions((prev) => {
       const existing = prev.find((e) => e.team_id === teamId);
-      if (existing) return prev.map((e) => (e.team_id === teamId ? { ...e, extended_until: iso } : e));
+      if (existing) return prev.map((e) => (e.team_id === teamId ? { ...e, extended_until: iso, granted_at: now } : e));
       return [
         ...prev,
         {
@@ -263,7 +267,7 @@ export function ProblemStatementsAdminSection({
           duration_minutes: null,
           reason: null,
           granted_by: "",
-          granted_at: new Date().toISOString(),
+          granted_at: now,
         },
       ];
     });
@@ -477,6 +481,7 @@ export function ProblemStatementsAdminSection({
               <div className="flex flex-wrap items-center gap-3">
                 <input
                   type="datetime-local"
+                  min={nowDatetimeLocalValue()}
                   value={bulkDeadline}
                   onChange={(e) => setBulkDeadline(e.target.value)}
                   className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
@@ -591,12 +596,10 @@ export function ProblemStatementsAdminSection({
                       const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
                       const room = roomOf(team);
                       const zone = zoneOf(room);
-                      const extension = extensionOf(team.id);
                       const psBusyHere = psBusy === team.id;
                       const extendBusyHere = extendBusy === team.id;
-                      const teamSelectionEnd = effectiveConfigValue(config, "problem_statement.selection_end", team.campus);
-                      const deadlineFieldValue =
-                        deadlineDrafts[team.id] ?? toDatetimeLocal(extension?.extended_until ?? teamSelectionEnd);
+                      const { value: currentDeadline, fromIndividualOverride } = effectiveDeadlineDetailed(team.id);
+                      const deadlineFieldValue = deadlineDrafts[team.id] ?? toDatetimeLocal(currentDeadline);
 
                       return (
                         <tr key={team.id} className="border-b border-border align-top last:border-0">
@@ -651,12 +654,13 @@ export function ProblemStatementsAdminSection({
                           <td className="px-4 py-3">
                             <div className="flex flex-col gap-1">
                               <span className="font-heading text-[11px] text-ink-muted">
-                                Current: {fmtDateTime(extension?.extended_until ?? teamSelectionEnd)}
-                                {!extension && teamSelectionEnd && " (general)"}
+                                Current: {fmtDateTime(currentDeadline)}
+                                {currentDeadline && !fromIndividualOverride && " (general)"}
                               </span>
                               <div className="flex items-center gap-1">
                                 <input
                                   type="datetime-local"
+                                  min={nowDatetimeLocalValue()}
                                   value={deadlineFieldValue}
                                   onChange={(e) => setDeadlineDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
                                   className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"

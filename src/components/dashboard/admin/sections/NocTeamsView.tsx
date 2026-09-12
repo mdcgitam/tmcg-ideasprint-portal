@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { NocRow, ProblemStatementRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { extendNocDeadline, DashboardActionError } from "@/lib/dashboard/team-actions";
-import { effectiveNocDeadlineDetailed, sortCampuses } from "@/lib/dashboard/campus-config";
+import { effectiveNocDeadlineDetailed, nowDatetimeLocalValue, sortCampuses } from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
@@ -260,6 +260,7 @@ export function NocTeamsView({
         <div className="flex flex-wrap items-center gap-3">
           <input
             type="datetime-local"
+            min={nowDatetimeLocalValue()}
             value={bulkDeadline}
             onChange={(e) => setBulkDeadline(e.target.value)}
             className="rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
@@ -429,6 +430,7 @@ export function NocTeamsView({
                         <div className="flex items-center gap-1">
                           <input
                             type="datetime-local"
+                            min={nowDatetimeLocalValue()}
                             value={rowDeadlines[team.id] ?? toDatetimeLocal(deadline.iso)}
                             onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [team.id]: e.target.value }))}
                             className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"

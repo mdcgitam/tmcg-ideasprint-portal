@@ -90,13 +90,32 @@ export function effectiveConfigValue(
 }
 
 /**
- * A person's actual NOC deadline: whichever of {global general default,
- * campus-scoped general default, this person's individual override} has
- * the latest updated_at wins — same rule effectiveConfigValue already uses
- * between global/campus, extended with the individual override as a third
- * candidate. Mirrors effective_noc_deadline (0064) so the UI never shows
+ * A person/team's actual deadline for a given general config key: whichever
+ * of {global general default, campus-scoped general default, an
+ * individual/per-team override} has the latest updated_at wins — same rule
+ * effectiveConfigValue already uses between global/campus, extended with
+ * the individual override as a third candidate. Mirrors the equivalent
+ * Postgres effective_*_deadline helpers (0064/0066) so the UI never shows
  * something the backend wouldn't also enforce.
  */
+function effectiveDeadlineWithOverrideDetailed(
+  config: Record<string, unknown>,
+  generalBaseKey: string,
+  campus: CampusCode | null | undefined,
+  individualDeadline: string | null | undefined,
+  individualDeadlineUpdatedAt: string | null | undefined,
+): { value: string | null; fromIndividualOverride: boolean } {
+  const general = effectiveConfigValueWithTimestamp(config, generalBaseKey, campus);
+  if (!individualDeadline) return { value: general.value, fromIndividualOverride: false };
+
+  const individualUpdated = individualDeadlineUpdatedAt ? new Date(individualDeadlineUpdatedAt).getTime() : 0;
+  if (!general.value || individualUpdated >= general.updatedAt) {
+    return { value: individualDeadline, fromIndividualOverride: true };
+  }
+  return { value: general.value, fromIndividualOverride: false };
+}
+
+/** A person's actual NOC deadline — see effectiveDeadlineWithOverrideDetailed. */
 export function effectiveNocDeadline(
   config: Record<string, unknown>,
   campus: CampusCode | null | undefined,
@@ -113,12 +132,52 @@ export function effectiveNocDeadlineDetailed(
   individualDeadline: string | null | undefined,
   individualDeadlineUpdatedAt: string | null | undefined,
 ): { value: string | null; fromIndividualOverride: boolean } {
-  const general = effectiveConfigValueWithTimestamp(config, "noc.general_deadline", campus);
-  if (!individualDeadline) return { value: general.value, fromIndividualOverride: false };
+  return effectiveDeadlineWithOverrideDetailed(config, "noc.general_deadline", campus, individualDeadline, individualDeadlineUpdatedAt);
+}
 
-  const individualUpdated = individualDeadlineUpdatedAt ? new Date(individualDeadlineUpdatedAt).getTime() : 0;
-  if (!general.value || individualUpdated >= general.updatedAt) {
-    return { value: individualDeadline, fromIndividualOverride: true };
-  }
-  return { value: general.value, fromIndividualOverride: false };
+/** A team's actual PPT deadline — see effectiveDeadlineWithOverrideDetailed. */
+export function effectivePresentationDeadline(
+  config: Record<string, unknown>,
+  campus: CampusCode | null | undefined,
+  individualDeadline: string | null | undefined,
+  individualDeadlineUpdatedAt: string | null | undefined,
+): string | null {
+  return effectivePresentationDeadlineDetailed(config, campus, individualDeadline, individualDeadlineUpdatedAt).value;
+}
+
+/** Same resolution as effectivePresentationDeadline, plus which source actually won. */
+export function effectivePresentationDeadlineDetailed(
+  config: Record<string, unknown>,
+  campus: CampusCode | null | undefined,
+  individualDeadline: string | null | undefined,
+  individualDeadlineUpdatedAt: string | null | undefined,
+): { value: string | null; fromIndividualOverride: boolean } {
+  return effectiveDeadlineWithOverrideDetailed(config, "ppt.general_deadline", campus, individualDeadline, individualDeadlineUpdatedAt);
+}
+
+/** A team's actual Problem Statement selection end — see effectiveDeadlineWithOverrideDetailed; the "individual override" here is the team's extension (problem_statement_extensions), timestamped by granted_at. */
+export function effectiveProblemStatementEnd(
+  config: Record<string, unknown>,
+  campus: CampusCode | null | undefined,
+  extendedUntil: string | null | undefined,
+  extendedUntilGrantedAt: string | null | undefined,
+): string | null {
+  return effectiveProblemStatementEndDetailed(config, campus, extendedUntil, extendedUntilGrantedAt).value;
+}
+
+/** Same resolution as effectiveProblemStatementEnd, plus which source actually won. */
+export function effectiveProblemStatementEndDetailed(
+  config: Record<string, unknown>,
+  campus: CampusCode | null | undefined,
+  extendedUntil: string | null | undefined,
+  extendedUntilGrantedAt: string | null | undefined,
+): { value: string | null; fromIndividualOverride: boolean } {
+  return effectiveDeadlineWithOverrideDetailed(config, "problem_statement.selection_end", campus, extendedUntil, extendedUntilGrantedAt);
+}
+
+/** Current local datetime in the format a `<input type="datetime-local">` expects, for use as its `min` so a picker can't select an already-past date/time. */
+export function nowDatetimeLocalValue(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
