@@ -127,8 +127,6 @@ export function NocIndividualsView({
     return sortByLayout(filtered, {
       singleCampus,
       campusOf: (row) => row.member.campus,
-      zoneNameOf: (row) => zoneOf(roomOf(row.team))?.name ?? null,
-      venueNameOf: (row) => roomOf(row.team)?.name ?? null,
       idOf: (row) => row.member.user_id,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

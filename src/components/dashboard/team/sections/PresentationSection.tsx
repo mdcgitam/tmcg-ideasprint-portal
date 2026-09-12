@@ -154,7 +154,7 @@ export function PresentationSection({
               }
               className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
             >
-              {busy ? "Working…" : notConfigured ? "Deadline Not Set" : expired ? "Time Exceeded" : uploaded ? "Replace" : "Upload"}
+              {busy ? "Working…" : notConfigured ? "Deadline Not Set" : uploaded ? "Replace" : "Upload"}
             </button>
             {uploaded && (
               <button

@@ -81,11 +81,10 @@ export function TeamsByMembersView({
     return sortByLayout(sortedGroups, {
       singleCampus,
       campusOf: (rows) => rows[0]?.team.campus ?? null,
-      zoneNameOf: (rows) => zoneOf(roomOf(rows[0].team))?.name ?? null,
-      venueNameOf: (rows) => roomOf(rows[0].team)?.name ?? null,
-      idOf: (rows) => rows[0]?.team.team_id ?? "",
+      // Each group is already sorted by user_id below, so its first row is its own lowest User ID.
+      idOf: (rows) => rows[0]?.member.user_id ?? "",
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+     
   }, [filteredRows, singleCampus]);
 
   function handleDownloadAllMembers() {

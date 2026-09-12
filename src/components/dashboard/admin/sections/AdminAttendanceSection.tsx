@@ -263,8 +263,6 @@ export function AdminAttendanceSection({
     return sortByLayout(filtered, {
       singleCampus,
       campusOf: (team) => (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.campus ?? team.campus,
-      zoneNameOf: (team) => zoneOf(roomOf(team))?.name ?? null,
-      venueNameOf: (team) => roomOf(team)?.name ?? null,
       idOf: (team) => team.team_id,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -335,8 +333,6 @@ export function AdminAttendanceSection({
     return sortByLayout(filtered, {
       singleCampus,
       campusOf: (row) => row.member.campus,
-      zoneNameOf: (row) => zoneOf(roomOf(row.team))?.name ?? null,
-      venueNameOf: (row) => roomOf(row.team)?.name ?? null,
       idOf: (row) => row.member.user_id,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
