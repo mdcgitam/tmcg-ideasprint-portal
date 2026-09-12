@@ -116,6 +116,7 @@ export function TeamsByMembersView({
         Venue: roomOf(team)?.name ?? "Unassigned",
         SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
         Status: memberStatusLabel(m),
+        Participation: team.is_active ? "Participated" : "No-Show",
       })),
     );
   }
@@ -190,6 +191,7 @@ export function TeamsByMembersView({
                 <th className="px-4 py-3">Venue</th>
                 <th className="px-4 py-3">SPOC</th>
                 <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">Participation</th>
                 <th className="px-4 py-3">Actions</th>
               </tr>
             </thead>
@@ -227,6 +229,11 @@ export function TeamsByMembersView({
                           <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                           <td className="px-4 py-3">
                             <ExitStatusBadge member={m} />
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`rounded-full border px-3 py-1 text-xs ${team.is_active ? "border-gitam/40 bg-gitam/10 text-gitam" : "border-danger/40 bg-danger/10 text-danger"}`}>
+                              {team.is_active ? "Participated" : "No-Show"}
+                            </span>
                           </td>
                           <td className="px-4 py-3">
                             <button

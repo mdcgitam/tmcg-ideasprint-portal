@@ -172,7 +172,12 @@ export function TeamDetailModal({
       >
         <div className="flex items-start justify-between gap-4 border-b border-border p-6">
           <div>
-            <h2 className="font-display text-2xl text-ink">{team.team_name}</h2>
+            <h2 className="flex items-center gap-2 font-display text-2xl text-ink">
+              {team.team_name}
+              {!team.is_active && (
+                <span className="rounded-full border border-danger/40 bg-danger/10 px-3 py-1 font-heading text-xs text-danger">No-Show</span>
+              )}
+            </h2>
             <p className="mt-1 font-heading text-xs text-ink-muted">
               {team.team_id} · Campus: {team.campus} · Members: {members.filter((m) => m.is_active).length}
               {members.some((m) => !m.is_active) && ` (+${members.filter((m) => !m.is_active).length} inactive)`}
