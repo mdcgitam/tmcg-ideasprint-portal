@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { TeamRow, ProblemStatementRow } from "@/types/database";
 import { selectProblemStatement, DashboardActionError } from "@/lib/dashboard/team-actions";
 import {
+  campusOverrideValue,
   effectiveConfigValue,
   parseProblemStatementCode,
   problemStatementMaxNumber,
@@ -39,10 +40,11 @@ export function ProblemStatementSection({
     currentProblemStatement ? { number: currentProblemStatement.number, title: currentProblemStatement.title } : null,
   );
 
-  const liveAt = typeof config["problem_statement.live_at"] === "string" ? (config["problem_statement.live_at"] as string) : null;
-  const spreadsheetUrl = liveAt && typeof config["problem_statement.spreadsheet_url"] === "string"
-    ? (config["problem_statement.spreadsheet_url"] as string)
-    : null;
+  // A campus-specific override (set by Super Admin going live for just
+  // this campus) always wins over the global value, whichever was edited
+  // more recently — see campusOverrideValue.
+  const liveAt = campusOverrideValue(config, "problem_statement.live_at", team.campus);
+  const spreadsheetUrl = liveAt ? campusOverrideValue(config, "problem_statement.spreadsheet_url", team.campus) : null;
 
   // Selection is frozen until both bounds are configured — select_problem_statement
   // already enforces this server-side (SELECTION_NOT_CONFIGURED, 0049); this just

@@ -5,6 +5,28 @@ export function campusConfigKey(baseKey: string, campus: CampusCode): string {
   return `${baseKey}.${campus}`;
 }
 
+/**
+ * Resolves a config value where a campus-specific override always wins
+ * over the global default, regardless of which was edited more recently —
+ * the opposite rule from effectiveConfigValue (used for NOC/PPT/selection
+ * window deadlines, where whichever was edited last wins). Used for the
+ * Problem Statement spreadsheet URL / Go Live, where the point is letting
+ * one campus go live independently without a later global edit (or a
+ * later Go Live elsewhere) silently taking it over.
+ */
+export function campusOverrideValue(
+  config: Record<string, unknown>,
+  baseKey: string,
+  campus: CampusCode | null | undefined,
+): string | null {
+  if (campus) {
+    const raw = config[campusConfigKey(baseKey, campus)];
+    if (typeof raw === "string" && raw) return raw;
+  }
+  const global = config[baseKey];
+  return typeof global === "string" && global ? global : null;
+}
+
 /** Canonical display order for campus codes, everywhere one is listed — VSP, then HYD, then BLR. */
 export const CAMPUS_ORDER: CampusCode[] = ["VSP", "HYD", "BLR"];
 

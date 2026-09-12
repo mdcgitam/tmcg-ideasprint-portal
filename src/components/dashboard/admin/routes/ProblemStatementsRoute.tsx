@@ -7,10 +7,13 @@ export async function ProblemStatementsRoute({ profile }: { profile: ProfileRow 
   const { problemStatements, problemStatementExtensions, teams, membersByTeam, rooms, zones, staffAccounts, config } =
     await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
-  const canManage = profile.role === "Super Admin" || profile.role === "Campus Admin";
+  const isSuperAdmin = profile.role === "Super Admin";
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
   const isSpoc = profile.role === "SPOC";
   const hideZoneFilters = isSpoc || profile.role === "Zone Manager";
+  // For everyone but Super Admin this is just their own fixed campus; for
+  // Super Admin it's whichever module they're viewing (null = "All").
+  const viewerCampus = profile.campus;
 
   return (
     <SectionPageShell title="Problem Statements" scope={scope} campus={profile.campus}>
@@ -27,7 +30,8 @@ export async function ProblemStatementsRoute({ profile }: { profile: ProfileRow 
         zones={zones}
         staffAccounts={staffAccounts}
         config={config}
-        canManage={canManage}
+        isSuperAdmin={isSuperAdmin}
+        viewerCampus={viewerCampus}
       />
     </SectionPageShell>
   );
