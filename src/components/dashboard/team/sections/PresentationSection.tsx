@@ -127,7 +127,7 @@ export function PresentationSection({
             View
           </button>
         )}
-        {isLead && (
+        {isLead && !expired && (
           <>
             <input
               ref={fileInputRef}
@@ -142,14 +142,12 @@ export function PresentationSection({
             />
             <button
               type="button"
-              disabled={busy || notConfigured || expired}
+              disabled={busy || notConfigured}
               onClick={() => fileInputRef.current?.click()}
               title={
                 notConfigured
                   ? "No deadline set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one."
-                  : expired
-                    ? "Deadline passed — ask your SPOC, Zone Manager, or Super Admin to extend it."
-                    : undefined
+                  : undefined
               }
               className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
             >

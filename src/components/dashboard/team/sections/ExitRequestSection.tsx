@@ -217,7 +217,7 @@ export function ExitRequestSection({
                           onClick={() => fileInputRefs.current[m.id]?.click()}
                           className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
                         >
-                          {busy ? "Working…" : isOpen ? "Replace" : "Request Exit"}
+                          {busy ? "Working…" : isOpen ? "Replace" : "Upload"}
                         </button>
                       </>
                     )}
@@ -228,7 +228,7 @@ export function ExitRequestSection({
                         onClick={() => handleWithdraw(m.id)}
                         className="rounded-full border border-danger/40 px-4 py-1.5 font-heading text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
                       >
-                        Withdraw
+                        Delete
                       </button>
                     )}
                   </div>

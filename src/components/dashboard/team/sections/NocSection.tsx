@@ -168,7 +168,7 @@ export function NocSection({
                   View
                 </button>
               )}
-              {canUpload && (
+              {canUpload && !expired && (
                 <>
                   <input
                     ref={(el) => {
@@ -185,14 +185,12 @@ export function NocSection({
                   />
                   <button
                     type="button"
-                    disabled={busy || notConfigured || expired}
+                    disabled={busy || notConfigured}
                     onClick={() => fileInputRefs.current[m.id]?.click()}
                     title={
                       notConfigured
                         ? "No deadline set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one."
-                        : expired
-                          ? "Deadline passed — ask your SPOC, Zone Manager, or Super Admin to extend it."
-                          : undefined
+                        : undefined
                     }
                     className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
                   >
@@ -200,11 +198,10 @@ export function NocSection({
                   </button>
                 </>
               )}
-              {canAct && uploaded && (
+              {canAct && uploaded && !expired && (
                 <button
                   type="button"
-                  disabled={busy || expired}
-                  title={expired ? "Deadline passed — ask your SPOC, Zone Manager, or Super Admin to extend it." : undefined}
+                  disabled={busy}
                   onClick={() => handleDelete(m.id)}
                   className="rounded-full border border-danger/40 px-4 py-1.5 font-heading text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
                 >
