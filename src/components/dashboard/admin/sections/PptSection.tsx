@@ -311,7 +311,7 @@ export function PptSection({
       const status = localPresentations.find((p) => p.team_id === team.id)?.status ?? "Not Uploaded";
 
       if (q) {
-        const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""} ${psOf(team)?.number ?? ""}`.toLowerCase();
+        const haystack = `${team.team_id} ${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""} ${psOf(team)?.number ?? ""}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       if (filters.campus && lead?.campus !== filters.campus) return false;
@@ -345,10 +345,11 @@ export function PptSection({
         const { iso: currentDeadline, isOverride } = effectiveDeadline(team.id);
         return {
           ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
+          "Team ID": team.team_id,
           "Team Name": team.team_name,
+          "Team Size": String(teamSize(team)),
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
-          "Team Size": String(teamSize(team)),
           Zone: zone?.name ?? "Unassigned",
           "Zone Manager": zoneManagerName(zone) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
@@ -471,7 +472,7 @@ export function PptSection({
         <input
           value={filters.search}
           onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-          placeholder="Team name / team lead / lead phone / PS code…"
+          placeholder="Team ID / team name / team lead / lead phone / PS code…"
           className="min-w-[180px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
       </div>
@@ -490,10 +491,11 @@ export function PptSection({
                 <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                   <th className="px-2 py-3" />
                   {!singleCampus && <th className="px-4 py-3">Campus</th>}
+                  <th className="px-4 py-3">Team ID</th>
                   <th className="px-4 py-3">Team Name</th>
+                  <th className="px-4 py-3">Team Size</th>
                   <th className="px-4 py-3">Team Lead</th>
                   <th className="px-4 py-3">Lead Phone No</th>
-                  <th className="px-4 py-3">Team Size</th>
                   <th className="px-4 py-3">Zone</th>
                   <th className="px-4 py-3">Zone Manager</th>
                   <th className="px-4 py-3">Venue</th>
@@ -531,10 +533,11 @@ export function PptSection({
                         />
                       </td>
                       {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
+                      <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                       <td className="px-4 py-3 text-ink">{team.team_name}</td>
+                      <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                       <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                      <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                       <td className="px-4 py-3 text-ink-muted">{zone?.name ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zone) ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>

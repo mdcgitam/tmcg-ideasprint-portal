@@ -223,7 +223,7 @@ export function ProblemStatementsAdminSection({
     const filtered = localTeams.filter((team) => {
       const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
       if (q) {
-        const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""} ${psNumberOf(team)}`.toLowerCase();
+        const haystack = `${team.team_id} ${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""} ${psNumberOf(team)}`.toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       if (filters.campus && team.campus !== filters.campus) return false;
@@ -368,10 +368,11 @@ export function ProblemStatementsAdminSection({
         const room = roomOf(team);
         return {
           ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
+          "Team ID": team.team_id,
           "Team Name": team.team_name,
+          "Team Size": String(sizeOf(team)),
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
-          "Team Size": String(sizeOf(team)),
           Zone: zoneOf(room)?.name ?? "—",
           Venue: room?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
@@ -383,12 +384,17 @@ export function ProblemStatementsAdminSection({
   }
 
   // ── Analytics ────────────────────────────────────────────────────────
+  // Campus filter lets a Super Admin viewing "All" narrow the breakdown to
+  // one campus without leaving All mode and switching campus module.
+  const [analyticsCampus, setAnalyticsCampus] = useState("");
+
   const analytics = useMemo(() => {
+    const teamsInScope = analyticsCampus ? localTeams.filter((t) => t.campus === analyticsCampus) : localTeams;
     const counts = new Map<string, { number: string; count: number; teamNames: string[] }>();
     for (const ps of local) {
       counts.set(ps.id, { number: ps.number, count: 0, teamNames: [] });
     }
-    for (const team of localTeams) {
+    for (const team of teamsInScope) {
       if (!team.current_problem_statement_id) continue;
       const entry = counts.get(team.current_problem_statement_id);
       if (entry) {
@@ -399,9 +405,9 @@ export function ProblemStatementsAdminSection({
     const rows = Array.from(counts.values()).sort(
       (a, b) => Number(a.number) - Number(b.number) || a.number.localeCompare(b.number),
     );
-    const totalSelected = localTeams.filter((t) => t.current_problem_statement_id).length;
-    return { rows, totalSelected, totalTeams: localTeams.length };
-  }, [local, localTeams]);
+    const totalSelected = teamsInScope.filter((t) => t.current_problem_statement_id).length;
+    return { rows, totalSelected, totalTeams: teamsInScope.length };
+  }, [local, localTeams, analyticsCampus]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -560,7 +566,7 @@ export function ProblemStatementsAdminSection({
               <input
                 value={filters.search}
                 onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-                placeholder="Team name / team lead / lead phone / PS code…"
+                placeholder="Team ID / team name / team lead / lead phone / PS code…"
                 className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
               />
             </div>
@@ -580,10 +586,11 @@ export function ProblemStatementsAdminSection({
                     <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                       <th className="px-4 py-3" />
                       {!singleCampus && <th className="px-4 py-3">Campus</th>}
+                      <th className="px-4 py-3">Team ID</th>
                       <th className="px-4 py-3">Team Name</th>
+                      <th className="px-4 py-3">Team Size</th>
                       <th className="px-4 py-3">Team Lead</th>
                       <th className="px-4 py-3">Lead Phone No</th>
-                      <th className="px-4 py-3">Team Size</th>
                       <th className="px-4 py-3">Zone</th>
                       <th className="px-4 py-3">Venue</th>
                       <th className="px-4 py-3">SPOC</th>
@@ -607,10 +614,11 @@ export function ProblemStatementsAdminSection({
                             <input type="checkbox" checked={selected.has(team.id)} onChange={() => toggleSelected(team.id)} />
                           </td>
                           {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
+                          <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                           <td className="px-4 py-3 text-ink">{team.team_name}</td>
+                          <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>
                           <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                           <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                          <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>
                           <td className="px-4 py-3 text-ink-muted">{zone?.name ?? "—"}</td>
                           <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                           <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
@@ -691,6 +699,11 @@ export function ProblemStatementsAdminSection({
 
         {view === "analytics" && (
           <div className="flex flex-col gap-4">
+            {!singleCampus && (
+              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
+                <FilterSelect label="Campus" value={analyticsCampus} onChange={setAnalyticsCampus} options={campusOptions} />
+              </div>
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-border bg-surface p-5">
                 <span className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">Teams Selected</span>
