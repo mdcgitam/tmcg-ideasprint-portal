@@ -148,14 +148,12 @@ export function ExitRequestSection({
         {view === "requests" ? (
           <div className="flex flex-col gap-4">
             <p className="max-w-2xl font-heading text-xs text-ink-muted">
-              Not a mandatory submission — only for participants who want to exit the event partway through. Upload
-              the already-signed, physical exit form; a SPOC, Zone Manager, Campus Admin, or Super Admin will review
-              it. A member can exit only while the team keeps at least 3 active members.
+              Optional — upload your signed exit form for review by your SPOC, Zone Manager, Campus Admin, or Super
+              Admin.
             </p>
             {activeCount <= 3 && (
               <p className="max-w-2xl rounded-lg border border-gold/40 bg-gold/5 px-4 py-3 font-heading text-xs text-gold">
-                This team is at the 3-member minimum. A single member can&rsquo;t exit on their own — all {activeCount}{" "}
-                members must each submit an exit form. Once those are approved the whole team becomes inactive.
+                Team at the {activeCount}-member minimum — all {activeCount} must exit together for it to go through.
               </p>
             )}
             {error && (

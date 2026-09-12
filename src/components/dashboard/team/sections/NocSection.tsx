@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { NocRow, ProfileRow } from "@/types/database";
+import type { CampusCode, NocRow, ProfileRow } from "@/types/database";
 import type { TeamMemberProfile } from "../TeamDashboardShell";
 import {
   uploadNocFile,
@@ -11,25 +11,32 @@ import {
   getSignedUrl,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
+import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const GENERAL_DEADLINE_KEY = "noc.general_deadline";
 
 /**
  * SPEC §39-48: every participant has an individual NOC. Team Lead can
  * upload/view/replace/delete any member's; a Member can only upload/view
  * their own — never edit/replace/delete it once uploaded. Files must be a
  * PDF under 2MB (matches the noc-uploads storage bucket's
- * file_size_limit/allowed_mime_types).
+ * file_size_limit/allowed_mime_types). A per-member deadline override
+ * (set from the admin NOC page) wins over the campus-scoped General NOC
+ * Deadline set in Configuration; uploads are locked until one of those
+ * exists at all — not just once it's passed (record_noc_metadata, 0062).
  */
 export function NocSection({
   profile,
   members,
   nocs,
+  config,
   isLead,
 }: {
   profile: ProfileRow;
   members: TeamMemberProfile[];
   nocs: NocRow[];
+  config: Record<string, unknown>;
   isLead: boolean;
 }) {
   const [localNocs, setLocalNocs] = useState(nocs);
@@ -43,13 +50,17 @@ export function NocSection({
     return localNocs.find((n) => n.profile_id === profileId) ?? null;
   }
 
-  function deadlinePassed(profileId: string): boolean {
-    const deadline = nocFor(profileId)?.deadline;
-    return !!deadline && new Date(deadline) < new Date();
+  function effectiveDeadlineFor(profileId: string, campus: CampusCode | null): string | null {
+    return nocFor(profileId)?.deadline ?? effectiveConfigValue(config, GENERAL_DEADLINE_KEY, campus);
   }
 
-  async function handleUpload(profileId: string, file: File) {
-    if (deadlinePassed(profileId)) {
+  async function handleUpload(profileId: string, campus: CampusCode | null, file: File) {
+    const deadline = effectiveDeadlineFor(profileId, campus);
+    if (!deadline) {
+      setError("No deadline has been set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one before uploading.");
+      return;
+    }
+    if (new Date(deadline) < new Date()) {
       setError("Time exceeded — the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.");
       return;
     }
@@ -126,7 +137,9 @@ export function NocSection({
         const canManage = isLead; // Team Lead: upload/replace/delete any; Member: upload own only, no replace/delete.
         const canUpload = canManage || (m.id === profile.id && !uploaded);
         const busy = busyProfileId === m.id;
-        const expired = deadlinePassed(m.id);
+        const deadline = effectiveDeadlineFor(m.id, m.campus);
+        const notConfigured = !deadline;
+        const expired = !!deadline && new Date(deadline) < new Date();
 
         return (
           <div key={m.id} className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface p-5">
@@ -137,11 +150,8 @@ export function NocSection({
               <p className={`mt-1 font-heading text-xs ${uploaded ? "text-gitam" : "text-ink-faint"}`}>
                 {noc?.status ?? "Not Uploaded"}
               </p>
-              <p className={`mt-1 font-heading text-xs ${expired ? "text-danger" : "text-ink-faint"}`}>
-                Deadline:{" "}
-                {noc?.deadline
-                  ? new Date(noc.deadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
-                  : "Not set"}
+              <p className={`mt-1 font-heading text-xs ${notConfigured || expired ? "text-danger" : "text-ink-faint"}`}>
+                Deadline: {deadline ? new Date(deadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "Not yet set"}
                 {expired && " — Time exceeded"}
               </p>
             </div>
@@ -166,18 +176,24 @@ export function NocSection({
                     className="hidden"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
-                      if (file) handleUpload(m.id, file);
+                      if (file) handleUpload(m.id, m.campus, file);
                       e.target.value = "";
                     }}
                   />
                   <button
                     type="button"
-                    disabled={busy || expired}
+                    disabled={busy || notConfigured || expired}
                     onClick={() => fileInputRefs.current[m.id]?.click()}
-                    title={expired ? "Deadline passed — ask your SPOC, Zone Manager, or Super Admin to extend it." : undefined}
+                    title={
+                      notConfigured
+                        ? "No deadline set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one."
+                        : expired
+                          ? "Deadline passed — ask your SPOC, Zone Manager, or Super Admin to extend it."
+                          : undefined
+                    }
                     className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
                   >
-                    {busy ? "Working…" : expired ? "Time Exceeded" : uploaded ? "Replace" : "Upload"}
+                    {busy ? "Working…" : notConfigured ? "Deadline Not Set" : expired ? "Time Exceeded" : uploaded ? "Replace" : "Upload"}
                   </button>
                 </>
               )}

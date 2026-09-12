@@ -3,6 +3,10 @@
 import { useState } from "react";
 import type { TeamRow, ProblemStatementRow } from "@/types/database";
 import { selectProblemStatement, DashboardActionError } from "@/lib/dashboard/team-actions";
+import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
+
+const SELECTION_START_KEY = "problem_statement.selection_start";
+const SELECTION_END_KEY = "problem_statement.selection_end";
 
 /**
  * SPEC §30-38: problem statements are browsed via an admin-provided
@@ -34,6 +38,13 @@ export function ProblemStatementSection({
   const spreadsheetUrl = liveAt && typeof config["problem_statement.spreadsheet_url"] === "string"
     ? (config["problem_statement.spreadsheet_url"] as string)
     : null;
+
+  // Selection is frozen until both bounds are configured — select_problem_statement
+  // already enforces this server-side (SELECTION_NOT_CONFIGURED, 0049); this just
+  // surfaces it proactively instead of only after a failed submit.
+  const selectionStart = effectiveConfigValue(config, SELECTION_START_KEY, team.campus);
+  const selectionEnd = effectiveConfigValue(config, SELECTION_END_KEY, team.campus);
+  const notConfigured = !selectionStart || !selectionEnd;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -86,10 +97,16 @@ export function ProblemStatementSection({
       {isLead && (
         <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Select / Change</span>
-          <p className="mt-2 font-heading text-xs text-ink-muted">
-            Pick a problem statement from the sheet above and enter its number (1–50) — you can change this any
-            number of times until the selection window closes.
-          </p>
+          {notConfigured ? (
+            <p className="mt-2 font-heading text-xs text-danger">
+              Selection deadline not yet set — ask your Campus Admin or Super Admin to configure it before you can select.
+            </p>
+          ) : (
+            <p className="mt-2 font-heading text-xs text-ink-muted">
+              Pick a problem statement from the sheet above and enter its number (1–50) — you can change this any
+              number of times until the selection window closes.
+            </p>
+          )}
           <div className="mt-4 flex gap-3">
             <input
               type="number"
@@ -99,14 +116,16 @@ export function ProblemStatementSection({
               onChange={(e) => setPsNumber(e.target.value)}
               placeholder="1–50"
               required
-              className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+              disabled={notConfigured}
+              className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold disabled:opacity-60"
             />
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || notConfigured}
+              title={notConfigured ? "Selection deadline not yet set." : undefined}
               className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
             >
-              {submitting ? "Submitting…" : "Select"}
+              {submitting ? "Submitting…" : notConfigured ? "Deadline Not Set" : "Select"}
             </button>
           </div>
           {message && (

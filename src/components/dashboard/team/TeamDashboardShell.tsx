@@ -149,7 +149,9 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
               spocName={props.spocName}
             />
           )}
-          {tab === "NOC" && <NocSection profile={props.profile} members={props.members} nocs={props.nocs} isLead={isLead} />}
+          {tab === "NOC" && (
+            <NocSection profile={props.profile} members={props.members} nocs={props.nocs} config={props.config} isLead={isLead} />
+          )}
           {tab === "Presentation" && (
             <PresentationSection
               team={props.team}

@@ -27,6 +27,9 @@ function friendlyError(raw: string): string {
   if (raw.includes("TEAM_NOT_FOUND")) return "That team no longer exists — refresh the page.";
   if (raw.includes("REQUEST_NOT_FOUND")) return "That request couldn't be found.";
   if (raw.includes("INVALID_DECISION")) return "Invalid decision.";
+  if (raw.includes("DEADLINE_NOT_SET")) {
+    return "No deadline has been set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one before uploading.";
+  }
   if (raw.includes("DEADLINE_PASSED")) {
     return "Time exceeded — the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.";
   }

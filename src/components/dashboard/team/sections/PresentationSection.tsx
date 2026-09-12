@@ -45,9 +45,14 @@ export function PresentationSection({
   // Super-Admin-set global default (0048).
   const generalDeadline = effectiveConfigValue(config, GENERAL_DEADLINE_KEY, team.campus);
   const effectiveDeadline = local?.deadline ?? generalDeadline;
+  const notConfigured = !effectiveDeadline;
   const expired = !!effectiveDeadline && new Date(effectiveDeadline) < new Date();
 
   async function handleUpload(file: File) {
+    if (notConfigured) {
+      setError("No deadline has been set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one before uploading.");
+      return;
+    }
     if (expired) {
       setError("Time exceeded — the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.");
       return;
@@ -109,11 +114,11 @@ export function PresentationSection({
       <p className="mt-2 max-w-lg font-heading text-xs text-ink-muted">
         Upload your team&rsquo;s pitch deck. Only the Team Lead can upload — PDF only, max 2MB.
       </p>
-      <p className={`mt-2 font-heading text-xs ${expired ? "text-danger" : "text-ink-faint"}`}>
+      <p className={`mt-2 font-heading text-xs ${notConfigured || expired ? "text-danger" : "text-ink-faint"}`}>
         Deadline:{" "}
         {effectiveDeadline
           ? new Date(effectiveDeadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
-          : "Not set"}
+          : "Not yet set"}
         {expired && " — Time exceeded"}
       </p>
 
@@ -138,12 +143,18 @@ export function PresentationSection({
             />
             <button
               type="button"
-              disabled={busy || expired}
+              disabled={busy || notConfigured || expired}
               onClick={() => fileInputRef.current?.click()}
-              title={expired ? "Deadline passed — ask your SPOC, Zone Manager, or Super Admin to extend it." : undefined}
+              title={
+                notConfigured
+                  ? "No deadline set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one."
+                  : expired
+                    ? "Deadline passed — ask your SPOC, Zone Manager, or Super Admin to extend it."
+                    : undefined
+              }
               className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"
             >
-              {busy ? "Working…" : expired ? "Time Exceeded" : uploaded ? "Replace" : "Upload"}
+              {busy ? "Working…" : notConfigured ? "Deadline Not Set" : expired ? "Time Exceeded" : uploaded ? "Replace" : "Upload"}
             </button>
             {uploaded && (
               <button
