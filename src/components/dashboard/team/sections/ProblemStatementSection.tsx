@@ -40,11 +40,15 @@ export function ProblemStatementSection({
     currentProblemStatement ? { number: currentProblemStatement.number, title: currentProblemStatement.title } : null,
   );
 
-  // A campus-specific override (set by Super Admin going live for just
-  // this campus) always wins over the global value, whichever was edited
-  // more recently — see campusOverrideValue.
+  // A campus-specific live_at (set by Super Admin going live for just this
+  // campus) always wins over the global one, whichever was edited more
+  // recently — see campusOverrideValue. The spreadsheet URL itself is one
+  // shared value, not campus-specific.
   const liveAt = campusOverrideValue(config, "problem_statement.live_at", team.campus);
-  const spreadsheetUrl = liveAt ? campusOverrideValue(config, "problem_statement.spreadsheet_url", team.campus) : null;
+  const spreadsheetUrl =
+    liveAt && typeof config["problem_statement.spreadsheet_url"] === "string"
+      ? (config["problem_statement.spreadsheet_url"] as string)
+      : null;
 
   // Selection is frozen until both bounds are configured — select_problem_statement
   // already enforces this server-side (SELECTION_NOT_CONFIGURED, 0049); this just

@@ -132,10 +132,11 @@ export function ProblemStatementsAdminSection({
     return viewerCampus ? campusConfigKey(baseKey, viewerCampus) : baseKey;
   }
 
-  // Super Admin edits the raw value for whichever scope they're viewing —
-  // blank if that scope has no override of its own yet, so saving without
-  // changing it never accidentally freezes in a copy of the global value.
-  const [spreadsheetUrl, setSpreadsheetUrl] = useState(configString(config, writeKeyFor(URL_KEY)) ?? "");
+  // The spreadsheet URL is one shared global value, editable only from
+  // "All" — frozen (read-only) while viewing a specific campus module, so
+  // there's never a divergent link per campus. Only Go Live is genuinely
+  // independent per campus.
+  const [spreadsheetUrl, setSpreadsheetUrl] = useState(configString(config, URL_KEY) ?? "");
   const [savingUrl, setSavingUrl] = useState(false);
   const [urlMessage, setUrlMessage] = useState<string | null>(null);
   const [liveAt, setLiveAt] = useState(configString(config, writeKeyFor(LIVE_AT_KEY)));
@@ -143,8 +144,8 @@ export function ProblemStatementsAdminSection({
   const [goLiveError, setGoLiveError] = useState<string | null>(null);
 
   // What everyone else (Campus Admin, SPOC, Zone Manager) actually sees:
-  // their own campus's override if set, else the global default.
-  const effectiveSpreadsheetUrl = campusOverrideValue(config, URL_KEY, viewerCampus);
+  // the shared URL, revealed once their own campus's live_at is set (or
+  // the global one, if that campus never got its own).
   const effectiveLiveAt = campusOverrideValue(config, LIVE_AT_KEY, viewerCampus);
 
   // Each campus's problem statement count ceiling (numbering starts at 1)
@@ -161,8 +162,8 @@ export function ProblemStatementsAdminSection({
     setSavingUrl(true);
     setUrlMessage(null);
     try {
-      await setConfiguration(writeKeyFor(URL_KEY), spreadsheetUrl || null, "Problem statement spreadsheet URL.");
-      setUrlMessage(viewerCampus ? `Saved — applies to ${viewerCampus} only.` : "Saved — applies to all 3 campuses.");
+      await setConfiguration(URL_KEY, spreadsheetUrl || null, "Problem statement spreadsheet URL.");
+      setUrlMessage("Saved.");
     } catch (err) {
       setUrlMessage(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
@@ -171,15 +172,14 @@ export function ProblemStatementsAdminSection({
   }
 
   async function handleGoLive() {
-    const effectiveUrlNow = spreadsheetUrl.trim() || campusOverrideValue(config, URL_KEY, viewerCampus);
     const selectionStart = effectiveConfigValue(config, "problem_statement.selection_start", viewerCampus);
     const selectionEnd = effectiveConfigValue(config, "problem_statement.selection_end", viewerCampus);
     if (!selectionStart || !selectionEnd) {
       setGoLiveError("Set the selection window (start & end) in Configuration before going live.");
       return;
     }
-    if (!effectiveUrlNow) {
-      setGoLiveError("Add the spreadsheet URL above before going live.");
+    if (!spreadsheetUrl.trim()) {
+      setGoLiveError("Add the spreadsheet URL from the \"All\" module before going live.");
       return;
     }
     setGoingLive(true);
@@ -497,8 +497,8 @@ export function ProblemStatementsAdminSection({
           </p>
           {viewerCampus && (
             <p className="mt-1 font-heading text-xs text-gold">
-              Editing {viewerCampus}&rsquo;s own override. Leave blank to keep following the global URL
-              {campusOverrideValue(config, URL_KEY, null) ? ` (currently ${campusOverrideValue(config, URL_KEY, null)})` : " (not set)"}.
+              One shared link for all campuses — frozen here. Switch to the &ldquo;All&rdquo; module to change it; Go Live below still
+              works independently for {viewerCampus}.
             </p>
           )}
           <div className="mt-3 flex flex-wrap gap-3">
@@ -506,18 +506,21 @@ export function ProblemStatementsAdminSection({
               value={spreadsheetUrl}
               onChange={(e) => setSpreadsheetUrl(e.target.value)}
               placeholder="https://docs.google.com/spreadsheets/..."
-              className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+              disabled={!!viewerCampus}
+              className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold disabled:cursor-not-allowed disabled:opacity-60"
             />
-            <button
-              type="button"
-              disabled={savingUrl}
-              onClick={handleSaveUrl}
-              className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-            >
-              {savingUrl ? "Saving…" : "Save"}
-            </button>
+            {!viewerCampus && (
+              <button
+                type="button"
+                disabled={savingUrl}
+                onClick={handleSaveUrl}
+                className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+              >
+                {savingUrl ? "Saving…" : "Save"}
+              </button>
+            )}
           </div>
-          {urlMessage && <p className="mt-2 font-heading text-xs text-ink-muted">{urlMessage}</p>}
+          {!viewerCampus && urlMessage && <p className="mt-2 font-heading text-xs text-ink-muted">{urlMessage}</p>}
 
           <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-5">
             <button
@@ -539,10 +542,10 @@ export function ProblemStatementsAdminSection({
       ) : (
         <div className="rounded-xl border border-border bg-surface p-4">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Sheet</span>
-          {effectiveLiveAt && effectiveSpreadsheetUrl ? (
+          {effectiveLiveAt && spreadsheetUrl ? (
             <>
               <p className="mt-2 font-heading text-sm text-ink">
-                <a href={effectiveSpreadsheetUrl} target="_blank" rel="noopener noreferrer" className="text-gold underline">
+                <a href={spreadsheetUrl} target="_blank" rel="noopener noreferrer" className="text-gold underline">
                   Open the problem statement sheet ↗
                 </a>
               </p>
