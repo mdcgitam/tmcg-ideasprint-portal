@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import type { ProfileRow } from "@/types/database";
+import type { CampusCode, ProfileRow } from "@/types/database";
 import { setConfiguration, DashboardActionError } from "@/lib/dashboard/admin-actions";
-import { effectiveConfigValue, campusConfigKey, nowDatetimeLocalValue } from "@/lib/dashboard/campus-config";
+import {
+  CAMPUS_ORDER,
+  campusConfigKey,
+  effectiveConfigValue,
+  nowDatetimeLocalValue,
+  problemStatementMaxNumber,
+  problemStatementMaxNumberKey,
+  PROBLEM_STATEMENT_PREFIX,
+} from "@/lib/dashboard/campus-config";
 import { parseDocumentLinks, type DocumentLink } from "@/components/dashboard/DocumentsSection";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -107,6 +115,39 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
   });
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [message, setMessage] = useState<Record<string, string>>({});
+
+  // Super-Admin-only, "All" mode only — each campus runs its own numbered
+  // problem statement track (V1.., H1.., B1..); a Campus Admin never sees
+  // or edits any campus's count, including their own.
+  const [psMaxDrafts, setPsMaxDrafts] = useState<Record<CampusCode, string>>(() => ({
+    VSP: String(problemStatementMaxNumber(config, "VSP")),
+    HYD: String(problemStatementMaxNumber(config, "HYD")),
+    BLR: String(problemStatementMaxNumber(config, "BLR")),
+  }));
+  const [savingPsMaxCampus, setSavingPsMaxCampus] = useState<CampusCode | null>(null);
+  const [psMaxMessages, setPsMaxMessages] = useState<Partial<Record<CampusCode, string>>>({});
+
+  async function handleSavePsMax(psCampus: CampusCode) {
+    const n = Number(psMaxDrafts[psCampus].trim());
+    if (!Number.isInteger(n) || n < 1) {
+      setPsMaxMessages((m) => ({ ...m, [psCampus]: "Enter a whole number of 1 or more." }));
+      return;
+    }
+    setSavingPsMaxCampus(psCampus);
+    setPsMaxMessages((m) => ({ ...m, [psCampus]: "" }));
+    try {
+      await setConfiguration(
+        problemStatementMaxNumberKey(psCampus),
+        n,
+        `Highest problem statement number for ${psCampus} (numbering starts at 1).`,
+      );
+      setPsMaxMessages((m) => ({ ...m, [psCampus]: "Saved." }));
+    } catch (err) {
+      setPsMaxMessages((m) => ({ ...m, [psCampus]: err instanceof DashboardActionError ? err.message : "Something went wrong." }));
+    } finally {
+      setSavingPsMaxCampus(null);
+    }
+  }
 
   const [documents, setDocuments] = useState<DocumentLink[]>(() => parseDocumentLinks(config));
   const [newDocName, setNewDocName] = useState("");
@@ -235,6 +276,44 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
           </button>
         </div>
         {message[key] && <p className="mt-2 font-heading text-xs text-ink-muted">{message[key]}</p>}
+      </div>
+    );
+  }
+
+  function psCountField() {
+    return (
+      <div className="rounded-xl border border-border bg-surface p-6">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Count (per campus)</span>
+        <p className="mt-1 font-heading text-xs text-ink-muted">
+          Each campus runs its own numbered track (V1… for VSP, H1… for HYD, B1… for BLR) — set how many each has. Go Live on the
+          Problem Statements page creates exactly this many per campus, and it&rsquo;s the ceiling Team Leads and admins can enter
+          for that campus.
+        </p>
+        <div className="mt-3 flex flex-col gap-3">
+          {CAMPUS_ORDER.map((psCampus) => (
+            <div key={psCampus} className="flex flex-wrap items-center gap-3">
+              <span className="w-14 font-heading text-xs text-ink-muted">
+                {psCampus} ({PROBLEM_STATEMENT_PREFIX[psCampus]})
+              </span>
+              <input
+                type="number"
+                min={1}
+                value={psMaxDrafts[psCampus]}
+                onChange={(e) => setPsMaxDrafts((prev) => ({ ...prev, [psCampus]: e.target.value }))}
+                className="w-28 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+              />
+              <button
+                type="button"
+                disabled={savingPsMaxCampus === psCampus}
+                onClick={() => handleSavePsMax(psCampus)}
+                className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+              >
+                {savingPsMaxCampus === psCampus ? "Saving…" : "Save"}
+              </button>
+              {psMaxMessages[psCampus] && <span className="font-heading text-xs text-ink-muted">{psMaxMessages[psCampus]}</span>}
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -421,6 +500,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
           <>
             {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
             {DEADLINE_KEYS.map((d) => deadlineField(d))}
+            {isAllMode && psCountField()}
             {isAllMode && tncField()}
             {isAllMode && privacyField()}
           </>

@@ -25,7 +25,6 @@ import {
   parseProblemStatementCode,
   problemStatementCode,
   problemStatementMaxNumber,
-  problemStatementMaxNumberKey,
   PROBLEM_STATEMENT_PREFIX,
   sortCampuses,
 } from "@/lib/dashboard/campus-config";
@@ -95,7 +94,6 @@ export function ProblemStatementsAdminSection({
   hideVenueFilter = false,
   hideSpocFilter = false,
   canManage = false,
-  isSuperAdmin = false,
 }: {
   problemStatements: ProblemStatementRow[];
   problemStatementExtensions: ProblemStatementExtensionRow[];
@@ -110,7 +108,6 @@ export function ProblemStatementsAdminSection({
   hideVenueFilter?: boolean;
   hideSpocFilter?: boolean;
   canManage?: boolean;
-  isSuperAdmin?: boolean;
 }) {
   const [local, setLocal] = useState(problemStatements);
   const [localExtensions, setLocalExtensions] = useState(problemStatementExtensions);
@@ -128,45 +125,15 @@ export function ProblemStatementsAdminSection({
   const [goingLive, setGoingLive] = useState(false);
   const [goLiveError, setGoLiveError] = useState<string | null>(null);
 
-  // Super-Admin-only: how many problem statements each campus's track has
-  // (numbering always starts at 1) — Go Live creates exactly this many per
-  // campus, and it's the ceiling Team Leads/admins can enter for that
-  // campus. Independent per campus; no Campus Admin override.
-  const [psMax, setPsMax] = useState<Record<CampusCode, number>>(() => ({
+  // Each campus's problem statement count ceiling (numbering starts at 1)
+  // — Super-Admin-set from the Configuration page, read-only here. Go Live
+  // creates exactly this many per campus, and it's the ceiling Team
+  // Leads/admins can enter for that campus.
+  const psMax: Record<CampusCode, number> = {
     VSP: problemStatementMaxNumber(config, "VSP"),
     HYD: problemStatementMaxNumber(config, "HYD"),
     BLR: problemStatementMaxNumber(config, "BLR"),
-  }));
-  const [psMaxDrafts, setPsMaxDrafts] = useState<Record<CampusCode, string>>(() => ({
-    VSP: String(psMax.VSP),
-    HYD: String(psMax.HYD),
-    BLR: String(psMax.BLR),
-  }));
-  const [savingPsMaxCampus, setSavingPsMaxCampus] = useState<CampusCode | null>(null);
-  const [psMaxMessages, setPsMaxMessages] = useState<Partial<Record<CampusCode, string>>>({});
-
-  async function handleSavePsMax(campus: CampusCode) {
-    const n = Number(psMaxDrafts[campus].trim());
-    if (!Number.isInteger(n) || n < 1) {
-      setPsMaxMessages((m) => ({ ...m, [campus]: "Enter a whole number of 1 or more." }));
-      return;
-    }
-    setSavingPsMaxCampus(campus);
-    setPsMaxMessages((m) => ({ ...m, [campus]: "" }));
-    try {
-      await setConfiguration(
-        problemStatementMaxNumberKey(campus),
-        n,
-        `Highest problem statement number for ${campus} (numbering starts at 1).`,
-      );
-      setPsMax((prev) => ({ ...prev, [campus]: n }));
-      setPsMaxMessages((m) => ({ ...m, [campus]: "Saved." }));
-    } catch (err) {
-      setPsMaxMessages((m) => ({ ...m, [campus]: err instanceof DashboardActionError ? err.message : "Something went wrong." }));
-    } finally {
-      setSavingPsMaxCampus(null);
-    }
-  }
+  };
 
   async function handleSaveUrl() {
     setSavingUrl(true);
@@ -449,83 +416,53 @@ export function ProblemStatementsAdminSection({
   }
 
   // ── Analytics ────────────────────────────────────────────────────────
-  // Campus filter lets a Super Admin viewing "All" narrow the breakdown to
-  // one campus without leaving All mode and switching campus module.
-  const [analyticsCampus, setAnalyticsCampus] = useState("");
+  // Each campus's problem statements are numbered independently (V1.., H1..,
+  // B1..) so a single merged table would mix unrelated codes together —
+  // instead, show one table per campus. Scoped viewers (Campus Admin, SPOC,
+  // Zone Manager, or a Super Admin who's selected a campus module) only
+  // ever have one campus's teams anyway, so this naturally collapses to a
+  // single table for them.
+  const analyticsCampuses = singleCampus ? campusOptions : CAMPUS_ORDER;
 
-  const analytics = useMemo(() => {
-    const teamsInScope = analyticsCampus ? localTeams.filter((t) => t.campus === analyticsCampus) : localTeams;
-    const psInScope = analyticsCampus ? local.filter((p) => p.campus === analyticsCampus) : local;
-    const counts = new Map<string, { number: string; count: number; teamNames: string[] }>();
-    for (const ps of psInScope) {
-      counts.set(ps.id, { number: ps.number, count: 0, teamNames: [] });
-    }
-    for (const team of teamsInScope) {
-      if (!team.current_problem_statement_id) continue;
-      const entry = counts.get(team.current_problem_statement_id);
-      if (entry) {
-        entry.count += 1;
-        entry.teamNames.push(team.team_name);
+  const analyticsByCampus = useMemo(() => {
+    return analyticsCampuses.map((campus) => {
+      const teamsInCampus = localTeams.filter((t) => t.campus === campus);
+      const psInCampus = local.filter((p) => p.campus === campus);
+      const counts = new Map<string, { number: string; count: number; teamNames: string[] }>();
+      for (const ps of psInCampus) {
+        counts.set(ps.id, { number: ps.number, count: 0, teamNames: [] });
       }
-    }
-    const rows = Array.from(counts.values()).sort((a, b) => {
-      const pa = parseProblemStatementCode(a.number);
-      const pb = parseProblemStatementCode(b.number);
-      if (pa && pb) {
-        const campusDiff = CAMPUS_ORDER.indexOf(pa.campus) - CAMPUS_ORDER.indexOf(pb.campus);
-        return campusDiff !== 0 ? campusDiff : pa.number - pb.number;
+      for (const team of teamsInCampus) {
+        if (!team.current_problem_statement_id) continue;
+        const entry = counts.get(team.current_problem_statement_id);
+        if (entry) {
+          entry.count += 1;
+          entry.teamNames.push(team.team_name);
+        }
       }
-      return a.number.localeCompare(b.number);
+      const rows = Array.from(counts.values()).sort((a, b) => {
+        const pa = parseProblemStatementCode(a.number);
+        const pb = parseProblemStatementCode(b.number);
+        if (pa && pb) return pa.number - pb.number;
+        return a.number.localeCompare(b.number);
+      });
+      const totalSelected = teamsInCampus.filter((t) => t.current_problem_statement_id).length;
+      const totalReleased = psInCampus.filter((p) => p.status === "Released").length;
+      return { campus, rows, totalSelected, totalTeams: teamsInCampus.length, totalReleased };
     });
-    const totalSelected = teamsInScope.filter((t) => t.current_problem_statement_id).length;
-    const totalReleased = psInScope.filter((p) => p.status === "Released").length;
-    return { rows, totalSelected, totalTeams: teamsInScope.length, totalReleased };
-  }, [local, localTeams, analyticsCampus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [local, localTeams, singleCampus, campusOptions]);
+
+  const analyticsTotals = {
+    totalSelected: analyticsByCampus.reduce((sum, c) => sum + c.totalSelected, 0),
+    totalTeams: analyticsByCampus.reduce((sum, c) => sum + c.totalTeams, 0),
+    totalReleased: analyticsByCampus.reduce((sum, c) => sum + c.totalReleased, 0),
+  };
 
   return (
     <div className="flex flex-col gap-6">
       {canManage ? (
-        <>
-          {isSuperAdmin && (
-            <div className="rounded-xl border border-border bg-surface p-6">
-              <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Count (per campus)</span>
-              <p className="mt-1 font-heading text-xs text-ink-muted">
-                Each campus runs its own numbered track (V1… for VSP, H1… for HYD, B1… for BLR) — set how many each has. Go Live
-                creates exactly this many per campus, and it&rsquo;s the ceiling Team Leads and admins can enter for that campus.
-                Super Admin only.
-              </p>
-              <div className="mt-3 flex flex-col gap-3">
-                {CAMPUS_ORDER.map((campus) => (
-                  <div key={campus} className="flex flex-wrap items-center gap-3">
-                    <span className="w-14 font-heading text-xs text-ink-muted">
-                      {campus} ({PROBLEM_STATEMENT_PREFIX[campus]})
-                    </span>
-                    <input
-                      type="number"
-                      min={1}
-                      value={psMaxDrafts[campus]}
-                      onChange={(e) => setPsMaxDrafts((prev) => ({ ...prev, [campus]: e.target.value }))}
-                      className="w-28 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-                    />
-                    <button
-                      type="button"
-                      disabled={savingPsMaxCampus === campus}
-                      onClick={() => handleSavePsMax(campus)}
-                      className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-                    >
-                      {savingPsMaxCampus === campus ? "Saving…" : "Save"}
-                    </button>
-                    <span className="font-heading text-xs text-ink-muted">
-                      Currently {PROBLEM_STATEMENT_PREFIX[campus]}1–{PROBLEM_STATEMENT_PREFIX[campus]}
-                      {psMax[campus]}.
-                    </span>
-                    {psMaxMessages[campus] && <span className="font-heading text-xs text-ink-muted">{psMaxMessages[campus]}</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="rounded-xl border border-border bg-surface p-6">
+        <div className="rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Spreadsheet URL</span>
           <p className="mt-1 font-heading text-xs text-ink-muted">
             Hidden from Zone Manager, SPOC, and Team Lead / Member until you click Go Live below.
@@ -562,8 +499,7 @@ export function ProblemStatementsAdminSection({
             </span>
           </div>
           {goLiveError && <p className="mt-2 font-heading text-xs text-danger">{goLiveError}</p>}
-          </div>
-        </>
+        </div>
       ) : (
         <div className="rounded-xl border border-border bg-surface p-4">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Sheet</span>
@@ -810,46 +746,58 @@ export function ProblemStatementsAdminSection({
         )}
 
         {view === "analytics" && (
-          <div className="flex flex-col gap-4">
-            {!singleCampus && (
-              <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface p-4">
-                <FilterSelect label="Campus" value={analyticsCampus} onChange={setAnalyticsCampus} options={campusOptions} />
-              </div>
-            )}
+          <div className="flex flex-col gap-6">
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-border bg-surface p-5">
                 <span className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">Teams Selected</span>
                 <p className="mt-2 font-display text-3xl text-ink">
-                  {analytics.totalSelected}
-                  <span className="ml-2 font-heading text-sm text-ink-muted">of {analytics.totalTeams}</span>
+                  {analyticsTotals.totalSelected}
+                  <span className="ml-2 font-heading text-sm text-ink-muted">of {analyticsTotals.totalTeams}</span>
                 </p>
               </div>
               <div className="rounded-xl border border-border bg-surface p-5">
                 <span className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">Problem Statements Live</span>
-                <p className="mt-2 font-display text-3xl text-ink">{analytics.totalReleased}</p>
+                <p className="mt-2 font-display text-3xl text-ink">{analyticsTotals.totalReleased}</p>
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-              <table className="w-full text-left font-heading text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                    <th className="px-4 py-3">PS Code</th>
-                    <th className="px-4 py-3">No. of Teams</th>
-                    <th className="px-4 py-3">Teams</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {analytics.rows.map((row) => (
-                    <tr key={row.number} className="border-b border-border align-top last:border-0">
-                      <td className="px-4 py-3 text-ink">{row.number}</td>
-                      <td className="px-4 py-3 text-ink-muted">{row.count}</td>
-                      <td className="px-4 py-3 text-ink-muted">{row.teamNames.length === 0 ? "—" : row.teamNames.join(", ")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            {analyticsByCampus.map(({ campus, rows, totalSelected, totalTeams }) => (
+              <div key={campus} className="flex flex-col gap-2">
+                {!singleCampus && (
+                  <span className="font-mono text-xs tracking-[0.2em] text-gold uppercase">
+                    {campus} — {totalSelected} of {totalTeams} selected
+                  </span>
+                )}
+                <div className="overflow-x-auto rounded-xl border border-border bg-surface">
+                  <table className="w-full text-left font-heading text-sm">
+                    <thead>
+                      <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+                        <th className="px-4 py-3">PS Code</th>
+                        <th className="px-4 py-3">No. of Teams</th>
+                        <th className="px-4 py-3">Teams</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-3 text-ink-muted">
+                            No problem statements released for {campus} yet.
+                          </td>
+                        </tr>
+                      ) : (
+                        rows.map((row) => (
+                          <tr key={row.number} className="border-b border-border align-top last:border-0">
+                            <td className="px-4 py-3 text-ink">{row.number}</td>
+                            <td className="px-4 py-3 text-ink-muted">{row.count}</td>
+                            <td className="px-4 py-3 text-ink-muted">{row.teamNames.length === 0 ? "—" : row.teamNames.join(", ")}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
