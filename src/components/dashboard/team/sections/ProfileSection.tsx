@@ -5,6 +5,9 @@ import type { ProfileRow, TeamRow, ApprovalRequestRow, RoomRow, ZoneRow } from "
 import type { TeamMemberProfile } from "../TeamDashboardShell";
 import { submitTeamEditRequest, DashboardActionError } from "@/lib/dashboard/team-actions";
 import { memberStatusLabel, teamActiveStatus } from "@/lib/dashboard/team-status";
+import { buildEditDiff, summarizeDiff } from "@/lib/dashboard/approval-diff";
+import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
+import { useTabFade } from "@/hooks/useTabFade";
 import {
   GENDER_OPTIONS,
   GRADUATION_OPTIONS,
@@ -15,6 +18,8 @@ import {
   programsFor,
   yearsFor,
 } from "@/lib/registration/academic";
+
+type ProfileView = "details" | "requests";
 
 interface EditableMember {
   profileId: string;
@@ -57,7 +62,8 @@ export function ProfileSection({
   profile,
   team,
   members,
-  pendingApprovalRequest,
+  approvalRequests,
+  reviewerNames,
   isLead,
   room,
   zone,
@@ -69,7 +75,9 @@ export function ProfileSection({
   profile: ProfileRow;
   team: TeamRow;
   members: TeamMemberProfile[];
-  pendingApprovalRequest: ApprovalRequestRow | null;
+  approvalRequests: ApprovalRequestRow[];
+  /** id -> name for reviewers who aren't team members (SPOC/Zone Manager/Campus Admin/Super Admin). */
+  reviewerNames: Record<string, string>;
   isLead: boolean;
   room: RoomRow | null;
   zone: ZoneRow | null;
@@ -78,12 +86,16 @@ export function ProfileSection({
   zoneManagerName: string | null;
   zoneManagerEmail: string | null;
 }) {
+  const [view, setView] = useState<ProfileView>("details");
+  const fadeRef = useTabFade(view);
   const [editing, setEditing] = useState(false);
   const [teamName, setTeamName] = useState(team.team_name);
   const [editedMembers, setEditedMembers] = useState<EditableMember[]>(() => toEditable(members));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justSubmitted, setJustSubmitted] = useState(false);
+
+  const [localRequests, setLocalRequests] = useState(approvalRequests);
 
   function updateMember(profileId: string, patch: Partial<EditableMember>) {
     setEditedMembers((prev) => prev.map((m) => (m.profileId === profileId ? { ...m, ...patch } : m)));
@@ -96,6 +108,21 @@ export function ProfileSection({
       const currentSnapshot = { team: { teamName: team.team_name }, members: toEditable(members) };
       const requestedChanges = { team: { teamName }, members: editedMembers };
       await submitTeamEditRequest(team.id, currentSnapshot, requestedChanges);
+      setLocalRequests((prev) => [
+        {
+          id: crypto.randomUUID(),
+          team_id: team.id,
+          request_type: "Team Edit",
+          requested_changes: requestedChanges,
+          current_snapshot: currentSnapshot,
+          requested_by: profile.id,
+          status: "Pending",
+          reviewed_by: null,
+          reviewed_at: null,
+          created_at: new Date().toISOString(),
+        },
+        ...prev,
+      ]);
       setJustSubmitted(true);
       setEditing(false);
     } catch (err) {
@@ -105,10 +132,77 @@ export function ProfileSection({
     }
   }
 
-  const hasPending = !!pendingApprovalRequest || justSubmitted;
+  const hasPending = localRequests.some((r) => r.status === "Pending") || justSubmitted;
+  const sortedRequests = [...localRequests].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   return (
     <div className="flex flex-col gap-6">
+      <ViewToggle
+        value={view}
+        onChange={setView}
+        options={[
+          { value: "details", label: "Details" },
+          { value: "requests", label: "Requests" },
+        ]}
+      />
+
+      <div ref={fadeRef} className="flex flex-col gap-6">
+      {view === "requests" ? (
+        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+          {sortedRequests.length === 0 ? (
+            <p className="p-8 text-center font-heading text-sm text-ink-muted">No edit requests yet.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left font-heading text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+                    <th className="px-4 py-3">Requested At</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Reviewed By</th>
+                    <th className="px-4 py-3">Reviewed At</th>
+                    <th className="px-4 py-3">Changes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sortedRequests.map((r) => {
+                    const diff = buildEditDiff(r.current_snapshot, r.requested_changes);
+                    return (
+                      <tr key={r.id} className="border-b border-border align-top last:border-0">
+                        <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                          {new Date(r.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`rounded-full border px-3 py-1 text-xs ${
+                              r.status === "Approved"
+                                ? "border-gitam/40 bg-gitam/10 text-gitam"
+                                : r.status === "Pending"
+                                  ? "border-gold/40 bg-gold/10 text-gold"
+                                  : "border-danger/40 bg-danger/10 text-danger"
+                            }`}
+                          >
+                            {r.status}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-ink-muted">
+                          {r.reviewed_by ? (reviewerNames[r.reviewed_by] ?? "Unknown") : "—"}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                          {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                        </td>
+                        <td className="max-w-md px-4 py-3 text-ink-muted">
+                          {summarizeDiff(diff, (id) => members.find((m) => m.id === id)?.name ?? "Member")}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      ) : (
+      <>
       <div className="grid gap-6 rounded-xl border border-border bg-surface p-6 sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Campus</span>
@@ -320,6 +414,9 @@ export function ProfileSection({
           ))}
         </div>
       )}
+      </>
+      )}
+      </div>
     </div>
   );
 }

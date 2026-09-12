@@ -47,7 +47,7 @@ interface CardDef {
 
 // Order follows the requested module layout: Overview, Profile, Attendance,
 // NOC, Problem Statements, PPT, ID Cards & Certificates, Zones and Venues,
-// Approvals, Notifications, Exit Submissions, Staff Accounts, Configuration.
+// Profile Requests, Notifications, Exit Submissions, Staff Accounts, Configuration.
 // Zones and Venues, Staff Accounts, and Configuration stay admin-privileged
 // (Super Admin / Campus Admin only) — everything else, Problem Statements
 // included, is shared by every role (each already scoped to just their own
@@ -66,7 +66,7 @@ const ALL_CARDS: OrderedCardDef[] = [
   { key: "PPT", slug: "ppt", icon: Presentation },
   { key: "ID Cards & Certificates", slug: "id-cards", icon: IdCard },
   { key: "Zones and Venues", slug: "rooms-zones", icon: DoorOpen, adminOnly: true },
-  { key: "Approvals", slug: "approvals", icon: ClipboardCheck },
+  { key: "Profile Requests", slug: "approvals", icon: ClipboardCheck },
   { key: "Documents", slug: "documents", icon: FolderOpen },
   { key: "Notifications", slug: "notifications", icon: Bell },
   { key: "Exit Submissions", slug: "exit-submissions", icon: LogOut },

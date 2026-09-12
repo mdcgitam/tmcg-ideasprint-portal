@@ -4,7 +4,7 @@ import { OverviewSection } from "@/components/dashboard/admin/sections/OverviewS
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function OverviewRoute({ profile }: { profile: ProfileRow }) {
-  const { teams, membersByTeam, pendingApprovals, nocs } = await fetchAdminDashboardData(profile);
+  const { teams, membersByTeam, approvalRequests, nocs } = await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
 
   return (
@@ -13,7 +13,7 @@ export async function OverviewRoute({ profile }: { profile: ProfileRow }) {
         scope={scope}
         teams={teams}
         membersByTeam={membersByTeam}
-        pendingApprovals={pendingApprovals}
+        pendingApprovals={approvalRequests.filter((a) => a.status === "Pending")}
         nocs={nocs}
       />
     </SectionPageShell>

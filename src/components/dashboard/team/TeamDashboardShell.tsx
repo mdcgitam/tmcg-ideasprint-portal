@@ -46,7 +46,7 @@ export interface TeamDashboardShellProps {
   notifications: NotificationRow[];
   presentation: PresentationRow | null;
   currentProblemStatement: ProblemStatementRow | null;
-  pendingApprovalRequest: ApprovalRequestRow | null;
+  approvalRequests: ApprovalRequestRow[];
   config: Record<string, unknown>;
   room: RoomRow | null;
   zone: ZoneRow | null;
@@ -55,7 +55,7 @@ export interface TeamDashboardShellProps {
   zoneManagerName: string | null;
   zoneManagerEmail: string | null;
   idCardCertRecords: IdCardCertRecordRow[];
-  /** id -> name for exit-request reviewers who aren't team members (SPOC/Zone Manager/Campus Admin/Super Admin). */
+  /** id -> name for exit-request/profile-edit-request reviewers who aren't team members (SPOC/Zone Manager/Campus Admin/Super Admin). */
   reviewerNames: Record<string, string>;
 }
 
@@ -122,7 +122,8 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
               profile={props.profile}
               team={props.team}
               members={props.members}
-              pendingApprovalRequest={props.pendingApprovalRequest}
+              approvalRequests={props.approvalRequests}
+              reviewerNames={props.reviewerNames}
               isLead={isLead}
               room={props.room}
               zone={props.zone}

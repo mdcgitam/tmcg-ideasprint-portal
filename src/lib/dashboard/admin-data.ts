@@ -26,7 +26,7 @@ export interface TeamMemberProfile extends ProfileRow {
 export interface AdminDashboardData {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
-  pendingApprovals: ApprovalRequestRow[];
+  approvalRequests: ApprovalRequestRow[];
   attendanceSessions: AttendanceSessionRow[];
   attendance: AttendanceRow[];
   idCardCertRecords: IdCardCertRecordRow[];
@@ -70,7 +70,7 @@ export async function fetchAdminDashboardData(
   const [
     { data: teams },
     { data: teamMemberRows },
-    { data: pendingApprovals },
+    { data: approvalRequests },
     { data: attendanceSessions },
     { data: attendance },
     { data: idCardCertRecords },
@@ -89,7 +89,7 @@ export async function fetchAdminDashboardData(
   ] = await Promise.all([
     supabase.from("teams").select("*").order("created_at", { ascending: false }),
     supabase.from("team_members").select("team_id, profile_id, is_lead, profiles(*)"),
-    supabase.from("approval_requests").select("*").eq("status", "Pending"),
+    supabase.from("approval_requests").select("*"),
     supabase.from("attendance_sessions").select("*").order("sort_order"),
     supabase.from("attendance").select("*"),
     supabase.from("id_card_certificate_records").select("*"),
@@ -129,7 +129,7 @@ export async function fetchAdminDashboardData(
 
   let scopedTeams = (teams ?? []) as TeamRow[];
   let scopedMembersByTeam = membersByTeam;
-  let scopedPendingApprovals = (pendingApprovals ?? []) as ApprovalRequestRow[];
+  let scopedApprovalRequests = (approvalRequests ?? []) as ApprovalRequestRow[];
   let scopedAttendance = (attendance ?? []) as AttendanceRow[];
   let scopedIdCardCertRecords = (idCardCertRecords ?? []) as IdCardCertRecordRow[];
   let scopedNocs = (nocs ?? []) as NocRow[];
@@ -148,7 +148,7 @@ export async function fetchAdminDashboardData(
     return {
       teams: scopedTeams.filter((t) => teamIds.has(t.id)),
       membersByTeam: sMembersByTeam,
-      pendingApprovals: scopedPendingApprovals.filter((a) => teamIds.has(a.team_id)),
+      approvalRequests: scopedApprovalRequests.filter((a) => teamIds.has(a.team_id)),
       attendance: scopedAttendance.filter((a) => teamIds.has(a.team_id)),
       idCardCertRecords: scopedIdCardCertRecords.filter((r) => teamIds.has(r.team_id)),
       exitRequests: scopedExitRequests.filter((e) => teamIds.has(e.team_id)),
@@ -200,7 +200,7 @@ export async function fetchAdminDashboardData(
     const n = narrowToTeamIds(teamIds);
     scopedTeams = n.teams;
     scopedMembersByTeam = n.membersByTeam;
-    scopedPendingApprovals = n.pendingApprovals;
+    scopedApprovalRequests = n.approvalRequests;
     scopedAttendance = n.attendance;
     scopedIdCardCertRecords = n.idCardCertRecords;
     scopedNocs = n.nocs;
@@ -212,7 +212,7 @@ export async function fetchAdminDashboardData(
   return {
     teams: scopedTeams,
     membersByTeam: scopedMembersByTeam,
-    pendingApprovals: scopedPendingApprovals,
+    approvalRequests: scopedApprovalRequests,
     // A session with campus = null applies to all 3 campuses; a
     // campus-scoped one only shows to that campus (or to a Super Admin
     // who has that specific module selected) — never merged into the "All"

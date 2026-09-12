@@ -66,7 +66,7 @@ export default async function TeamDashboardPage() {
     { data: exitRequestRows },
     { data: notificationRows },
     { data: presentationRow },
-    { data: pendingRequestRow },
+    { data: approvalRequestRows },
     { data: configRows },
     { data: idCardCertRows },
   ] = await Promise.all([
@@ -83,7 +83,7 @@ export default async function TeamDashboardPage() {
     supabase.from("exit_requests").select("*"),
     supabase.from("notifications").select("*").order("created_at", { ascending: false }),
     supabase.from("presentations").select("*").eq("team_id", teamId).maybeSingle(),
-    supabase.from("approval_requests").select("*").eq("team_id", teamId).eq("status", "Pending").maybeSingle(),
+    supabase.from("approval_requests").select("*").eq("team_id", teamId).order("created_at", { ascending: false }),
     supabase.from("configuration").select("*"),
     supabase.from("id_card_certificate_records").select("*").eq("team_id", teamId),
   ]);
@@ -124,10 +124,16 @@ export default async function TeamDashboardPage() {
 
   const config = buildConfigMap((configRows ?? []) as ConfigurationRow[]);
 
-  // Exit Request History's "Reviewed By" column — the reviewer may be a
-  // Campus Admin/Super Admin outside the team's own SPOC/Zone Manager.
+  // Exit Request History's and the Profile Requests tab's "Reviewed By"
+  // column — the reviewer may be a Campus Admin/Super Admin outside the
+  // team's own SPOC/Zone Manager.
   const reviewerIds = Array.from(
-    new Set(((exitRequestRows ?? []) as ExitRequestRow[]).map((r) => r.reviewed_by).filter((id): id is string => Boolean(id))),
+    new Set(
+      [
+        ...((exitRequestRows ?? []) as ExitRequestRow[]).map((r) => r.reviewed_by),
+        ...((approvalRequestRows ?? []) as ApprovalRequestRow[]).map((r) => r.reviewed_by),
+      ].filter((id): id is string => Boolean(id)),
+    ),
   );
   const { data: reviewerRows } = reviewerIds.length > 0
     ? await supabase.from("profiles").select("id, name").in("id", reviewerIds)
@@ -150,7 +156,7 @@ export default async function TeamDashboardPage() {
       notifications={(notificationRows ?? []) as NotificationRow[]}
       presentation={(presentationRow ?? null) as PresentationRow | null}
       currentProblemStatement={(currentPsRow ?? null) as ProblemStatementRow | null}
-      pendingApprovalRequest={(pendingRequestRow ?? null) as ApprovalRequestRow | null}
+      approvalRequests={(approvalRequestRows ?? []) as ApprovalRequestRow[]}
       config={config}
       room={room}
       zone={zone}

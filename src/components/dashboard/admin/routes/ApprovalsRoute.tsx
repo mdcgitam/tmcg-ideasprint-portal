@@ -4,18 +4,18 @@ import { ApprovalsSection } from "@/components/dashboard/admin/sections/Approval
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function ApprovalsRoute({ profile }: { profile: ProfileRow }) {
-  const { pendingApprovals, teams, membersByTeam, rooms, zones, staffAccounts } = await fetchAdminDashboardData(profile);
+  const { approvalRequests, teams, membersByTeam, staffAccounts } = await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
+  const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
 
   return (
-    <SectionPageShell title="Approvals" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="Profile Requests" scope={scope} campus={profile.campus}>
       <ApprovalsSection
-        pendingApprovals={pendingApprovals}
+        approvalRequests={approvalRequests}
         teams={teams}
         membersByTeam={membersByTeam}
-        rooms={rooms}
-        zones={zones}
         staffAccounts={staffAccounts}
+        singleCampus={singleCampus}
       />
     </SectionPageShell>
   );

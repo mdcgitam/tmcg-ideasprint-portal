@@ -1,171 +1,55 @@
 "use client";
 
-import { Fragment, useMemo, useState } from "react";
-import type { ApprovalRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import { useMemo, useState } from "react";
+import type { ApprovalRequestRow, ProfileRow, TeamRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { resolveApprovalRequest, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { buildEditDiff, summarizeDiff } from "@/lib/dashboard/approval-diff";
+import { sortCampuses } from "@/lib/dashboard/campus-config";
+import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
+import { FilterSelect } from "./TeamFormFields";
 
-type View = "pending" | "by-team";
+type View = "requests" | "history";
 
-// Fields a Team Lead can put into an edit request (see ProfileSection's
-// `toEditable`) plus the team-name field — mapped to human labels.
-const MEMBER_FIELD_LABELS: Array<[string, string]> = [
-  ["name", "Name"],
-  ["phone", "Phone"],
-  ["graduation", "Graduation"],
-  ["program", "Program"],
-  ["yearOfStudy", "Year of Study"],
-  ["school", "School"],
-  ["department", "Department"],
-  ["branch", "Branch"],
-  ["gender", "Gender"],
-  ["stay", "Stay"],
-];
-
-interface FieldChange {
-  label: string;
-  from: string;
-  to: string;
-}
-interface MemberDiff {
-  profileId: string;
-  changes: FieldChange[];
-}
-interface EditDiff {
-  teamName: FieldChange | null;
-  members: MemberDiff[];
-  /** Only used when the request isn't the known {team, members} shape. */
-  generic: FieldChange[];
-}
-
-function asText(v: unknown): string {
-  if (v == null) return "";
-  if (typeof v === "object") {
-    return Object.entries(v as Record<string, unknown>)
-      .map(([k, val]) => `${k}: ${asText(val)}`)
-      .join(", ");
-  }
-  return String(v);
-}
-
-function prettifyKey(k: string): string {
-  return k
-    .replace(/_/g, " ")
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-/** Turn a request's before/after snapshots into a field-level diff — the
- *  reviewer sees only what actually changes, not the whole record. */
-function buildEditDiff(currentRaw: unknown, requestedRaw: unknown): EditDiff {
-  const current = (currentRaw ?? {}) as Record<string, unknown>;
-  const requested = (requestedRaw ?? {}) as Record<string, unknown>;
-
-  const isKnownShape =
-    "team" in requested || "members" in requested || "team" in current || "members" in current;
-
-  if (isKnownShape) {
-    const curTeam = (current.team ?? {}) as Record<string, unknown>;
-    const reqTeam = (requested.team ?? {}) as Record<string, unknown>;
-    const teamFrom = asText(curTeam.teamName);
-    const teamTo = asText(reqTeam.teamName);
-    const teamName: FieldChange | null =
-      teamFrom !== teamTo ? { label: "Team Name", from: teamFrom, to: teamTo } : null;
-
-    const curMembers = (Array.isArray(current.members) ? current.members : []) as Record<string, unknown>[];
-    const reqMembers = (Array.isArray(requested.members) ? requested.members : []) as Record<string, unknown>[];
-
-    const members: MemberDiff[] = [];
-    reqMembers.forEach((rm, i) => {
-      const cm =
-        curMembers.find((m) => m.profileId === rm.profileId) ?? curMembers[i] ?? ({} as Record<string, unknown>);
-      const changes: FieldChange[] = [];
-      for (const [key, label] of MEMBER_FIELD_LABELS) {
-        const from = asText(cm[key]);
-        const to = asText(rm[key]);
-        if (from !== to) changes.push({ label, from, to });
-      }
-      if (changes.length > 0) members.push({ profileId: String(rm.profileId ?? i), changes });
-    });
-
-    return { teamName, members, generic: [] };
-  }
-
-  const keys = Array.from(new Set([...Object.keys(current), ...Object.keys(requested)]));
-  const generic = keys
-    .map((k) => ({ label: prettifyKey(k), from: asText(current[k]), to: asText(requested[k]) }))
-    .filter((c) => c.from !== c.to);
-  return { teamName: null, members: [], generic };
-}
-
-function DiffRow({ label, from, to }: FieldChange) {
-  return (
-    <div className="flex flex-wrap items-center gap-2 font-heading text-sm">
-      <span className="min-w-[7.5rem] font-mono text-[11px] tracking-[0.15em] text-ink-muted uppercase">{label}</span>
-      <span className="rounded bg-danger/10 px-2 py-0.5 text-danger line-through decoration-danger/50">
-        {from || "—"}
-      </span>
-      <span aria-hidden className="text-ink-faint">
-        →
-      </span>
-      <span className="rounded bg-gitam/10 px-2 py-0.5 text-gitam">{to || "—"}</span>
-    </div>
-  );
-}
-
+/** "Profile Requests" — a Team Lead's team/member edit requests, reviewed by SPOC/Zone Manager/Campus Admin/Super Admin. Two tabs: Requests (open, actionable) and History (resolved, read-only) — no separate "by team" view, since a request already carries its team's full context inline. */
 export function ApprovalsSection({
-  pendingApprovals,
+  approvalRequests,
   teams,
   membersByTeam,
-  rooms,
-  zones,
   staffAccounts,
+  singleCampus = false,
 }: {
-  pendingApprovals: ApprovalRequestRow[];
+  approvalRequests: ApprovalRequestRow[];
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
-  rooms: RoomRow[];
-  zones: ZoneRow[];
   staffAccounts: ProfileRow[];
+  singleCampus?: boolean;
 }) {
-  const [localRequests, setLocalRequests] = useState(pendingApprovals);
+  const [localRequests, setLocalRequests] = useState(approvalRequests);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<View>("pending");
+  const [view, setView] = useState<View>("requests");
   const fadeRef = useTabFade(view);
 
-  const leadOf = (team: TeamRow | undefined) => (team ? (membersByTeam[team.id] ?? []).find((m) => m.is_lead) : null) ?? null;
-  const campusOf = (team: TeamRow | undefined) => leadOf(team)?.campus ?? team?.campus ?? "—";
-  const roomOf = (team: TeamRow | undefined) => (team?.room_id ? (rooms.find((r) => r.id === team.room_id) ?? null) : null);
-  const zoneOf = (team: TeamRow | undefined) => {
-    const room = roomOf(team);
-    return room ? (zones.find((z) => z.id === room.zone_id) ?? null) : null;
-  };
-  const spocName = (team: TeamRow | undefined) =>
-    team?.spoc_profile_id ? (staffAccounts.find((s) => s.id === team.spoc_profile_id)?.name ?? null) : null;
+  const [campusFilter, setCampusFilter] = useState("");
+  const [search, setSearch] = useState("");
 
-  /** Requesting-team identity — the fields a reviewer needs before reading the request itself. */
-  function RequestContext({ team }: { team: TeamRow | undefined }) {
-    return (
-      <div className="flex flex-col gap-1">
-        <p className="font-heading text-sm text-gold">{team?.team_name ?? "Unknown team"}</p>
-        <p className="font-heading text-xs text-ink-muted">
-          Campus: {campusOf(team)} · Zone: {zoneOf(team)?.name ?? "Unassigned"} · Venue:{" "}
-          {roomOf(team)?.name ?? "Unassigned"} · SPOC: {spocName(team) ?? "Unassigned"} · Team Lead:{" "}
-          {leadOf(team)?.name ?? "—"}
-        </p>
-      </div>
-    );
-  }
+  const leadOf = (team: TeamRow | undefined) => (team ? (membersByTeam[team.id] ?? []).find((m) => m.is_lead) : null) ?? null;
+  const campusOf = (team: TeamRow | undefined) => leadOf(team)?.campus ?? team?.campus ?? null;
+  const requesterName = (req: ApprovalRequestRow) =>
+    (membersByTeam[req.team_id] ?? []).find((m) => m.id === req.requested_by)?.name ?? "Unknown";
+  const reviewerName = (id: string | null) => (id ? (staffAccounts.find((s) => s.id === id)?.name ?? "Unknown") : "—");
 
   async function handleResolve(requestId: string, decision: "Approved" | "Rejected") {
     setBusyId(requestId);
     setError(null);
     try {
       await resolveApprovalRequest(requestId, decision);
-      setLocalRequests((prev) => prev.filter((r) => r.id !== requestId));
+      setLocalRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? { ...r, status: decision, reviewed_at: new Date().toISOString() } : r)),
+      );
     } catch (err) {
       setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
@@ -173,108 +57,46 @@ export function ApprovalsSection({
     }
   }
 
-  const byTeam = useMemo(() => {
-    const groups = new Map<string, ApprovalRequestRow[]>();
-    for (const req of localRequests) {
-      const entry = groups.get(req.team_id) ?? [];
-      entry.push(req);
-      groups.set(req.team_id, entry);
-    }
-    return groups;
-  }, [localRequests]);
+  const campusOptions = useMemo(
+    () => sortCampuses(Array.from(new Set(teams.map((t) => campusOf(t)).filter((c): c is NonNullable<typeof c> => Boolean(c))))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [teams, membersByTeam],
+  );
 
-  function renderRequest(req: ApprovalRequestRow) {
-    const team = teams.find((t) => t.id === req.team_id);
-    const teamMembers = membersByTeam[req.team_id] ?? [];
-    const diff = buildEditDiff(req.current_snapshot, req.requested_changes);
-    const nothing = !diff.teamName && diff.members.length === 0 && diff.generic.length === 0;
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = localRequests.filter((r) => {
+      if (view === "requests" && r.status !== "Pending") return false;
+      if (view === "history" && r.status === "Pending") return false;
+      const team = teams.find((t) => t.id === r.team_id);
+      if (campusFilter && campusOf(team) !== campusFilter) return false;
+      if (q && !`${team?.team_name ?? ""} ${team?.team_id ?? ""} ${requesterName(r)}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+    return view === "requests"
+      ? filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      : filtered.sort((a, b) => new Date(b.reviewed_at ?? b.created_at).getTime() - new Date(a.reviewed_at ?? a.created_at).getTime());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localRequests, view, teams, membersByTeam, campusFilter, search]);
 
-    return (
-      <div key={req.id} className="rounded-xl border border-gold/40 bg-gold/5 p-6">
-        <RequestContext team={team} />
-        <p className="mt-2 font-heading text-xs text-ink-muted">
-          Team edit request received · submitted{" "}
-          {new Date(req.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
-        </p>
-        <p className="mt-3 font-heading text-xs text-ink-faint">
-          <span className="text-danger">Previous</span> → <span className="text-gitam">Requested</span>
-        </p>
-
-        <div className="mt-3 flex flex-col gap-3">
-          {nothing && (
-            <p className="font-heading text-sm text-ink-muted">This request doesn&rsquo;t change any fields.</p>
-          )}
-
-          {diff.teamName && (
-            <div className="rounded-lg border border-border bg-void/40 p-4">
-              <p className="mb-2 font-mono text-[11px] tracking-[0.2em] text-ink-muted uppercase">Team</p>
-              <DiffRow {...diff.teamName} />
-            </div>
-          )}
-
-          {diff.members.map((md) => {
-            const m = teamMembers.find((x) => x.id === md.profileId);
-            return (
-              <div key={md.profileId} className="rounded-lg border border-border bg-void/40 p-4">
-                <p className="font-heading text-sm text-ink">
-                  {m?.name ?? "Member"}
-                  {m && <span className="text-ink-faint"> · {m.user_id}</span>}
-                </p>
-                {m && (
-                  <p className="mt-0.5 font-heading text-xs text-ink-muted">
-                    {m.gitam_email} · {m.reg_no}
-                    {m.is_lead ? " · Team Lead" : ""}
-                  </p>
-                )}
-                <div className="mt-3 flex flex-col gap-2">
-                  {md.changes.map((c) => (
-                    <DiffRow key={c.label} {...c} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-
-          {diff.generic.length > 0 && (
-            <div className="rounded-lg border border-border bg-void/40 p-4">
-              <div className="flex flex-col gap-2">
-                {diff.generic.map((c) => (
-                  <DiffRow key={c.label} {...c} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="mt-4 flex gap-3">
-          <button
-            type="button"
-            disabled={busyId === req.id}
-            onClick={() => handleResolve(req.id, "Approved")}
-            className="rounded-full bg-gitam px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:opacity-90 disabled:opacity-60"
-          >
-            Approve
-          </button>
-          <button
-            type="button"
-            disabled={busyId === req.id}
-            onClick={() => handleResolve(req.id, "Rejected")}
-            className="rounded-full border border-danger/40 px-6 py-2.5 font-heading text-sm text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
-          >
-            Reject
-          </button>
-        </div>
-      </div>
-    );
+  function handleExportCsv() {
+    downloadCsv(view === "requests" ? "profile-requests" : "profile-requests-history", rows.map((r) => {
+      const team = teams.find((t) => t.id === r.team_id);
+      const diff = buildEditDiff(r.current_snapshot, r.requested_changes);
+      return {
+        "Request ID": r.id,
+        ...(singleCampus ? {} : { Campus: campusOf(team) ?? "—" }),
+        "Team ID": team?.team_id ?? "—",
+        "Team Name": team?.team_name ?? "Unknown team",
+        "Requested By": requesterName(r),
+        "Requested At": r.created_at,
+        ...(view === "history" ? { Status: r.status, "Reviewed By": reviewerName(r.reviewed_by), "Reviewed At": r.reviewed_at ?? "—" } : {}),
+        Changes: summarizeDiff(diff, (id) => membersByTeam[r.team_id]?.find((m) => m.id === id)?.name ?? "Member"),
+      };
+    }));
   }
 
-  if (localRequests.length === 0) {
-    return (
-      <div className="rounded-xl border border-border bg-surface p-8 text-center">
-        <p className="font-heading text-sm text-ink-muted">No pending approval requests.</p>
-      </div>
-    );
-  }
+  const columnCount = (singleCampus ? 0 : 1) + 5 + (view === "history" ? 3 : 1);
 
   return (
     <div className="flex flex-col gap-4">
@@ -282,27 +104,127 @@ export function ApprovalsSection({
         value={view}
         onChange={setView}
         options={[
-          { value: "pending", label: "View by Request" },
-          { value: "by-team", label: "View by Team" },
+          { value: "requests", label: "Requests" },
+          { value: "history", label: "History" },
         ]}
       />
 
-      {error && <p className="font-heading text-sm text-danger">{error}</p>}
-
       <div ref={fadeRef} className="flex flex-col gap-4">
-        {view === "pending"
-          ? localRequests.map(renderRequest)
-          : Array.from(byTeam.entries()).map(([teamId, edits]) => {
-              const team = teams.find((t) => t.id === teamId);
-              return (
-                <Fragment key={teamId}>
-                  <p className="font-heading text-xs tracking-[0.2em] text-ink-muted uppercase">
-                    {team?.team_name ?? "Unknown team"}
-                  </p>
-                  {edits.map(renderRequest)}
-                </Fragment>
-              );
-            })}
+        <div className="flex flex-wrap items-center gap-2">
+          {!singleCampus && (
+            <FilterSelect label="Campus" value={campusFilter} onChange={setCampusFilter} options={campusOptions} valueOptions={campusOptions} />
+          )}
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search team, team ID, or requester…"
+            className="min-w-[200px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+          />
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="rounded-full border border-gold/50 px-4 py-2 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
+          >
+            Download CSV
+          </button>
+        </div>
+
+        {error && <p className="font-heading text-sm text-danger">{error}</p>}
+
+        <div className="overflow-hidden rounded-xl border border-border bg-surface">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left font-heading text-sm">
+              <thead>
+                <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+                  <th className="px-4 py-3">Request ID</th>
+                  {!singleCampus && <th className="px-4 py-3">Campus</th>}
+                  <th className="px-4 py-3">Team ID</th>
+                  <th className="px-4 py-3">Team Name</th>
+                  <th className="px-4 py-3">Requested By</th>
+                  <th className="px-4 py-3">Requested At</th>
+                  {view === "history" && (
+                    <>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Reviewed By</th>
+                      <th className="px-4 py-3">Reviewed At</th>
+                    </>
+                  )}
+                  <th className="px-4 py-3">Changes</th>
+                  {view === "requests" && <th className="px-4 py-3" />}
+                </tr>
+              </thead>
+              <tbody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={columnCount} className="px-4 py-8 text-center text-ink-muted">
+                      {view === "requests" ? "No pending requests." : "No resolved requests yet."}
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((r) => {
+                    const team = teams.find((t) => t.id === r.team_id);
+                    const diff = buildEditDiff(r.current_snapshot, r.requested_changes);
+                    const busy = busyId === r.id;
+                    return (
+                      <tr key={r.id} className="border-b border-border align-top last:border-0">
+                        <td className="px-4 py-3 text-ink-faint" title={r.id}>
+                          {r.id.slice(0, 8)}
+                        </td>
+                        {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team) ?? "—"}</td>}
+                        <td className="px-4 py-3 text-ink-muted">{team?.team_id ?? "—"}</td>
+                        <td className="px-4 py-3 text-ink">{team?.team_name ?? "Unknown team"}</td>
+                        <td className="px-4 py-3 text-ink-muted">{requesterName(r)}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                          {new Date(r.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}
+                        </td>
+                        {view === "history" && (
+                          <>
+                            <td className="px-4 py-3">
+                              <span
+                                className={`rounded-full border px-3 py-1 text-xs ${
+                                  r.status === "Approved" ? "border-gitam/40 bg-gitam/10 text-gitam" : "border-danger/40 bg-danger/10 text-danger"
+                                }`}
+                              >
+                                {r.status}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-ink-muted">{reviewerName(r.reviewed_by)}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
+                              {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                            </td>
+                          </>
+                        )}
+                        <td className="max-w-md px-4 py-3 text-ink-muted">{summarizeDiff(diff, (id) => membersByTeam[r.team_id]?.find((m) => m.id === id)?.name ?? "Member")}</td>
+                        {view === "requests" && (
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => handleResolve(r.id, "Approved")}
+                                className="rounded-full bg-gitam px-3 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:opacity-90 disabled:opacity-60"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                type="button"
+                                disabled={busy}
+                                onClick={() => handleResolve(r.id, "Rejected")}
+                                className="rounded-full border border-danger/40 px-3 py-1.5 font-heading text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
+                              >
+                                Reject
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </div>
   );
