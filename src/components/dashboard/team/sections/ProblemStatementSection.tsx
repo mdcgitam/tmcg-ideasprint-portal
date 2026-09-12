@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { TeamRow, ProblemStatementRow } from "@/types/database";
 import { selectProblemStatement, DashboardActionError } from "@/lib/dashboard/team-actions";
 import {
+  campusOverrideBoolean,
   campusOverrideValue,
   effectiveConfigValue,
   parseProblemStatementCode,
@@ -45,8 +46,12 @@ export function ProblemStatementSection({
   // recently — see campusOverrideValue. The spreadsheet URL itself is one
   // shared value, not campus-specific.
   const liveAt = campusOverrideValue(config, "problem_statement.live_at", team.campus);
+  // Super Admin can pause selection for this campus without un-releasing
+  // anything — hides the sheet link here too, with a message that reads
+  // as "temporary", not "never launched".
+  const paused = campusOverrideBoolean(config, "problem_statement.hidden", team.campus);
   const spreadsheetUrl =
-    liveAt && typeof config["problem_statement.spreadsheet_url"] === "string"
+    liveAt && !paused && typeof config["problem_statement.spreadsheet_url"] === "string"
       ? (config["problem_statement.spreadsheet_url"] as string)
       : null;
 
@@ -55,7 +60,7 @@ export function ProblemStatementSection({
   // surfaces it proactively instead of only after a failed submit.
   const selectionStart = effectiveConfigValue(config, SELECTION_START_KEY, team.campus);
   const selectionEnd = effectiveConfigValue(config, SELECTION_END_KEY, team.campus);
-  const notConfigured = !selectionStart || !selectionEnd;
+  const notConfigured = !selectionStart || !selectionEnd || paused;
   const psMax = problemStatementMaxNumber(config, team.campus);
   const psPrefix = PROBLEM_STATEMENT_PREFIX[team.campus];
 
@@ -91,6 +96,8 @@ export function ProblemStatementSection({
               Open the problem statement sheet ↗
             </a>
           </p>
+        ) : paused ? (
+          <p className="mt-3 font-heading text-sm text-gold">Temporarily paused — check back shortly.</p>
         ) : (
           <p className="mt-3 font-heading text-sm text-ink-muted">The problem statement list hasn&rsquo;t gone live yet.</p>
         )}
@@ -110,7 +117,9 @@ export function ProblemStatementSection({
       {isLead && (
         <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Select / Change</span>
-          {notConfigured ? (
+          {paused ? (
+            <p className="mt-2 font-heading text-xs text-gold">Selection is temporarily paused — check back shortly.</p>
+          ) : notConfigured ? (
             <p className="mt-2 font-heading text-xs text-danger">
               Selection deadline not yet set — ask your Campus Admin or Super Admin to configure it before you can select.
             </p>
@@ -133,10 +142,10 @@ export function ProblemStatementSection({
             <button
               type="submit"
               disabled={submitting || notConfigured}
-              title={notConfigured ? "Selection deadline not yet set." : undefined}
+              title={paused ? "Selection is temporarily paused." : notConfigured ? "Selection deadline not yet set." : undefined}
               className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
             >
-              {submitting ? "Submitting…" : notConfigured ? "Deadline Not Set" : "Select"}
+              {submitting ? "Submitting…" : paused ? "Paused" : notConfigured ? "Deadline Not Set" : "Select"}
             </button>
           </div>
           {message && (

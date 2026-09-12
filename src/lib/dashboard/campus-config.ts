@@ -27,6 +27,26 @@ export function campusOverrideValue(
   return typeof global === "string" && global ? global : null;
 }
 
+/**
+ * Boolean counterpart to campusOverrideValue — a campus-specific override
+ * always wins over the global default, regardless of which was edited more
+ * recently. An explicit `false` override (Super Admin un-hides just this
+ * campus while the global stays hidden) counts as a real override, unlike
+ * a missing key.
+ */
+export function campusOverrideBoolean(
+  config: Record<string, unknown>,
+  baseKey: string,
+  campus: CampusCode | null | undefined,
+): boolean {
+  if (campus) {
+    const raw = config[campusConfigKey(baseKey, campus)];
+    if (typeof raw === "boolean") return raw;
+  }
+  const global = config[baseKey];
+  return typeof global === "boolean" ? global : false;
+}
+
 /** Canonical display order for campus codes, everywhere one is listed — VSP, then HYD, then BLR. */
 export const CAMPUS_ORDER: CampusCode[] = ["VSP", "HYD", "BLR"];
 

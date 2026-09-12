@@ -17,6 +17,7 @@ function friendlyError(raw: string): string {
   if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant couldn't be found.";
   if (raw.includes("NOT_A_SPOC")) return "That account isn't a SPOC — assign the SPOC role first.";
   if (raw.includes("NOT_A_ZONE_MANAGER")) return "Only a Zone Manager account can manage a zone.";
+  if (raw.includes("SELECTION_PAUSED")) return "Problem statement selection is temporarily paused for this campus.";
   if (raw.includes("DUPLICATE_PS_NUMBER")) return "That problem statement number is already in use.";
   if (raw.includes("DUPLICATE_ROOM_NAME")) return "A room with that name already exists.";
   if (raw.includes("DUPLICATE_ZONE_NAME")) return "A zone with that name already exists.";

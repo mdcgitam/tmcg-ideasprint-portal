@@ -20,6 +20,7 @@ function friendlyError(raw: string): string {
   if (raw.includes("TEAM_MIN_SIZE")) {
     return "This team is at the 3-member minimum — every other active member must also submit (and have approved) an exit request before this one can go through. A single member can't exit alone from a 3-person team.";
   }
+  if (raw.includes("SELECTION_PAUSED")) return "Problem statement selection is temporarily paused — check back shortly.";
   if (raw.includes("SELECTION_NOT_CONFIGURED")) return "Problem statement selection hasn't been opened yet.";
   if (raw.includes("SELECTION_CLOSED")) return "The problem statement selection window is currently closed.";
   if (raw.includes("INVALID_PS_NUMBER")) return "That problem statement number wasn't found. Double-check it and try again.";

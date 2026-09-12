@@ -21,6 +21,7 @@ import {
 import {
   CAMPUS_ORDER,
   campusConfigKey,
+  campusOverrideBoolean,
   campusOverrideValue,
   effectiveConfigValue,
   effectiveProblemStatementEndDetailed,
@@ -147,6 +148,34 @@ export function ProblemStatementsAdminSection({
   // the shared URL, revealed once their own campus's live_at is set (or
   // the global one, if that campus never got its own).
   const effectiveLiveAt = campusOverrideValue(config, LIVE_AT_KEY, viewerCampus);
+
+  // Super-Admin-only pause: blocks new selections and hides the sheet link
+  // for this scope without touching the already-created catalog or any
+  // team's existing selection — reversible instantly. Kept separate from
+  // live_at so toggling it doesn't stamp over the original "went live at"
+  // record. Same campus-override-wins rule as the URL/live_at.
+  const HIDDEN_KEY = "problem_statement.hidden";
+  const [hidden, setHidden] = useState(campusOverrideBoolean(config, HIDDEN_KEY, viewerCampus));
+  const [togglingHidden, setTogglingHidden] = useState(false);
+  const [hideError, setHideError] = useState<string | null>(null);
+
+  async function handleToggleHidden() {
+    const next = !hidden;
+    setTogglingHidden(true);
+    setHideError(null);
+    try {
+      await setConfiguration(
+        writeKeyFor(HIDDEN_KEY),
+        next,
+        next ? "Problem statement selection temporarily paused." : "Problem statement selection resumed.",
+      );
+      setHidden(next);
+    } catch (err) {
+      setHideError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setTogglingHidden(false);
+    }
+  }
 
   // Each campus's problem statement count ceiling (numbering starts at 1)
   // — Super-Admin-set from the Configuration page, read-only here. Go Live
@@ -538,11 +567,34 @@ export function ProblemStatementsAdminSection({
             </span>
           </div>
           {goLiveError && <p className="mt-2 font-heading text-xs text-danger">{goLiveError}</p>}
+
+          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-5">
+            <button
+              type="button"
+              disabled={togglingHidden}
+              onClick={handleToggleHidden}
+              className={`rounded-full px-6 py-2.5 font-heading text-sm font-medium transition-colors disabled:opacity-60 ${
+                hidden
+                  ? "bg-gold text-void hover:bg-gold-light"
+                  : "border border-danger/40 text-danger hover:bg-danger/10"
+              }`}
+            >
+              {togglingHidden ? "Working…" : hidden ? `Unhide for ${viewerCampus ?? "All Campuses"}` : `Hide for ${viewerCampus ?? "All Campuses"}`}
+            </button>
+            <span className="font-heading text-xs text-ink-muted">
+              {hidden
+                ? `Paused for ${viewerCampus ?? "all campuses"} — the sheet link is hidden and no new selections are accepted.`
+                : "Not paused — selection works normally for this scope."}
+            </span>
+          </div>
+          {hideError && <p className="mt-2 font-heading text-xs text-danger">{hideError}</p>}
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-surface p-4">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Sheet</span>
-          {effectiveLiveAt && spreadsheetUrl ? (
+          {campusOverrideBoolean(config, HIDDEN_KEY, viewerCampus) ? (
+            <p className="mt-2 font-heading text-xs text-gold">Temporarily paused — check back shortly.</p>
+          ) : effectiveLiveAt && spreadsheetUrl ? (
             <>
               <p className="mt-2 font-heading text-sm text-ink">
                 <a href={spreadsheetUrl} target="_blank" rel="noopener noreferrer" className="text-gold underline">
