@@ -15,6 +15,7 @@ import {
   updateRoomName,
   updateZoneCampus,
   updateZoneName,
+  setTeamActive,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
 import { CAMPUS_ORDER, sortCampuses } from "@/lib/dashboard/campus-config";
@@ -38,6 +39,11 @@ type View = "create" | "teams" | "headcount";
  *    kept separate rather than folded into that tab or the Overview tab
  *    (which has no Zone/Venue axis at all). "People" counts active
  *    members only, matching the Team Size convention used everywhere else.
+ *    A no-show team (is_active false) contributes to neither table — the
+ *    Teams tab is the one place that always lists every team regardless of
+ *    status, with a Status column plus a Mark as No-Show/Mark Active
+ *    toggle (0073) since this is the recovery path for late arrivals or a
+ *    mistaken no-show from the Attendance page.
  */
 export function RoomsZonesSection({
   campus,
@@ -221,6 +227,20 @@ export function RoomsZonesSection({
     }
   }
 
+  /** Bidirectional — this is the recovery path for a late arrival or a mistaken Mark as No-Show from Attendance. */
+  async function handleToggleTeamActive(team: TeamRow) {
+    setBusy(`active-team:${team.id}`);
+    setError(null);
+    try {
+      await setTeamActive(team.id, !team.is_active);
+      setLocalTeams((prev) => prev.map((t) => (t.id === team.id ? { ...t, is_active: !team.is_active } : t)));
+    } catch (err) {
+      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setBusy(null);
+    }
+  }
+
   /** Zones (plus an "Unassigned" bucket) with the venues that sit in each. */
   const zoneGroups: Array<{ zone: ZoneRow | null; venues: RoomRow[] }> = [
     ...localZones.map((zone) => ({ zone, venues: localRooms.filter((r) => r.zone_id === zone.id) })),
@@ -289,7 +309,7 @@ export function RoomsZonesSection({
     const rows = localZones
       .filter((z) => (zoneHcCampus ? z.campus === zoneHcCampus : true) && (zoneHcZone ? z.id === zoneHcZone : true))
       .map((zone) => {
-        const teamsHere = localTeams.filter((t) => teamContext(t).zone?.id === zone.id);
+        const teamsHere = localTeams.filter((t) => t.is_active && teamContext(t).zone?.id === zone.id);
         return {
           key: zone.id,
           campus: zone.campus,
@@ -316,7 +336,7 @@ export function RoomsZonesSection({
           (venueHcSpoc ? r.spoc_profile_id === venueHcSpoc : true),
       )
       .map((room) => {
-        const teamsHere = localTeams.filter((t) => t.room_id === room.id);
+        const teamsHere = localTeams.filter((t) => t.is_active && t.room_id === room.id);
         const zone = zoneById(room.zone_id);
         return {
           key: room.id,
@@ -1092,13 +1112,14 @@ export function RoomsZonesSection({
                     <th className="px-4 py-3">Zone Manager</th>
                     <th className="px-4 py-3">Venue</th>
                     <th className="px-4 py-3">Spoc</th>
+                    <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {viewRows.length === 0 ? (
                     <tr>
-                      <td colSpan={singleCampus ? 11 : 12} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                      <td colSpan={singleCampus ? 12 : 13} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
                         No teams match these filters.
                       </td>
                     </tr>
@@ -1146,6 +1167,15 @@ export function RoomsZonesSection({
                           </td>
                           <td className="px-4 py-3 text-ink-muted">{spoc ?? "—"}</td>
                           <td className="px-4 py-3">
+                            <span
+                              className={`rounded-full border px-3 py-1 text-xs ${
+                                team.is_active ? "border-gitam/40 bg-gitam/10 text-gitam" : "border-danger/40 bg-danger/10 text-danger"
+                              }`}
+                            >
+                              {team.is_active ? "Active" : "No-Show"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
                             {editing ? (
                               <div className="flex flex-wrap items-center gap-2">
                                 <button
@@ -1183,6 +1213,14 @@ export function RoomsZonesSection({
                                   className="text-xs text-danger underline disabled:opacity-60"
                                 >
                                   Delete
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleTeamActive(team)}
+                                  disabled={busy === `active-team:${team.id}`}
+                                  className={`text-xs underline disabled:opacity-60 ${team.is_active ? "text-danger" : "text-gitam"}`}
+                                >
+                                  {team.is_active ? "Mark as No-Show" : "Mark Active"}
                                 </button>
                               </div>
                             )}
