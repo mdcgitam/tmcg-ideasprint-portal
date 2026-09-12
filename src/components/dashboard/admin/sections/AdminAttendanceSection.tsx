@@ -66,13 +66,19 @@ function uniqueValues(values: (string | undefined | null)[]): string[] {
   return Array.from(new Set(values.filter((v): v is string => Boolean(v))));
 }
 
-/** Both Super Admin and SPOC can create sessions and mark attendance — SPOC for their own assigned teams (RLS-scoped), Super Admin for any team (record_attendance's own `current_role() = 'Super Admin'` check). */
+/**
+ * Attendance sessions are global — shared by all 3 campuses, no per-campus
+ * list — so only Super Admin viewing "All" can add one (canAddSession),
+ * keeping every campus on the same session lineup instead of each Campus
+ * Admin creating their own. Marking attendance is separate: SPOC for their
+ * own assigned teams (RLS-scoped), Campus Admin/Super Admin for any team
+ * in scope (record_attendance's own role checks).
+ */
 export function AdminAttendanceSection({
   teams,
   membersByTeam,
   attendanceSessions,
   attendance,
-  scope,
   staffAccounts,
   spocs,
   rooms,
@@ -81,12 +87,12 @@ export function AdminAttendanceSection({
   hideZoneFilters = false,
   hideVenueFilter = false,
   hideSpocFilter = false,
+  canAddSession = false,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   attendanceSessions: AttendanceSessionRow[];
   attendance: AttendanceRow[];
-  scope: "spoc" | "admin";
   staffAccounts: ProfileRow[];
   spocs: ProfileRow[];
   rooms: RoomRow[];
@@ -95,6 +101,7 @@ export function AdminAttendanceSection({
   hideZoneFilters?: boolean;
   hideVenueFilter?: boolean;
   hideSpocFilter?: boolean;
+  canAddSession?: boolean;
 }) {
   const [localSessions, setLocalSessions] = useState(attendanceSessions);
   const [localAttendance, setLocalAttendance] = useState(attendance);
@@ -376,7 +383,7 @@ export function AdminAttendanceSection({
 
   return (
     <div className="flex flex-col gap-6">
-      {scope === "admin" && (
+      {canAddSession && (
         <form onSubmit={handleCreateSession} className="flex gap-3 rounded-xl border border-border bg-surface p-5">
           <input
             value={sessionName}
@@ -399,7 +406,7 @@ export function AdminAttendanceSection({
       {localSessions.length === 0 ? (
         <div className="rounded-xl border border-border bg-surface p-8 text-center">
           <p className="font-heading text-sm text-ink-muted">
-            {scope === "admin" ? "No attendance sessions yet — add one above." : "No attendance sessions configured yet."}
+            {canAddSession ? "No attendance sessions yet — add one above." : "No attendance sessions configured yet."}
           </p>
         </div>
       ) : (

@@ -10,6 +10,10 @@ export async function AttendanceRoute({ profile }: { profile: ProfileRow }) {
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
   const isSpoc = profile.role === "SPOC";
   const hideZoneFilters = isSpoc || profile.role === "Zone Manager";
+  // Sessions are global (shared by all 3 campuses) — only Super Admin
+  // viewing "All" can add one, so every campus stays on the same list
+  // instead of Campus Admins each adding their own.
+  const canAddSession = profile.role === "Super Admin" && !singleCampus;
 
   return (
     <SectionPageShell title="Attendance" scope={scope} campus={profile.campus}>
@@ -18,11 +22,11 @@ export async function AttendanceRoute({ profile }: { profile: ProfileRow }) {
         hideZoneFilters={hideZoneFilters}
         hideVenueFilter={isSpoc}
         hideSpocFilter={isSpoc}
+        canAddSession={canAddSession}
         teams={teams}
         membersByTeam={membersByTeam}
         attendanceSessions={attendanceSessions}
         attendance={attendance}
-        scope={scope}
         staffAccounts={staffAccounts}
         spocs={spocs}
         rooms={rooms}
