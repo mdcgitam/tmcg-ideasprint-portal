@@ -165,6 +165,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
             <ExitRequestSection
               profile={props.profile}
               teamId={props.team.id}
+              teamIsActive={props.team.is_active}
               members={props.members}
               exitRequests={props.exitRequests}
               reviewerNames={props.reviewerNames}

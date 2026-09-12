@@ -267,6 +267,16 @@ export function ProfileSection({
         </div>
       </div>
 
+      {!team.is_active && (
+        <div className="rounded-xl border border-danger/40 bg-danger/5 p-6">
+          <span className="font-mono text-xs tracking-[0.3em] text-danger uppercase">Team Marked Inactive</span>
+          <p className="mt-2 font-heading text-sm text-ink-muted">
+            This team is marked inactive and can&apos;t submit edit requests. Contact your SPOC, Zone Manager, or
+            Campus Admin if this looks wrong.
+          </p>
+        </div>
+      )}
+
       {hasPending && (
         <div className="rounded-xl border border-gold/40 bg-gold/5 p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Pending Approval</span>
@@ -277,7 +287,7 @@ export function ProfileSection({
         </div>
       )}
 
-      {isLead && !hasPending && !editing && (
+      {isLead && team.is_active && !hasPending && !editing && (
         <button
           type="button"
           onClick={() => {

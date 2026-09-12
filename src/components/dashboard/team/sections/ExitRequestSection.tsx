@@ -32,6 +32,7 @@ type View = "requests" | "history";
 export function ExitRequestSection({
   profile,
   teamId,
+  teamIsActive,
   members,
   exitRequests,
   reviewerNames,
@@ -39,6 +40,8 @@ export function ExitRequestSection({
 }: {
   profile: ProfileRow;
   teamId: string;
+  /** A team marked inactive (no-show) can't submit new exit requests. */
+  teamIsActive: boolean;
   members: TeamMemberProfile[];
   exitRequests: ExitRequestRow[];
   /** id -> name for whoever reviewed a request — may not be a team member (SPOC/Zone Manager/Campus Admin/Super Admin). */
@@ -147,6 +150,15 @@ export function ExitRequestSection({
       <div ref={fadeRef}>
         {view === "requests" ? (
           <div className="flex flex-col gap-4">
+            {!teamIsActive && (
+              <div className="max-w-2xl rounded-lg border border-danger/40 bg-danger/5 px-4 py-3">
+                <p className="font-heading text-xs font-semibold tracking-wide text-danger uppercase">Team Marked Inactive</p>
+                <p className="mt-1 font-heading text-xs text-ink-muted">
+                  This team is marked inactive and can&apos;t submit new exit requests. Contact your SPOC, Zone
+                  Manager, or Campus Admin if this looks wrong.
+                </p>
+              </div>
+            )}
             <div className="max-w-2xl rounded-lg border border-gold/40 bg-gold/5 px-4 py-3">
               <p className="font-heading text-xs font-semibold tracking-wide text-gold uppercase">Note</p>
               <ul className="mt-1.5 list-disc space-y-1 pl-4 font-heading text-xs text-ink-muted">
@@ -171,7 +183,7 @@ export function ExitRequestSection({
               const busy = busyProfileId === m.id;
               const canAct = isLead || m.id === profile.id;
               const isOpen = request?.status === "Requested";
-              const canUpload = canAct && request?.status !== "Approved";
+              const canUpload = canAct && request?.status !== "Approved" && teamIsActive;
               const canWithdraw = canAct && isOpen;
 
               return (
