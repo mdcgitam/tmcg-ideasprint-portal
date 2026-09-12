@@ -16,6 +16,10 @@ export async function AttendanceRoute({ profile }: { profile: ProfileRow }) {
   // is selected is scoped to just that campus (profile.campus already
   // reflects the picked module for a Super Admin — effectiveAdminProfile).
   const canAddSession = profile.role === "Super Admin";
+  // A no-show team drops off Attendance entirely (nothing to mark
+  // attendance for) — reversible from Rooms and Venues or the Profile
+  // module, both of which still show every team regardless of status.
+  const activeTeams = teams.filter((t) => t.is_active);
 
   return (
     <SectionPageShell title="Attendance" scope={scope} campus={profile.campus}>
@@ -26,7 +30,7 @@ export async function AttendanceRoute({ profile }: { profile: ProfileRow }) {
         hideSpocFilter={isSpoc}
         canAddSession={canAddSession}
         addSessionCampus={profile.campus}
-        teams={teams}
+        teams={activeTeams}
         membersByTeam={membersByTeam}
         attendanceSessions={attendanceSessions}
         attendance={attendance}

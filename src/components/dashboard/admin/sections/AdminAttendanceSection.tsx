@@ -4,7 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { AttendanceRow, AttendanceSessionRow, CampusCode, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
-import { recordAttendance, createAttendanceSession, DashboardActionError } from "@/lib/dashboard/admin-actions";
+import { recordAttendance, createAttendanceSession, setTeamActive, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { sortCampuses } from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
@@ -110,9 +110,11 @@ export function AdminAttendanceSection({
 }) {
   const [localSessions, setLocalSessions] = useState(attendanceSessions);
   const [localAttendance, setLocalAttendance] = useState(attendance);
+  const [localTeams, setLocalTeams] = useState(teams);
   const [sessionName, setSessionName] = useState("");
   const [creating, setCreating] = useState(false);
   const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [noShowBusyId, setNoShowBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<View>("teams");
   const fadeRef = useTabFade(view);
@@ -209,6 +211,26 @@ export function AdminAttendanceSection({
     }
   }
 
+  /**
+   * A no-show team never turned up for the event — independent of the
+   * exit-driven per-member is_active (0073). Removes it from this page
+   * (and NOC/PPT/Problem Statement/ID Cards/Exit Submissions) entirely;
+   * reversible any time from Rooms and Venues or the Profile module,
+   * which both keep showing every team regardless of status.
+   */
+  async function handleMarkNoShow(teamId: string) {
+    setNoShowBusyId(teamId);
+    setError(null);
+    try {
+      await setTeamActive(teamId, false);
+      setLocalTeams((prev) => prev.filter((t) => t.id !== teamId));
+    } catch (err) {
+      setError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setNoShowBusyId(null);
+    }
+  }
+
   function memberStatus(profileId: string, session: AttendanceSessionRow | null): Status {
     if (!session) return "Not Marked";
     const record = localAttendance.find((a) => a.session_id === session.id && a.profile_id === profileId);
@@ -236,13 +258,13 @@ export function AdminAttendanceSection({
   // ── Teams tab ────────────────────────────────────────────────────────
 
   const teamCampusOptions = useMemo(
-    () => sortCampuses(uniqueValues(teams.map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus))),
-    [teams, membersByTeam],
+    () => sortCampuses(uniqueValues(localTeams.map((t) => (membersByTeam[t.id] ?? []).find((m) => m.is_lead)?.campus))),
+    [localTeams, membersByTeam],
   );
 
   const filteredTeams = useMemo(() => {
     const q = teamFilters.search.trim().toLowerCase();
-    const filtered = teams.filter((team) => {
+    const filtered = localTeams.filter((team) => {
       const members = membersByTeam[team.id] ?? [];
       const lead = members.find((m) => m.is_lead);
 
@@ -281,7 +303,7 @@ export function AdminAttendanceSection({
       idOf: (team) => team.team_id,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, teamFilters, localAttendance, localSessions, singleCampus]);
+  }, [localTeams, membersByTeam, teamFilters, localAttendance, localSessions, singleCampus]);
 
   function handleExportTeams() {
     downloadCsv(
@@ -307,12 +329,12 @@ export function AdminAttendanceSection({
 
   // ── Members tab ──────────────────────────────────────────────────────
 
-  const allMembers = useMemo(() => teams.flatMap((t) => membersByTeam[t.id] ?? []), [teams, membersByTeam]);
+  const allMembers = useMemo(() => localTeams.flatMap((t) => membersByTeam[t.id] ?? []), [localTeams, membersByTeam]);
   const memberCampusOptions = useMemo(() => sortCampuses(uniqueValues(allMembers.map((m) => m.campus))), [allMembers]);
 
   const filteredMembers = useMemo(() => {
     const q = memberFilters.search.trim().toLowerCase();
-    const filtered = teams.flatMap((team) => {
+    const filtered = localTeams.flatMap((team) => {
       const members = membersByTeam[team.id] ?? [];
       // Inactive teams (fewer than 3 active members) are not part of attendance.
       if (activeMemberCount(members) < TEAM_MIN_ACTIVE) return [];
@@ -354,7 +376,7 @@ export function AdminAttendanceSection({
       idOf: (row) => row.member.user_id,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, memberFilters, localAttendance, localSessions, singleCampus]);
+  }, [localTeams, membersByTeam, memberFilters, localAttendance, localSessions, singleCampus]);
 
   function handleExportMembers() {
     downloadCsv(
@@ -383,7 +405,7 @@ export function AdminAttendanceSection({
     );
   }
 
-  const TEAM_FIXED_COLS = singleCampus ? 9 : 10; // chevron, [Campus], Team Name, Team Size, Team Lead, Lead Phone No, Zone, Zone Manager, SPOC, Venue
+  const TEAM_FIXED_COLS = singleCampus ? 10 : 11; // chevron, [Campus], Team Name, Team Size, Team Lead, Lead Phone No, Zone, Zone Manager, SPOC, Venue, Actions
   const MEMBER_FIXED_COLS = singleCampus ? 9 : 10; // [Campus], Team Name, Team Size, Name, Position, Phone No, Zone, Zone Manager, Venue, SPOC
 
   return (
@@ -535,6 +557,7 @@ export function AdminAttendanceSection({
                         <th className="px-4 py-3">Zone Manager</th>
                         <th className="px-4 py-3">Venue</th>
                         <th className="px-4 py-3">SPOC</th>
+                        <th className="px-4 py-3">Actions</th>
                         {localSessions.map((s) => (
                           <th key={s.id} className="px-4 py-3">
                             Attendance Status ({s.name})
@@ -577,6 +600,16 @@ export function AdminAttendanceSection({
                                 <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                                 <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                                 <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
+                                <td className="px-4 py-3">
+                                  <button
+                                    type="button"
+                                    disabled={noShowBusyId === team.id}
+                                    onClick={() => handleMarkNoShow(team.id)}
+                                    className="rounded-full border border-danger/40 px-3 py-1.5 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
+                                  >
+                                    {noShowBusyId === team.id ? "Working…" : "Mark as No-Show"}
+                                  </button>
+                                </td>
                                 {localSessions.map((s) => {
                                   const status = teamStatus(team, s);
                                   const busy = busyKey === `team:${team.id}:${s.id}`;
