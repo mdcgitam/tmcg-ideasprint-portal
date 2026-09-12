@@ -8,6 +8,7 @@ export async function ProblemStatementsRoute({ profile }: { profile: ProfileRow 
     await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   const canManage = profile.role === "Super Admin" || profile.role === "Campus Admin";
+  const isSuperAdmin = profile.role === "Super Admin";
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
   const isSpoc = profile.role === "SPOC";
   const hideZoneFilters = isSpoc || profile.role === "Zone Manager";
@@ -28,6 +29,7 @@ export async function ProblemStatementsRoute({ profile }: { profile: ProfileRow 
         staffAccounts={staffAccounts}
         config={config}
         canManage={canManage}
+        isSuperAdmin={isSuperAdmin}
       />
     </SectionPageShell>
   );

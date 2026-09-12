@@ -17,7 +17,12 @@ import {
   upsertProblemStatement,
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
-import { effectiveProblemStatementEndDetailed, nowDatetimeLocalValue, sortCampuses } from "@/lib/dashboard/campus-config";
+import {
+  effectiveProblemStatementEndDetailed,
+  nowDatetimeLocalValue,
+  problemStatementMaxNumber,
+  sortCampuses,
+} from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
@@ -25,7 +30,7 @@ import { useTabFade } from "@/hooks/useTabFade";
 import { FilterSelect } from "./TeamFormFields";
 
 const PS_MIN = 1;
-const PS_MAX = 50;
+const MAX_NUMBER_KEY = "problem_statement.max_number";
 
 type View = "team" | "analytics";
 
@@ -59,7 +64,8 @@ function configString(config: Record<string, unknown>, key: string): string | nu
 
 /**
  * Problem Statements are catalogued in our DB only as bare number+status
- * rows (1–50) — the actual titles/content live in an admin-provided Google
+ * rows, numbered 1 through a Super-Admin-configured ceiling
+ * (problem_statement.max_number, default 50) — the actual titles/content live in an admin-provided Google
  * Sheet, browsed externally by Team Leads. The sheet URL and the "Go Live"
  * release control live here (Super Admin / Campus Admin only) rather than in
  * Configuration. Until Go Live is clicked, the sheet link stays hidden from
@@ -81,6 +87,7 @@ export function ProblemStatementsAdminSection({
   hideVenueFilter = false,
   hideSpocFilter = false,
   canManage = false,
+  isSuperAdmin = false,
 }: {
   problemStatements: ProblemStatementRow[];
   problemStatementExtensions: ProblemStatementExtensionRow[];
@@ -95,6 +102,7 @@ export function ProblemStatementsAdminSection({
   hideVenueFilter?: boolean;
   hideSpocFilter?: boolean;
   canManage?: boolean;
+  isSuperAdmin?: boolean;
 }) {
   const [local, setLocal] = useState(problemStatements);
   const [localExtensions, setLocalExtensions] = useState(problemStatementExtensions);
@@ -111,6 +119,34 @@ export function ProblemStatementsAdminSection({
   const [liveAt, setLiveAt] = useState(configString(config, "problem_statement.live_at"));
   const [goingLive, setGoingLive] = useState(false);
   const [goLiveError, setGoLiveError] = useState<string | null>(null);
+
+  // Super-Admin-only: how many problem statements exist (numbering always
+  // starts at 1) — Go Live creates exactly this many, and it's the ceiling
+  // Team Leads/admins can enter. Not campus-overridable: the PS catalog
+  // itself isn't campus-specific.
+  const [psMax, setPsMax] = useState(problemStatementMaxNumber(config));
+  const [psMaxDraft, setPsMaxDraft] = useState(String(psMax));
+  const [savingPsMax, setSavingPsMax] = useState(false);
+  const [psMaxMessage, setPsMaxMessage] = useState<string | null>(null);
+
+  async function handleSavePsMax() {
+    const n = Number(psMaxDraft.trim());
+    if (!Number.isInteger(n) || n < 1) {
+      setPsMaxMessage("Enter a whole number of 1 or more.");
+      return;
+    }
+    setSavingPsMax(true);
+    setPsMaxMessage(null);
+    try {
+      await setConfiguration(MAX_NUMBER_KEY, n, "Highest problem statement number (numbering starts at 1).");
+      setPsMax(n);
+      setPsMaxMessage("Saved.");
+    } catch (err) {
+      setPsMaxMessage(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+    } finally {
+      setSavingPsMax(false);
+    }
+  }
 
   async function handleSaveUrl() {
     setSavingUrl(true);
@@ -138,7 +174,7 @@ export function ProblemStatementsAdminSection({
     setGoLiveError(null);
     try {
       const results = await Promise.all(
-        Array.from({ length: PS_MAX - PS_MIN + 1 }, (_, i) => String(PS_MIN + i)).map(async (number) => {
+        Array.from({ length: psMax - PS_MIN + 1 }, (_, i) => String(PS_MIN + i)).map(async (number) => {
           const existing = local.find((p) => p.number === number);
           const id = await upsertProblemStatement({
             id: existing?.id ?? null,
@@ -282,8 +318,8 @@ export function ProblemStatementsAdminSection({
   async function handlePsSave(team: TeamRow) {
     const raw = (psDrafts[team.id] ?? psNumberOf(team)).trim();
     const n = Number(raw);
-    if (!raw || !Number.isInteger(n) || n < PS_MIN || n > PS_MAX) {
-      setPsErrors((prev) => ({ ...prev, [team.id]: `Enter a number between ${PS_MIN} and ${PS_MAX}.` }));
+    if (!raw || !Number.isInteger(n) || n < PS_MIN || n > psMax) {
+      setPsErrors((prev) => ({ ...prev, [team.id]: `Enter a number between ${PS_MIN} and ${psMax}.` }));
       return;
     }
     setPsBusy(team.id);
@@ -412,7 +448,36 @@ export function ProblemStatementsAdminSection({
   return (
     <div className="flex flex-col gap-6">
       {canManage ? (
-        <div className="rounded-xl border border-border bg-surface p-6">
+        <>
+          {isSuperAdmin && (
+            <div className="rounded-xl border border-border bg-surface p-6">
+              <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Maximum Problem Statement Number</span>
+              <p className="mt-1 font-heading text-xs text-ink-muted">
+                Numbering always starts at 1 — set the highest number in the catalog. Go Live creates exactly this many, and it&rsquo;s
+                the ceiling Team Leads and admins can enter. Super Admin only; not campus-specific.
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <input
+                  type="number"
+                  min={1}
+                  value={psMaxDraft}
+                  onChange={(e) => setPsMaxDraft(e.target.value)}
+                  className="w-28 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                />
+                <button
+                  type="button"
+                  disabled={savingPsMax}
+                  onClick={handleSavePsMax}
+                  className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                >
+                  {savingPsMax ? "Saving…" : "Save"}
+                </button>
+                <span className="font-heading text-xs text-ink-muted">Currently 1–{psMax}.</span>
+              </div>
+              {psMaxMessage && <p className="mt-2 font-heading text-xs text-ink-muted">{psMaxMessage}</p>}
+            </div>
+          )}
+          <div className="rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Spreadsheet URL</span>
           <p className="mt-1 font-heading text-xs text-ink-muted">
             Hidden from Zone Manager, SPOC, and Team Lead / Member until you click Go Live below.
@@ -449,7 +514,8 @@ export function ProblemStatementsAdminSection({
             </span>
           </div>
           {goLiveError && <p className="mt-2 font-heading text-xs text-danger">{goLiveError}</p>}
-        </div>
+          </div>
+        </>
       ) : (
         <div className="rounded-xl border border-border bg-surface p-4">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Sheet</span>
@@ -640,10 +706,10 @@ export function ProblemStatementsAdminSection({
                                   <input
                                     type="number"
                                     min={PS_MIN}
-                                    max={PS_MAX}
+                                    max={psMax}
                                     value={psDrafts[team.id] ?? psNumberOf(team)}
                                     onChange={(e) => setPsDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                                    placeholder="1–50"
+                                    placeholder={`${PS_MIN}–${psMax}`}
                                     className="w-20 rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
                                   />
                                   <button

@@ -181,3 +181,17 @@ export function nowDatetimeLocalValue(): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
+
+const DEFAULT_PROBLEM_STATEMENT_MAX = 50;
+
+/**
+ * The highest problem statement number in the catalog (numbering always
+ * starts at 1) — set by the Super Admin via "problem_statement.max_number",
+ * global only (not campus-overridable: the PS catalog itself isn't
+ * campus-specific). Falls back to 50 until explicitly configured.
+ */
+export function problemStatementMaxNumber(config: Record<string, unknown>): number {
+  const raw = config["problem_statement.max_number"];
+  const n = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_PROBLEM_STATEMENT_MAX;
+}
