@@ -147,15 +147,15 @@ export function ExitRequestSection({
       <div ref={fadeRef}>
         {view === "requests" ? (
           <div className="flex flex-col gap-4">
-            <p className="max-w-2xl font-heading text-xs text-ink-muted">
-              Optional — upload your signed exit form for review by your SPOC, Zone Manager, Campus Admin, or Super
-              Admin.
-            </p>
-            {activeCount <= 3 && (
-              <p className="max-w-2xl rounded-lg border border-gold/40 bg-gold/5 px-4 py-3 font-heading text-xs text-gold">
-                Team at the {activeCount}-member minimum — all {activeCount} must exit together for it to go through.
-              </p>
-            )}
+            <div className="max-w-2xl rounded-lg border border-gold/40 bg-gold/5 px-4 py-3">
+              <p className="font-heading text-xs font-semibold tracking-wide text-gold uppercase">Note</p>
+              <ul className="mt-1.5 list-disc space-y-1 pl-4 font-heading text-xs text-ink-muted">
+                <li>Optional — upload your signed exit form for review by your SPOC, Zone Manager, Campus Admin, or Super Admin.</li>
+                {activeCount <= 3 && (
+                  <li>Team at the {activeCount}-member minimum — all {activeCount} must exit together for it to go through.</li>
+                )}
+              </ul>
+            </div>
             {error && (
               <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 font-heading text-sm text-danger">
                 {error}
@@ -163,7 +163,11 @@ export function ExitRequestSection({
             )}
             {visibleMembers.map((m) => {
               const request = currentRequestFor(m.id);
-              const status = request?.status ?? "No Request";
+              // A rejected request isn't a dead end — Upload lets them submit
+              // a fresh one right away, so it's shown the same as never
+              // having requested at all; the rejection itself still shows in
+              // History.
+              const status = request && request.status !== "Rejected" ? request.status : "No Request";
               const busy = busyProfileId === m.id;
               const canAct = isLead || m.id === profile.id;
               const isOpen = request?.status === "Requested";

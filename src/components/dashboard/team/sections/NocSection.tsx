@@ -126,7 +126,13 @@ export function NocSection({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="font-heading text-xs text-ink-muted">NOC files must be a PDF under 2MB.</p>
+      <div className="max-w-2xl rounded-lg border border-gold/40 bg-gold/5 px-4 py-3">
+        <p className="font-heading text-xs font-semibold tracking-wide text-gold uppercase">Note</p>
+        <ul className="mt-1.5 list-disc space-y-1 pl-4 font-heading text-xs text-ink-muted">
+          <li>NOC files must be a PDF under 2MB.</li>
+          <li>Physical submission of the original signed NOC is mandatory.</li>
+        </ul>
+      </div>
       {error && (
         <p className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 font-heading text-sm text-danger">
           {error}
