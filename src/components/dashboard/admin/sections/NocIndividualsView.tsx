@@ -14,6 +14,7 @@ import {
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
 import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
+import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 
@@ -108,7 +109,7 @@ export function NocIndividualsView({
 
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return allRows.filter(({ member, team }) => {
+    const filtered = allRows.filter(({ member, team }) => {
       if (q) {
         const haystack =
           `${team.team_name} ${member.name} ${member.reg_no} ${member.gitam_email} ${member.phone}`.toLowerCase();
@@ -123,8 +124,15 @@ export function NocIndividualsView({
       if (fileStatusFilter && (nocOf(member.id)?.status ?? "Not Uploaded") !== fileStatusFilter) return false;
       return true;
     });
+    return sortByLayout(filtered, {
+      singleCampus,
+      campusOf: (row) => row.member.campus,
+      zoneNameOf: (row) => zoneOf(roomOf(row.team))?.name ?? null,
+      venueNameOf: (row) => roomOf(row.team)?.name ?? null,
+      idOf: (row) => row.member.user_id,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allRows, search, campusFilter, positionFilter, zoneFilter, zoneManagerFilter, venueFilter, spocFilter, fileStatusFilter, localNocs]);
+  }, [allRows, search, campusFilter, positionFilter, zoneFilter, zoneManagerFilter, venueFilter, spocFilter, fileStatusFilter, localNocs, singleCampus]);
 
   function toggleSelected(profileId: string) {
     setSelected((prev) => {

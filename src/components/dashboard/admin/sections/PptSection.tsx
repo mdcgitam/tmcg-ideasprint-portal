@@ -21,6 +21,7 @@ import {
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
 import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
+import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 
@@ -295,7 +296,7 @@ export function PptSection({
 
   const visibleTeams = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
-    return teams.filter((team) => {
+    const filtered = teams.filter((team) => {
       const members = membersByTeam[team.id] ?? [];
       const lead = members.find((m) => m.is_lead);
       const status = localPresentations.find((p) => p.team_id === team.id)?.status ?? "Not Uploaded";
@@ -313,8 +314,15 @@ export function PptSection({
       if (filters.status && status !== filters.status) return false;
       return true;
     });
+    return sortByLayout(filtered, {
+      singleCampus,
+      campusOf: (team) => (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.campus ?? team.campus,
+      zoneNameOf: (team) => zoneOf(roomOf(team))?.name ?? null,
+      venueNameOf: (team) => roomOf(team)?.name ?? null,
+      idOf: (team) => team.team_id,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, filters, localPresentations]);
+  }, [teams, membersByTeam, filters, localPresentations, singleCampus]);
 
   function handleExportCsv() {
     downloadCsv(

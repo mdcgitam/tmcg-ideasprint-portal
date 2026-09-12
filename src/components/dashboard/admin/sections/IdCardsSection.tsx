@@ -6,6 +6,7 @@ import type { IdCardCertItem, IdCardCertRecordRow, ProfileRow, RoomRow, TeamRow,
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { recordIdCardCertificate, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { sortCampuses } from "@/lib/dashboard/campus-config";
+import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { FilterSelect } from "@/components/dashboard/admin/sections/TeamFormFields";
@@ -215,7 +216,7 @@ export function IdCardsSection({
 
   const filteredTeams = useMemo(() => {
     const q = teamFilters.search.trim().toLowerCase();
-    return teams.filter((team) => {
+    const filtered = teams.filter((team) => {
       const members = membersByTeam[team.id] ?? [];
       const lead = members.find((m) => m.is_lead);
 
@@ -241,8 +242,15 @@ export function IdCardsSection({
       if (teamFilters.certificate && teamStatus(team, "Certificate") !== teamFilters.certificate) return false;
       return true;
     });
+    return sortByLayout(filtered, {
+      singleCampus,
+      campusOf: (team) => (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.campus ?? team.campus,
+      zoneNameOf: (team) => zoneOf(roomOf(team))?.name ?? null,
+      venueNameOf: (team) => roomOf(team)?.name ?? null,
+      idOf: (team) => team.team_id,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, teamFilters, localRecords]);
+  }, [teams, membersByTeam, teamFilters, localRecords, singleCampus]);
 
   function handleExportTeams() {
     downloadCsv(
@@ -274,7 +282,7 @@ export function IdCardsSection({
 
   const filteredMembers = useMemo(() => {
     const q = memberFilters.search.trim().toLowerCase();
-    return teams.flatMap((team) => {
+    const filtered = teams.flatMap((team) => {
       const members = membersByTeam[team.id] ?? [];
       // Inactive teams (fewer than 3 active members) are not part of this tracker.
       if (activeMemberCount(members) < TEAM_MIN_ACTIVE) return [];
@@ -303,8 +311,15 @@ export function IdCardsSection({
         })
         .map((member) => ({ member, team }));
     });
+    return sortByLayout(filtered, {
+      singleCampus,
+      campusOf: (row) => row.member.campus,
+      zoneNameOf: (row) => zoneOf(roomOf(row.team))?.name ?? null,
+      venueNameOf: (row) => roomOf(row.team)?.name ?? null,
+      idOf: (row) => row.member.user_id,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, memberFilters, localRecords]);
+  }, [teams, membersByTeam, memberFilters, localRecords, singleCampus]);
 
   function handleExportMembers() {
     downloadCsv(

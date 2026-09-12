@@ -18,6 +18,7 @@ import {
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
 import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
+import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
@@ -216,7 +217,7 @@ export function ProblemStatementsAdminSection({
 
   const visibleTeams = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
-    return localTeams.filter((team) => {
+    const filtered = localTeams.filter((team) => {
       const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
       if (q) {
         const haystack = `${team.team_name} ${lead?.name ?? ""} ${lead?.phone ?? ""} ${psNumberOf(team)}`.toLowerCase();
@@ -229,8 +230,15 @@ export function ProblemStatementsAdminSection({
       if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
       return true;
     });
+    return sortByLayout(filtered, {
+      singleCampus,
+      campusOf: (team) => team.campus,
+      zoneNameOf: (team) => zoneOf(roomOf(team))?.name ?? null,
+      venueNameOf: (team) => roomOf(team)?.name ?? null,
+      idOf: (team) => team.team_id,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localTeams, membersByTeam, filters, local]);
+  }, [localTeams, membersByTeam, filters, local, singleCampus]);
 
   function toggleSelected(teamId: string) {
     setSelected((prev) => {

@@ -5,6 +5,7 @@ import type { NocRow, ProblemStatementRow, ProfileRow, RoomRow, TeamRow, ZoneRow
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { extendNocDeadline, DashboardActionError } from "@/lib/dashboard/team-actions";
 import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
+import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
 import { TeamDetailModal } from "./TeamDetailModal";
@@ -129,7 +130,7 @@ export function NocTeamsView({
 
   const filteredTeams = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return teams.filter((team) => {
+    const filtered = teams.filter((team) => {
       const members = membersByTeam[team.id] ?? [];
       const lead = members.find((m) => m.is_lead);
 
@@ -150,8 +151,15 @@ export function NocTeamsView({
       }
       return true;
     });
+    return sortByLayout(filtered, {
+      singleCampus,
+      campusOf: (team) => (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.campus ?? team.campus,
+      zoneNameOf: (team) => zoneOf(roomOf(team))?.name ?? null,
+      venueNameOf: (team) => roomOf(team)?.name ?? null,
+      idOf: (team) => team.team_id,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, search, campusFilter, teamSizeFilter, zoneFilter, zoneManagerFilter, venueFilter, spocFilter, statusFilter, localNocs]);
+  }, [teams, membersByTeam, search, campusFilter, teamSizeFilter, zoneFilter, zoneManagerFilter, venueFilter, spocFilter, statusFilter, localNocs, singleCampus]);
 
   function toggleSelected(teamId: string) {
     setSelected((prev) => {

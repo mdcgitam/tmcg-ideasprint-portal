@@ -18,9 +18,9 @@ const GENERAL_DEADLINE_KEY = "noc.general_deadline";
 
 /**
  * SPEC §39-48: every participant has an individual NOC. Team Lead can
- * upload/view/replace/delete any member's; a Member can only upload/view
- * their own — never edit/replace/delete it once uploaded. Files must be a
- * PDF under 2MB (matches the noc-uploads storage bucket's
+ * view/replace/delete any member's; a Member can do the same for their own
+ * — both right up until the deadline (0063). Files must be a PDF under
+ * 2MB (matches the noc-uploads storage bucket's
  * file_size_limit/allowed_mime_types). A per-member deadline override
  * (set from the admin NOC page) wins over the campus-scoped General NOC
  * Deadline set in Configuration; uploads are locked until one of those
@@ -134,8 +134,10 @@ export function NocSection({
       {visibleMembers.map((m) => {
         const noc = nocFor(m.id);
         const uploaded = noc?.status === "Uploaded" && noc.file_path;
-        const canManage = isLead; // Team Lead: upload/replace/delete any; Member: upload own only, no replace/delete.
-        const canUpload = canManage || (m.id === profile.id && !uploaded);
+        // Team Lead acts on any member's NOC; a Member acts on their own — both can
+        // view/replace/delete right up until the deadline, not just upload once.
+        const canAct = isLead || m.id === profile.id;
+        const canUpload = canAct;
         const busy = busyProfileId === m.id;
         const deadline = effectiveDeadlineFor(m.id, m.campus);
         const notConfigured = !deadline;
@@ -197,10 +199,11 @@ export function NocSection({
                   </button>
                 </>
               )}
-              {canManage && uploaded && (
+              {canAct && uploaded && (
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || expired}
+                  title={expired ? "Deadline passed — ask your SPOC, Zone Manager, or Super Admin to extend it." : undefined}
                   onClick={() => handleDelete(m.id)}
                   className="rounded-full border border-danger/40 px-4 py-1.5 font-heading text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
                 >

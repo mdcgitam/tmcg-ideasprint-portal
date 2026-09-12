@@ -12,6 +12,7 @@ import type {
 } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { downloadCsv } from "@/lib/csv";
+import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { TeamDetailModal } from "./TeamDetailModal";
 import { TeamFilterBar, filterTeams, EMPTY_TEAM_FILTERS, type TeamFilters } from "./TeamFilterBar";
 import { activeMemberCount, teamActiveStatus } from "./ExitStatusBadge";
@@ -61,8 +62,16 @@ export function TeamsByTeamView({
   const psOf = (team: TeamRow) => problemStatements.find((p) => p.id === team.current_problem_statement_id) ?? null;
 
   const filteredTeams = useMemo(
-    () => filterTeams(teams, membersByTeam, filters, rooms, zones),
-    [teams, membersByTeam, filters, rooms, zones],
+    () =>
+      sortByLayout(filterTeams(teams, membersByTeam, filters, rooms, zones), {
+        singleCampus,
+        campusOf: (team) => team.campus,
+        zoneNameOf: (team) => zoneOf(roomOf(team))?.name ?? null,
+        venueNameOf: (team) => roomOf(team)?.name ?? null,
+        idOf: (team) => team.team_id,
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [teams, membersByTeam, filters, rooms, zones, singleCampus],
   );
 
   function handleExportCsv() {

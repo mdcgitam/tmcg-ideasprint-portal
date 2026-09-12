@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 import type { TeamRow, NocRow, ProfileRow, RoomRow, ZoneRow, ProblemStatementRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { downloadCsv } from "@/lib/csv";
+import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { ExitStatusBadge, memberStatusLabel } from "./ExitStatusBadge";
 import { MembersFilterBar, filterMembers, EMPTY_MEMBER_FILTERS, type MemberFilters, type MemberRow } from "./MembersFilterBar";
 import { TeamDetailModal } from "./TeamDetailModal";
@@ -74,8 +75,18 @@ export function TeamsByMembersView({
       list.push(row);
       map.set(row.team.id, list);
     }
-    return Array.from(map.values());
-  }, [filteredRows]);
+    const sortedGroups = Array.from(map.values()).map((rows) =>
+      [...rows].sort((a, b) => a.member.user_id.localeCompare(b.member.user_id, undefined, { numeric: true })),
+    );
+    return sortByLayout(sortedGroups, {
+      singleCampus,
+      campusOf: (rows) => rows[0]?.team.campus ?? null,
+      zoneNameOf: (rows) => zoneOf(roomOf(rows[0].team))?.name ?? null,
+      venueNameOf: (rows) => roomOf(rows[0].team)?.name ?? null,
+      idOf: (rows) => rows[0]?.team.team_id ?? "",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredRows, singleCampus]);
 
   function handleDownloadAllMembers() {
     downloadCsv(
