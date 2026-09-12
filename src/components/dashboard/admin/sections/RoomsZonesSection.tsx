@@ -274,34 +274,55 @@ export function RoomsZonesSection({
     return { people: members.length, male: members.filter((m) => m.gender === "Male").length, female: members.filter((m) => m.gender === "Female").length };
   }
 
-  // Every team's own zone (via its venue), or null if it has no venue or
-  // the venue itself has no zone — covers teams zoneGroups wouldn't (a
-  // team with no venue at all doesn't show up there since that's built
-  // from venues, not teams).
-  const zoneOfTeam = (team: TeamRow): ZoneRow | null => teamContext(team).zone;
+  const [zoneHcCampus, setZoneHcCampus] = useState<CampusCode | "">("");
+  const [zoneHcZone, setZoneHcZone] = useState("");
+  const zoneHcZoneOptions = zoneHcCampus ? localZones.filter((z) => z.campus === zoneHcCampus) : localZones;
 
+  const [venueHcCampus, setVenueHcCampus] = useState<CampusCode | "">("");
+  const [venueHcZone, setVenueHcZone] = useState("");
+  const [venueHcVenue, setVenueHcVenue] = useState("");
+  const [venueHcSpoc, setVenueHcSpoc] = useState("");
+  const venueHcZoneOptions = venueHcCampus ? localZones.filter((z) => z.campus === venueHcCampus) : localZones;
+  const venueHcVenueOptions = localRooms.filter((r) => {
+    if (venueHcZone) return r.zone_id === venueHcZone;
+    if (venueHcCampus) return r.campus === venueHcCampus;
+    return true;
+  });
+  const venueHcSpocOptions = venueHcCampus ? spocs.filter((s) => s.campus === venueHcCampus) : spocs;
+
+  // Only actual zones — a team with no venue (or a venue without a zone)
+  // just doesn't count toward any row here, rather than showing a
+  // permanent "Unassigned" placeholder.
   const zoneHeadcountRows = useMemo(() => {
-    const rows = [...localZones, null].map((zone) => {
-      const teamsHere = zone ? localTeams.filter((t) => zoneOfTeam(t)?.id === zone.id) : localTeams.filter((t) => !zoneOfTeam(t));
-      const rowCampus = zone?.campus ?? (teamsHere.length > 0 ? campusOf(teamsHere[0]) : null);
-      return {
-        key: zone?.id ?? "unassigned",
-        campus: rowCampus,
-        zoneName: zone?.name ?? "Unassigned",
-        zoneManager: zone ? (staffById(zone.zone_manager_profile_id) ?? "Unassigned") : "—",
-        teams: teamsHere.length,
-        ...genderCounts(activeMembersOf(teamsHere)),
-      };
-    });
+    const rows = localZones
+      .filter((z) => (zoneHcCampus ? z.campus === zoneHcCampus : true) && (zoneHcZone ? z.id === zoneHcZone : true))
+      .map((zone) => {
+        const teamsHere = localTeams.filter((t) => teamContext(t).zone?.id === zone.id);
+        return {
+          key: zone.id,
+          campus: zone.campus,
+          zoneName: zone.name,
+          zoneManager: staffById(zone.zone_manager_profile_id) ?? "Unassigned",
+          teams: teamsHere.length,
+          ...genderCounts(activeMembersOf(teamsHere)),
+        };
+      });
     return rows.sort((a, b) => {
-      const campusDiff = CAMPUS_ORDER.indexOf(a.campus as CampusCode) - CAMPUS_ORDER.indexOf(b.campus as CampusCode);
+      const campusDiff = CAMPUS_ORDER.indexOf(a.campus) - CAMPUS_ORDER.indexOf(b.campus);
       return campusDiff !== 0 ? campusDiff : a.zoneName.localeCompare(b.zoneName);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localZones, localTeams, membersByTeam]);
+  }, [localZones, localTeams, membersByTeam, zoneHcCampus, zoneHcZone]);
 
   const venueHeadcountRows = useMemo(() => {
-    return [...localRooms]
+    return localRooms
+      .filter(
+        (r) =>
+          (venueHcCampus ? r.campus === venueHcCampus : true) &&
+          (venueHcZone ? r.zone_id === venueHcZone : true) &&
+          (venueHcVenue ? r.id === venueHcVenue : true) &&
+          (venueHcSpoc ? r.spoc_profile_id === venueHcSpoc : true),
+      )
       .map((room) => {
         const teamsHere = localTeams.filter((t) => t.room_id === room.id);
         const zone = zoneById(room.zone_id);
@@ -312,6 +333,7 @@ export function RoomsZonesSection({
           zoneManager: zone ? (staffById(zone.zone_manager_profile_id) ?? "Unassigned") : "—",
           venueName: room.name,
           spoc: staffById(room.spoc_profile_id) ?? "Unassigned",
+          teams: teamsHere.length,
           ...genderCounts(activeMembersOf(teamsHere)),
         };
       })
@@ -322,13 +344,13 @@ export function RoomsZonesSection({
         return zoneDiff !== 0 ? zoneDiff : a.venueName.localeCompare(b.venueName);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localRooms, localZones, localTeams, membersByTeam]);
+  }, [localRooms, localZones, localTeams, membersByTeam, venueHcCampus, venueHcZone, venueHcVenue, venueHcSpoc]);
 
   function handleExportZoneHeadcountCsv() {
     downloadCsv(
       "zone-headcount",
       zoneHeadcountRows.map((r) => ({
-        ...(singleCampus ? {} : { Campus: r.campus ?? "—" }),
+        ...(singleCampus ? {} : { Campus: r.campus }),
         Zone: r.zoneName,
         "Zone Manager": r.zoneManager,
         "Number of Teams": String(r.teams),
@@ -348,6 +370,7 @@ export function RoomsZonesSection({
         "Zone Manager": r.zoneManager,
         Venue: r.venueName,
         SPOC: r.spoc,
+        "Number of Teams": String(r.teams),
         "Number of People": String(r.people),
         Male: String(r.male),
         Female: String(r.female),
@@ -1193,6 +1216,45 @@ export function RoomsZonesSection({
                   Download CSV
                 </button>
               </div>
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
+                {!singleCampus && (
+                  <select
+                    value={zoneHcCampus}
+                    onChange={(e) => {
+                      setZoneHcCampus(e.target.value as CampusCode | "");
+                      setZoneHcZone("");
+                    }}
+                    className={selectClass}
+                  >
+                    <option value="">Campus</option>
+                    {CAMPUS_ORDER.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <select value={zoneHcZone} onChange={(e) => setZoneHcZone(e.target.value)} className={selectClass}>
+                  <option value="">Zone</option>
+                  {zoneHcZoneOptions.map((z) => (
+                    <option key={z.id} value={z.id}>
+                      {z.name}
+                    </option>
+                  ))}
+                </select>
+                {(zoneHcCampus || zoneHcZone) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setZoneHcCampus("");
+                      setZoneHcZone("");
+                    }}
+                    className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
               <div className="overflow-x-auto rounded-xl border border-border bg-surface">
                 <table className="w-full text-left font-heading text-sm">
                   <thead>
@@ -1207,17 +1269,25 @@ export function RoomsZonesSection({
                     </tr>
                   </thead>
                   <tbody>
-                    {zoneHeadcountRows.map((r) => (
-                      <tr key={r.key} className="border-b border-border last:border-0">
-                        {!singleCampus && <td className="px-4 py-3 text-ink-muted">{r.campus ?? "—"}</td>}
-                        <td className="px-4 py-3 text-ink">{r.zoneName}</td>
-                        <td className="px-4 py-3 text-ink-muted">{r.zoneManager}</td>
-                        <td className="px-4 py-3 text-ink-muted">{r.teams}</td>
-                        <td className="px-4 py-3 text-ink-muted">{r.people}</td>
-                        <td className="px-4 py-3 text-ink-muted">{r.male}</td>
-                        <td className="px-4 py-3 text-ink-muted">{r.female}</td>
+                    {zoneHeadcountRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={singleCampus ? 6 : 7} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                          No zones match these filters.
+                        </td>
                       </tr>
-                    ))}
+                    ) : (
+                      zoneHeadcountRows.map((r) => (
+                        <tr key={r.key} className="border-b border-border last:border-0">
+                          {!singleCampus && <td className="px-4 py-3 text-ink-muted">{r.campus}</td>}
+                          <td className="px-4 py-3 text-ink">{r.zoneName}</td>
+                          <td className="px-4 py-3 text-ink-muted">{r.zoneManager}</td>
+                          <td className="px-4 py-3 text-ink-muted">{r.teams}</td>
+                          <td className="px-4 py-3 text-ink-muted">{r.people}</td>
+                          <td className="px-4 py-3 text-ink-muted">{r.male}</td>
+                          <td className="px-4 py-3 text-ink-muted">{r.female}</td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1234,6 +1304,72 @@ export function RoomsZonesSection({
                   Download CSV
                 </button>
               </div>
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
+                {!singleCampus && (
+                  <select
+                    value={venueHcCampus}
+                    onChange={(e) => {
+                      setVenueHcCampus(e.target.value as CampusCode | "");
+                      setVenueHcZone("");
+                      setVenueHcVenue("");
+                      setVenueHcSpoc("");
+                    }}
+                    className={selectClass}
+                  >
+                    <option value="">Campus</option>
+                    {CAMPUS_ORDER.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                <select
+                  value={venueHcZone}
+                  onChange={(e) => {
+                    setVenueHcZone(e.target.value);
+                    setVenueHcVenue("");
+                  }}
+                  className={selectClass}
+                >
+                  <option value="">Zone</option>
+                  {venueHcZoneOptions.map((z) => (
+                    <option key={z.id} value={z.id}>
+                      {z.name}
+                    </option>
+                  ))}
+                </select>
+                <select value={venueHcVenue} onChange={(e) => setVenueHcVenue(e.target.value)} className={selectClass}>
+                  <option value="">Venue</option>
+                  {venueHcVenueOptions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
+                </select>
+                <select value={venueHcSpoc} onChange={(e) => setVenueHcSpoc(e.target.value)} className={selectClass}>
+                  <option value="">SPOC</option>
+                  {venueHcSpocOptions.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+                {(venueHcCampus || venueHcZone || venueHcVenue || venueHcSpoc) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVenueHcCampus("");
+                      setVenueHcZone("");
+                      setVenueHcVenue("");
+                      setVenueHcSpoc("");
+                    }}
+                    className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
               <div className="overflow-x-auto rounded-xl border border-border bg-surface">
                 <table className="w-full text-left font-heading text-sm">
                   <thead>
@@ -1243,6 +1379,7 @@ export function RoomsZonesSection({
                       <th className="px-4 py-3">Zone Manager</th>
                       <th className="px-4 py-3">Venue</th>
                       <th className="px-4 py-3">SPOC</th>
+                      <th className="px-4 py-3">Number of Teams</th>
                       <th className="px-4 py-3">Number of People</th>
                       <th className="px-4 py-3">Male</th>
                       <th className="px-4 py-3">Female</th>
@@ -1251,8 +1388,8 @@ export function RoomsZonesSection({
                   <tbody>
                     {venueHeadcountRows.length === 0 ? (
                       <tr>
-                        <td colSpan={singleCampus ? 6 : 7} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
-                          No venues yet.
+                        <td colSpan={singleCampus ? 7 : 8} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
+                          No venues match these filters.
                         </td>
                       </tr>
                     ) : (
@@ -1263,6 +1400,7 @@ export function RoomsZonesSection({
                           <td className="px-4 py-3 text-ink-muted">{r.zoneManager}</td>
                           <td className="px-4 py-3 text-ink-muted">{r.venueName}</td>
                           <td className="px-4 py-3 text-ink-muted">{r.spoc}</td>
+                          <td className="px-4 py-3 text-ink-muted">{r.teams}</td>
                           <td className="px-4 py-3 text-ink-muted">{r.people}</td>
                           <td className="px-4 py-3 text-ink-muted">{r.male}</td>
                           <td className="px-4 py-3 text-ink-muted">{r.female}</td>
