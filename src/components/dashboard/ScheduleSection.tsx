@@ -165,7 +165,7 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
 
   const visibleEntries = isAllMode ? entries : entries.filter((e) => !e.campus || e.campus === viewCampus);
   const canEditOrRemove = (entry: ScheduleEntry) => isAllMode || entry.campus === viewCampus;
-  const columnCount = 2 + (isAllMode ? 1 : 0) + (canManage ? 1 : 0);
+  const columnCount = 2 + (isAllMode ? 2 : 0) + (canManage ? 1 : 0);
 
   if (isAllMode && view !== "manage") {
     return (
@@ -210,20 +210,7 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
               Added for {viewCampus} only — switch to the &ldquo;All&rdquo; module to add an entry shown on every campus.
             </p>
           )}
-          <div className="mt-3 flex flex-wrap gap-3">
-            <input
-              value={newTime}
-              onChange={(e) => setNewTime(e.target.value)}
-              placeholder="e.g. 25th Sep, 04:00 PM"
-              className="min-w-[180px] rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-            />
-            <textarea
-              value={newDescription}
-              onChange={(e) => setNewDescription(e.target.value)}
-              placeholder="What happens — one line per detail"
-              rows={2}
-              className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-            />
+          <div className="mt-3 flex flex-wrap items-start gap-3">
             {isAllMode && (
               <select
                 value={newCampus}
@@ -238,11 +225,24 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
                 ))}
               </select>
             )}
+            <input
+              value={newTime}
+              onChange={(e) => setNewTime(e.target.value)}
+              placeholder="e.g. 25th Sep, 04:00 PM"
+              className="min-w-[180px] rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+            />
+            <textarea
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+              placeholder="What happens — one line per detail"
+              rows={2}
+              className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+            />
             <button
               type="button"
               disabled={saving}
               onClick={handleAdd}
-              className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+              className="rounded-full bg-gold px-5 py-2 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
             >
               {saving ? "Saving…" : "Add"}
             </button>
@@ -255,6 +255,7 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
         <table className="w-full text-left font-heading text-sm">
           <thead>
             <tr className="border-b border-border bg-gold text-xs text-void uppercase">
+              {isAllMode && <th className="w-8 px-2 py-3" />}
               <th className="px-4 py-3">Time</th>
               <th className="px-4 py-3">Action</th>
               {isAllMode && <th className="px-4 py-3">Campus</th>}
@@ -284,6 +285,24 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
                       handleReorderDrop(i);
                     }}
                   >
+                    {isAllMode && (
+                      <td className="px-2 py-3 text-center">
+                        {canDragRow && (
+                          <span
+                            draggable
+                            onDragStart={(e) => {
+                              setDragIndex(i);
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragEnd={() => setDragIndex(null)}
+                            title="Drag to reorder"
+                            className="inline-block cursor-grab select-none px-1 text-ink-faint active:cursor-grabbing"
+                          >
+                            ⠿
+                          </span>
+                        )}
+                      </td>
+                    )}
                     {isEditing ? (
                       <>
                         <td className="px-4 py-3">
@@ -331,20 +350,6 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
                         {canManage && (
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              {canDragRow && (
-                                <span
-                                  draggable
-                                  onDragStart={(e) => {
-                                    setDragIndex(i);
-                                    e.dataTransfer.effectAllowed = "move";
-                                  }}
-                                  onDragEnd={() => setDragIndex(null)}
-                                  title="Drag to reorder"
-                                  className="inline-block cursor-grab select-none px-1 text-ink-faint active:cursor-grabbing"
-                                >
-                                  ⠿
-                                </span>
-                              )}
                               {canEditOrRemove(entry) && (
                                 <>
                                   <button
