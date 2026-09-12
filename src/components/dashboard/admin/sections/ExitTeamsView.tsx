@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import type { ExitRequestRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { sortCampuses } from "@/lib/dashboard/campus-config";
+import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { FilterSelect } from "./TeamFormFields";
 import { ExitReviewModal } from "./ExitReviewModal";
 
@@ -66,7 +67,7 @@ export function ExitTeamsView({
 
   const filteredTeams = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return teams.filter((t) => {
+    const filtered = teams.filter((t) => {
       const lead = leadOf(t);
       if (q) {
         const haystack = `${t.team_name} ${t.team_id} ${lead?.name ?? ""} ${lead?.phone ?? ""}`.toLowerCase();
@@ -80,8 +81,16 @@ export function ExitTeamsView({
       if (spocFilter && t.spoc_profile_id !== spocFilter) return false;
       return true;
     });
+    return sortByLayout(filtered, {
+      singleCampus,
+      campusOf,
+      zoneNameOf: (t) => zoneOf(t)?.name ?? null,
+      venueNameOf: (t) => roomOf(t)?.name ?? null,
+      spocNameOf: (t) => spocName(t),
+      idOf: (t) => t.team_id,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [teams, membersByTeam, search, campusFilter, sizeFilter, zoneFilter, zoneManagerFilter, venueFilter, spocFilter]);
+  }, [teams, membersByTeam, search, campusFilter, sizeFilter, zoneFilter, zoneManagerFilter, venueFilter, spocFilter, singleCampus]);
 
   const openTeam = openTeamId ? (teams.find((t) => t.id === openTeamId) ?? null) : null;
   const columnCount =

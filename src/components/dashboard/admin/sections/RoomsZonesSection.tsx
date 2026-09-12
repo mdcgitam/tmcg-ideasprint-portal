@@ -145,23 +145,15 @@ export function RoomsZonesSection({
       return true;
     });
 
-    // Assigned teams first — grouped by Campus (VSP -> HYD -> BLR, skipped in a
-    // single-campus view) -> Zone name -> Venue name; unassigned teams at the bottom.
+    // Campus -> Team ID only — not the usual Campus/Zone/Venue/SPOC layout
+    // order, because this is precisely the tab where Zone/Venue/SPOC get
+    // assigned, so most teams here won't have one yet.
     return [...filtered].sort((a, b) => {
-      const aAssigned = a.room_id != null;
-      const bAssigned = b.room_id != null;
-      if (aAssigned !== bAssigned) return aAssigned ? -1 : 1;
-
       if (!singleCampus) {
         const campusDiff = CAMPUS_ORDER.indexOf(campusOf(a)) - CAMPUS_ORDER.indexOf(campusOf(b));
         if (campusDiff !== 0) return campusDiff;
       }
-
-      const aCtx = teamContext(a);
-      const bCtx = teamContext(b);
-      const zoneDiff = (aCtx.zoneName ?? "").localeCompare(bCtx.zoneName ?? "");
-      if (zoneDiff !== 0) return zoneDiff;
-      return (aCtx.venueName ?? "").localeCompare(bCtx.venueName ?? "");
+      return a.team_id.localeCompare(b.team_id, undefined, { numeric: true });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localTeams, localRooms, localZones, search, unassignedOnly, fCampus, fSize, fZone, fZoneMgr, fVenue, fSpoc, singleCampus]);

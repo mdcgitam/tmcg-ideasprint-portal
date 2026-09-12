@@ -6,6 +6,7 @@ import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { resolveMemberExit, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { getSignedUrl } from "@/lib/dashboard/team-actions";
 import { sortCampuses } from "@/lib/dashboard/campus-config";
+import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { canApproveExit } from "@/lib/dashboard/exit-eligibility";
 import { FilterSelect } from "./TeamFormFields";
@@ -84,7 +85,7 @@ export function ExitIndividualsView({
 
   const filteredRequests = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return localRequests.filter((r) => {
+    const filtered = localRequests.filter((r) => {
       const member = memberOf(r);
       const team = teamOf(r);
       if (statusFilter && r.status !== statusFilter) return false;
@@ -95,8 +96,16 @@ export function ExitIndividualsView({
       if (spocFilter && team?.spoc_profile_id !== spocFilter) return false;
       return true;
     });
+    return sortByLayout(filtered, {
+      singleCampus,
+      campusOf: (r) => memberOf(r)?.campus ?? null,
+      zoneNameOf: (r) => zoneOf(teamOf(r))?.name ?? null,
+      venueNameOf: (r) => roomOf(teamOf(r))?.name ?? null,
+      spocNameOf: (r) => spocNameOf(teamOf(r)),
+      idOf: (r) => memberOf(r)?.user_id ?? r.id,
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localRequests, search, statusFilter, campusFilter, zoneFilter, venueFilter, spocFilter]);
+  }, [localRequests, search, statusFilter, campusFilter, zoneFilter, venueFilter, spocFilter, singleCampus]);
 
   async function handleResolve(requestId: string, decision: "Approved" | "Rejected") {
     setBusyId(requestId);
