@@ -551,43 +551,45 @@ export function ProblemStatementsAdminSection({
           </div>
           {!viewerCampus && urlMessage && <p className="mt-2 font-heading text-xs text-ink-muted">{urlMessage}</p>}
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-5">
-            <button
-              type="button"
-              disabled={goingLive}
-              onClick={handleGoLive}
-              className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-            >
-              {goingLive ? "Going Live…" : viewerCampus ? `Go Live for ${viewerCampus}` : "Go Live for All Campuses"}
-            </button>
-            <span className="font-heading text-xs text-ink-muted">
-              {liveAt
-                ? `Live for ${viewerCampus ?? "all campuses"} since ${fmtDateTime(liveAt)}`
-                : `Not live for ${viewerCampus ?? "all campuses"} yet.`}
-            </span>
-          </div>
-          {goLiveError && <p className="mt-2 font-heading text-xs text-danger">{goLiveError}</p>}
+          <div className="mt-5 flex flex-wrap items-start gap-6 border-t border-border pt-5">
+            <div className="flex flex-col items-start gap-1.5">
+              <button
+                type="button"
+                disabled={goingLive}
+                onClick={handleGoLive}
+                className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+              >
+                {goingLive ? "Going Live…" : viewerCampus ? `Go Live for ${viewerCampus}` : "Go Live for All Campuses"}
+              </button>
+              <span className="max-w-[220px] font-heading text-xs text-ink-muted">
+                {liveAt ?? effectiveLiveAt
+                  ? `Live for ${viewerCampus ?? "all campuses"} since ${fmtDateTime(liveAt ?? effectiveLiveAt)}`
+                  : `Not live for ${viewerCampus ?? "all campuses"} yet.`}
+              </span>
+              {goLiveError && <p className="font-heading text-xs text-danger">{goLiveError}</p>}
+            </div>
 
-          <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-5">
-            <button
-              type="button"
-              disabled={togglingHidden}
-              onClick={handleToggleHidden}
-              className={`rounded-full px-6 py-2.5 font-heading text-sm font-medium transition-colors disabled:opacity-60 ${
-                hidden
-                  ? "bg-gold text-void hover:bg-gold-light"
-                  : "border border-danger/40 text-danger hover:bg-danger/10"
-              }`}
-            >
-              {togglingHidden ? "Working…" : hidden ? `Unhide for ${viewerCampus ?? "All Campuses"}` : `Hide for ${viewerCampus ?? "All Campuses"}`}
-            </button>
-            <span className="font-heading text-xs text-ink-muted">
-              {hidden
-                ? `Paused for ${viewerCampus ?? "all campuses"} — the sheet link is hidden and no new selections are accepted.`
-                : "Not paused — selection works normally for this scope."}
-            </span>
+            <div className="flex flex-col items-start gap-1.5">
+              <button
+                type="button"
+                disabled={togglingHidden}
+                onClick={handleToggleHidden}
+                className={`rounded-full px-6 py-2.5 font-heading text-sm font-medium transition-colors disabled:opacity-60 ${
+                  hidden
+                    ? "bg-gold text-void hover:bg-gold-light"
+                    : "border border-danger/40 text-danger hover:bg-danger/10"
+                }`}
+              >
+                {togglingHidden ? "Working…" : hidden ? `Unhide for ${viewerCampus ?? "All Campuses"}` : `Hide for ${viewerCampus ?? "All Campuses"}`}
+              </button>
+              <span className="max-w-[220px] font-heading text-xs text-ink-muted">
+                {hidden
+                  ? `Paused for ${viewerCampus ?? "all campuses"} — the sheet link is hidden and no new selections are accepted.`
+                  : "Not paused — selection works normally for this scope."}
+              </span>
+              {hideError && <p className="font-heading text-xs text-danger">{hideError}</p>}
+            </div>
           </div>
-          {hideError && <p className="mt-2 font-heading text-xs text-danger">{hideError}</p>}
         </div>
       ) : (
         <div className="rounded-xl border border-border bg-surface p-4">
