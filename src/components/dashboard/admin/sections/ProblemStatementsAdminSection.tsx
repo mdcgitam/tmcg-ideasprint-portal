@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type {
+  CampusCode,
   ProblemStatementExtensionRow,
   ProblemStatementRow,
   ProfileRow,
@@ -18,9 +19,14 @@ import {
   DashboardActionError,
 } from "@/lib/dashboard/admin-actions";
 import {
+  CAMPUS_ORDER,
   effectiveProblemStatementEndDetailed,
   nowDatetimeLocalValue,
+  parseProblemStatementCode,
+  problemStatementCode,
   problemStatementMaxNumber,
+  problemStatementMaxNumberKey,
+  PROBLEM_STATEMENT_PREFIX,
   sortCampuses,
 } from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
@@ -30,7 +36,6 @@ import { useTabFade } from "@/hooks/useTabFade";
 import { FilterSelect } from "./TeamFormFields";
 
 const PS_MIN = 1;
-const MAX_NUMBER_KEY = "problem_statement.max_number";
 
 type View = "team" | "analytics";
 
@@ -63,10 +68,13 @@ function configString(config: Record<string, unknown>, key: string): string | nu
 }
 
 /**
- * Problem Statements are catalogued in our DB only as bare number+status
- * rows, numbered 1 through a Super-Admin-configured ceiling
- * (problem_statement.max_number, default 50) — the actual titles/content live in an admin-provided Google
- * Sheet, browsed externally by Team Leads. The sheet URL and the "Go Live"
+ * Each campus runs its own independent problem statement track, numbered
+ * 1 through a Super-Admin-configured per-campus ceiling
+ * (problem_statement.max_number.<CAMPUS>, default 50) and distinguished by
+ * a campus-letter prefix (V1, V2… for VSP, H1… for HYD, B1… for BLR) — a
+ * team may only ever select from its own campus's track. The actual
+ * titles/content live in an admin-provided Google
+ * Sheet (one tab per campus), browsed externally by Team Leads. The sheet URL and the "Go Live"
  * release control live here (Super Admin / Campus Admin only) rather than in
  * Configuration. Until Go Live is clicked, the sheet link stays hidden from
  * Zone Manager / SPOC (here) and Team Lead / Member (on their own
@@ -120,31 +128,43 @@ export function ProblemStatementsAdminSection({
   const [goingLive, setGoingLive] = useState(false);
   const [goLiveError, setGoLiveError] = useState<string | null>(null);
 
-  // Super-Admin-only: how many problem statements exist (numbering always
-  // starts at 1) — Go Live creates exactly this many, and it's the ceiling
-  // Team Leads/admins can enter. Not campus-overridable: the PS catalog
-  // itself isn't campus-specific.
-  const [psMax, setPsMax] = useState(problemStatementMaxNumber(config));
-  const [psMaxDraft, setPsMaxDraft] = useState(String(psMax));
-  const [savingPsMax, setSavingPsMax] = useState(false);
-  const [psMaxMessage, setPsMaxMessage] = useState<string | null>(null);
+  // Super-Admin-only: how many problem statements each campus's track has
+  // (numbering always starts at 1) — Go Live creates exactly this many per
+  // campus, and it's the ceiling Team Leads/admins can enter for that
+  // campus. Independent per campus; no Campus Admin override.
+  const [psMax, setPsMax] = useState<Record<CampusCode, number>>(() => ({
+    VSP: problemStatementMaxNumber(config, "VSP"),
+    HYD: problemStatementMaxNumber(config, "HYD"),
+    BLR: problemStatementMaxNumber(config, "BLR"),
+  }));
+  const [psMaxDrafts, setPsMaxDrafts] = useState<Record<CampusCode, string>>(() => ({
+    VSP: String(psMax.VSP),
+    HYD: String(psMax.HYD),
+    BLR: String(psMax.BLR),
+  }));
+  const [savingPsMaxCampus, setSavingPsMaxCampus] = useState<CampusCode | null>(null);
+  const [psMaxMessages, setPsMaxMessages] = useState<Partial<Record<CampusCode, string>>>({});
 
-  async function handleSavePsMax() {
-    const n = Number(psMaxDraft.trim());
+  async function handleSavePsMax(campus: CampusCode) {
+    const n = Number(psMaxDrafts[campus].trim());
     if (!Number.isInteger(n) || n < 1) {
-      setPsMaxMessage("Enter a whole number of 1 or more.");
+      setPsMaxMessages((m) => ({ ...m, [campus]: "Enter a whole number of 1 or more." }));
       return;
     }
-    setSavingPsMax(true);
-    setPsMaxMessage(null);
+    setSavingPsMaxCampus(campus);
+    setPsMaxMessages((m) => ({ ...m, [campus]: "" }));
     try {
-      await setConfiguration(MAX_NUMBER_KEY, n, "Highest problem statement number (numbering starts at 1).");
-      setPsMax(n);
-      setPsMaxMessage("Saved.");
+      await setConfiguration(
+        problemStatementMaxNumberKey(campus),
+        n,
+        `Highest problem statement number for ${campus} (numbering starts at 1).`,
+      );
+      setPsMax((prev) => ({ ...prev, [campus]: n }));
+      setPsMaxMessages((m) => ({ ...m, [campus]: "Saved." }));
     } catch (err) {
-      setPsMaxMessage(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+      setPsMaxMessages((m) => ({ ...m, [campus]: err instanceof DashboardActionError ? err.message : "Something went wrong." }));
     } finally {
-      setSavingPsMax(false);
+      setSavingPsMaxCampus(null);
     }
   }
 
@@ -173,29 +193,34 @@ export function ProblemStatementsAdminSection({
     setGoingLive(true);
     setGoLiveError(null);
     try {
+      const codes = CAMPUS_ORDER.flatMap((campus) =>
+        Array.from({ length: psMax[campus] }, (_, i) => ({ campus, code: problemStatementCode(campus, PS_MIN + i) })),
+      );
       const results = await Promise.all(
-        Array.from({ length: psMax - PS_MIN + 1 }, (_, i) => String(PS_MIN + i)).map(async (number) => {
-          const existing = local.find((p) => p.number === number);
+        codes.map(async ({ campus, code }) => {
+          const existing = local.find((p) => p.number === code);
           const id = await upsertProblemStatement({
             id: existing?.id ?? null,
-            number,
-            title: existing?.title || `Problem Statement ${number}`,
+            number: code,
+            title: existing?.title || `Problem Statement ${code}`,
             description: existing?.description ?? "",
             status: "Released",
+            campus,
           });
-          return { id, number, existing };
+          return { id, code, campus, existing };
         }),
       );
 
       setLocal((prev) => {
         const next = [...prev];
-        for (const { id, number, existing } of results) {
+        for (const { id, code, campus, existing } of results) {
           const row: ProblemStatementRow = {
             id,
-            number,
-            title: existing?.title || `Problem Statement ${number}`,
+            number: code,
+            title: existing?.title || `Problem Statement ${code}`,
             description: existing?.description ?? null,
             status: "Released",
+            campus,
             created_at: existing?.created_at ?? new Date().toISOString(),
             updated_at: new Date().toISOString(),
           };
@@ -317,15 +342,18 @@ export function ProblemStatementsAdminSection({
 
   async function handlePsSave(team: TeamRow) {
     const raw = (psDrafts[team.id] ?? psNumberOf(team)).trim();
-    const n = Number(raw);
-    if (!raw || !Number.isInteger(n) || n < PS_MIN || n > psMax) {
-      setPsErrors((prev) => ({ ...prev, [team.id]: `Enter a number between ${PS_MIN} and ${psMax}.` }));
+    const prefix = PROBLEM_STATEMENT_PREFIX[team.campus];
+    const max = psMax[team.campus];
+    const parsed = parseProblemStatementCode(raw);
+    if (!raw || !parsed || parsed.campus !== team.campus || parsed.number < PS_MIN || parsed.number > max) {
+      setPsErrors((prev) => ({ ...prev, [team.id]: `Enter a code between ${prefix}${PS_MIN} and ${prefix}${max}.` }));
       return;
     }
+    const code = problemStatementCode(team.campus, parsed.number);
     setPsBusy(team.id);
     setPsErrors((prev) => ({ ...prev, [team.id]: "" }));
     try {
-      const result = await adminSetProblemStatement(team.id, String(n));
+      const result = await adminSetProblemStatement(team.id, code);
       setLocalTeams((prev) => prev.map((t) => (t.id === team.id ? { ...t, current_problem_statement_id: result.id } : t)));
       setLocal((prev) => {
         const exists = prev.find((p) => p.id === result.id);
@@ -339,6 +367,7 @@ export function ProblemStatementsAdminSection({
                 title: result.title,
                 description: null,
                 status: "Released",
+                campus: team.campus,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
               },
@@ -426,8 +455,9 @@ export function ProblemStatementsAdminSection({
 
   const analytics = useMemo(() => {
     const teamsInScope = analyticsCampus ? localTeams.filter((t) => t.campus === analyticsCampus) : localTeams;
+    const psInScope = analyticsCampus ? local.filter((p) => p.campus === analyticsCampus) : local;
     const counts = new Map<string, { number: string; count: number; teamNames: string[] }>();
-    for (const ps of local) {
+    for (const ps of psInScope) {
       counts.set(ps.id, { number: ps.number, count: 0, teamNames: [] });
     }
     for (const team of teamsInScope) {
@@ -438,11 +468,18 @@ export function ProblemStatementsAdminSection({
         entry.teamNames.push(team.team_name);
       }
     }
-    const rows = Array.from(counts.values()).sort(
-      (a, b) => Number(a.number) - Number(b.number) || a.number.localeCompare(b.number),
-    );
+    const rows = Array.from(counts.values()).sort((a, b) => {
+      const pa = parseProblemStatementCode(a.number);
+      const pb = parseProblemStatementCode(b.number);
+      if (pa && pb) {
+        const campusDiff = CAMPUS_ORDER.indexOf(pa.campus) - CAMPUS_ORDER.indexOf(pb.campus);
+        return campusDiff !== 0 ? campusDiff : pa.number - pb.number;
+      }
+      return a.number.localeCompare(b.number);
+    });
     const totalSelected = teamsInScope.filter((t) => t.current_problem_statement_id).length;
-    return { rows, totalSelected, totalTeams: teamsInScope.length };
+    const totalReleased = psInScope.filter((p) => p.status === "Released").length;
+    return { rows, totalSelected, totalTeams: teamsInScope.length, totalReleased };
   }, [local, localTeams, analyticsCampus]);
 
   return (
@@ -451,30 +488,41 @@ export function ProblemStatementsAdminSection({
         <>
           {isSuperAdmin && (
             <div className="rounded-xl border border-border bg-surface p-6">
-              <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Maximum Problem Statement Number</span>
+              <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Count (per campus)</span>
               <p className="mt-1 font-heading text-xs text-ink-muted">
-                Numbering always starts at 1 — set the highest number in the catalog. Go Live creates exactly this many, and it&rsquo;s
-                the ceiling Team Leads and admins can enter. Super Admin only; not campus-specific.
+                Each campus runs its own numbered track (V1… for VSP, H1… for HYD, B1… for BLR) — set how many each has. Go Live
+                creates exactly this many per campus, and it&rsquo;s the ceiling Team Leads and admins can enter for that campus.
+                Super Admin only.
               </p>
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <input
-                  type="number"
-                  min={1}
-                  value={psMaxDraft}
-                  onChange={(e) => setPsMaxDraft(e.target.value)}
-                  className="w-28 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-                />
-                <button
-                  type="button"
-                  disabled={savingPsMax}
-                  onClick={handleSavePsMax}
-                  className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-                >
-                  {savingPsMax ? "Saving…" : "Save"}
-                </button>
-                <span className="font-heading text-xs text-ink-muted">Currently 1–{psMax}.</span>
+              <div className="mt-3 flex flex-col gap-3">
+                {CAMPUS_ORDER.map((campus) => (
+                  <div key={campus} className="flex flex-wrap items-center gap-3">
+                    <span className="w-14 font-heading text-xs text-ink-muted">
+                      {campus} ({PROBLEM_STATEMENT_PREFIX[campus]})
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      value={psMaxDrafts[campus]}
+                      onChange={(e) => setPsMaxDrafts((prev) => ({ ...prev, [campus]: e.target.value }))}
+                      className="w-28 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                    />
+                    <button
+                      type="button"
+                      disabled={savingPsMaxCampus === campus}
+                      onClick={() => handleSavePsMax(campus)}
+                      className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                    >
+                      {savingPsMaxCampus === campus ? "Saving…" : "Save"}
+                    </button>
+                    <span className="font-heading text-xs text-ink-muted">
+                      Currently {PROBLEM_STATEMENT_PREFIX[campus]}1–{PROBLEM_STATEMENT_PREFIX[campus]}
+                      {psMax[campus]}.
+                    </span>
+                    {psMaxMessages[campus] && <span className="font-heading text-xs text-ink-muted">{psMaxMessages[campus]}</span>}
+                  </div>
+                ))}
               </div>
-              {psMaxMessage && <p className="mt-2 font-heading text-xs text-ink-muted">{psMaxMessage}</p>}
             </div>
           )}
           <div className="rounded-xl border border-border bg-surface p-6">
@@ -704,12 +752,10 @@ export function ProblemStatementsAdminSection({
                               ) : (
                                 <div className="flex items-center gap-2">
                                   <input
-                                    type="number"
-                                    min={PS_MIN}
-                                    max={psMax}
+                                    type="text"
                                     value={psDrafts[team.id] ?? psNumberOf(team)}
                                     onChange={(e) => setPsDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                                    placeholder={`${PS_MIN}–${psMax}`}
+                                    placeholder={`${PROBLEM_STATEMENT_PREFIX[team.campus]}${PS_MIN}–${PROBLEM_STATEMENT_PREFIX[team.campus]}${psMax[team.campus]}`}
                                     className="w-20 rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
                                   />
                                   <button
@@ -780,7 +826,7 @@ export function ProblemStatementsAdminSection({
               </div>
               <div className="rounded-xl border border-border bg-surface p-5">
                 <span className="font-mono text-xs tracking-[0.2em] text-ink-muted uppercase">Problem Statements Live</span>
-                <p className="mt-2 font-display text-3xl text-ink">{local.filter((p) => p.status === "Released").length}</p>
+                <p className="mt-2 font-display text-3xl text-ink">{analytics.totalReleased}</p>
               </div>
             </div>
 

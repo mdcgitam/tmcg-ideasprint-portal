@@ -3,7 +3,12 @@
 import { useState } from "react";
 import type { TeamRow, ProblemStatementRow } from "@/types/database";
 import { selectProblemStatement, DashboardActionError } from "@/lib/dashboard/team-actions";
-import { effectiveConfigValue, problemStatementMaxNumber } from "@/lib/dashboard/campus-config";
+import {
+  effectiveConfigValue,
+  parseProblemStatementCode,
+  problemStatementMaxNumber,
+  PROBLEM_STATEMENT_PREFIX,
+} from "@/lib/dashboard/campus-config";
 
 const SELECTION_START_KEY = "problem_statement.selection_start";
 const SELECTION_END_KEY = "problem_statement.selection_end";
@@ -45,20 +50,21 @@ export function ProblemStatementSection({
   const selectionStart = effectiveConfigValue(config, SELECTION_START_KEY, team.campus);
   const selectionEnd = effectiveConfigValue(config, SELECTION_END_KEY, team.campus);
   const notConfigured = !selectionStart || !selectionEnd;
-  const psMax = problemStatementMaxNumber(config);
+  const psMax = problemStatementMaxNumber(config, team.campus);
+  const psPrefix = PROBLEM_STATEMENT_PREFIX[team.campus];
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const trimmed = psNumber.trim();
-    const n = Number(trimmed);
-    if (!trimmed || !Number.isInteger(n) || n < 1 || n > psMax) {
-      setMessage({ kind: "error", text: `Enter a number between 1 and ${psMax}, exactly as listed on the sheet.` });
+    const parsed = parseProblemStatementCode(trimmed);
+    if (!trimmed || !parsed || parsed.campus !== team.campus || parsed.number < 1 || parsed.number > psMax) {
+      setMessage({ kind: "error", text: `Enter a code between ${psPrefix}1 and ${psPrefix}${psMax}, exactly as listed on your campus's sheet tab.` });
       return;
     }
     setSubmitting(true);
     setMessage(null);
     try {
-      const result = await selectProblemStatement(team.id, String(n));
+      const result = await selectProblemStatement(team.id, `${psPrefix}${parsed.number}`);
       setSelected({ number: result.number, title: result.title });
       setMessage({ kind: "success", text: "Problem statement selected." });
       setPsNumber("");
@@ -104,18 +110,16 @@ export function ProblemStatementSection({
             </p>
           ) : (
             <p className="mt-2 font-heading text-xs text-ink-muted">
-              Pick a problem statement from the sheet above and enter its number (1–{psMax}) — you can change this any
-              number of times until the selection window closes.
+              Pick a problem statement from your campus&rsquo;s tab in the sheet above and enter its code ({psPrefix}1–{psPrefix}
+              {psMax}) — you can change this any number of times until the selection window closes.
             </p>
           )}
           <div className="mt-4 flex gap-3">
             <input
-              type="number"
-              min={1}
-              max={psMax}
+              type="text"
               value={psNumber}
               onChange={(e) => setPsNumber(e.target.value)}
-              placeholder={`1–${psMax}`}
+              placeholder={`${psPrefix}1–${psPrefix}${psMax}`}
               required
               disabled={notConfigured}
               className="flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold disabled:opacity-60"

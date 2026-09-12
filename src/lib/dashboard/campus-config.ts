@@ -184,14 +184,37 @@ export function nowDatetimeLocalValue(): string {
 
 const DEFAULT_PROBLEM_STATEMENT_MAX = 50;
 
+/** Each campus runs its own independent problem statement track, numbered 1..N with a campus-letter prefix (e.g. V1, V2… for VSP). */
+export const PROBLEM_STATEMENT_PREFIX: Record<CampusCode, string> = { VSP: "V", HYD: "H", BLR: "B" };
+
+/** The config key holding a campus's problem statement count ceiling — Super Admin only, one independent value per campus (no latest-edit-wins; there's no shared global to fall back to). */
+export function problemStatementMaxNumberKey(campus: CampusCode): string {
+  return `problem_statement.max_number.${campus}`;
+}
+
 /**
- * The highest problem statement number in the catalog (numbering always
- * starts at 1) — set by the Super Admin via "problem_statement.max_number",
- * global only (not campus-overridable: the PS catalog itself isn't
- * campus-specific). Falls back to 50 until explicitly configured.
+ * The highest problem statement number in a campus's track (numbering
+ * always starts at 1) — set by the Super Admin per campus via
+ * "problem_statement.max_number.<CAMPUS>". Falls back to 50 until
+ * explicitly configured.
  */
-export function problemStatementMaxNumber(config: Record<string, unknown>): number {
-  const raw = config["problem_statement.max_number"];
+export function problemStatementMaxNumber(config: Record<string, unknown>, campus: CampusCode): number {
+  const raw = config[problemStatementMaxNumberKey(campus)];
   const n = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_PROBLEM_STATEMENT_MAX;
+}
+
+/** Builds a campus's problem statement code for number n (e.g. VSP, 5 -> "V5"). */
+export function problemStatementCode(campus: CampusCode, n: number): string {
+  return `${PROBLEM_STATEMENT_PREFIX[campus]}${n}`;
+}
+
+/** Parses a user-entered code like "v5" into its campus + number, or null if it doesn't match any campus's prefix format. Case-insensitive; trims whitespace. */
+export function parseProblemStatementCode(code: string): { campus: CampusCode; number: number } | null {
+  const match = /^([A-Za-z])\s*(\d+)$/.exec(code.trim());
+  if (!match) return null;
+  const letter = match[1].toUpperCase();
+  const campus = (Object.keys(PROBLEM_STATEMENT_PREFIX) as CampusCode[]).find((c) => PROBLEM_STATEMENT_PREFIX[c] === letter);
+  if (!campus) return null;
+  return { campus, number: Number(match[2]) };
 }

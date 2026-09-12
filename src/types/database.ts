@@ -100,6 +100,7 @@ export interface ProblemStatementRow {
   title: string;
   description: string | null;
   status: PsStatus;
+  campus: CampusCode | null;
   created_at: string;
   updated_at: string;
 }

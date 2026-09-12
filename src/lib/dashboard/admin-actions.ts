@@ -117,6 +117,7 @@ export interface UpsertProblemStatementInput {
   title: string;
   description: string;
   status: "Hidden" | "Released";
+  campus?: string | null;
 }
 
 export function upsertProblemStatement(input: UpsertProblemStatementInput) {
@@ -126,6 +127,7 @@ export function upsertProblemStatement(input: UpsertProblemStatementInput) {
     p_title: input.title,
     p_description: input.description,
     p_status: input.status,
+    p_campus: input.campus ?? null,
   });
 }
 
