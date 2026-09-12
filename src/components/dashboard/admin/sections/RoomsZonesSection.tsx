@@ -41,9 +41,10 @@ type View = "create" | "teams" | "headcount";
  *    members only, matching the Team Size convention used everywhere else.
  *    A no-show team (is_active false) contributes to neither table — the
  *    Teams tab is the one place that always lists every team regardless of
- *    status, with a Status column plus a Mark as No-Show/Mark Active
- *    toggle (0073) since this is the recovery path for late arrivals or a
- *    mistaken no-show from the Attendance page.
+ *    status, with a Participation column (badge + Mark as No-Show/Mark
+ *    Active toggle, 0073) since this is the recovery path for late
+ *    arrivals or a mistaken no-show from the Attendance page. Actions
+ *    stays Edit/Delete only so the two controls don't get cramped together.
  */
 export function RoomsZonesSection({
   campus,
@@ -1112,7 +1113,7 @@ export function RoomsZonesSection({
                     <th className="px-4 py-3">Zone Manager</th>
                     <th className="px-4 py-3">Venue</th>
                     <th className="px-4 py-3">Spoc</th>
-                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Participation</th>
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
@@ -1167,13 +1168,23 @@ export function RoomsZonesSection({
                           </td>
                           <td className="px-4 py-3 text-ink-muted">{spoc ?? "—"}</td>
                           <td className="px-4 py-3">
-                            <span
-                              className={`rounded-full border px-3 py-1 text-xs ${
-                                team.is_active ? "border-gitam/40 bg-gitam/10 text-gitam" : "border-danger/40 bg-danger/10 text-danger"
-                              }`}
-                            >
-                              {team.is_active ? "Active" : "No-Show"}
-                            </span>
+                            <div className="flex flex-col items-start gap-1.5">
+                              <span
+                                className={`rounded-full border px-3 py-1 text-xs ${
+                                  team.is_active ? "border-gitam/40 bg-gitam/10 text-gitam" : "border-danger/40 bg-danger/10 text-danger"
+                                }`}
+                              >
+                                {team.is_active ? "Active" : "No-Show"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleTeamActive(team)}
+                                disabled={busy === `active-team:${team.id}`}
+                                className={`text-xs whitespace-nowrap underline disabled:opacity-60 ${team.is_active ? "text-danger" : "text-gitam"}`}
+                              >
+                                {team.is_active ? "Mark as No-Show" : "Mark Active"}
+                              </button>
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             {editing ? (
@@ -1213,14 +1224,6 @@ export function RoomsZonesSection({
                                   className="text-xs text-danger underline disabled:opacity-60"
                                 >
                                   Delete
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleToggleTeamActive(team)}
-                                  disabled={busy === `active-team:${team.id}`}
-                                  className={`text-xs underline disabled:opacity-60 ${team.is_active ? "text-danger" : "text-gitam"}`}
-                                >
-                                  {team.is_active ? "Mark as No-Show" : "Mark Active"}
                                 </button>
                               </div>
                             )}

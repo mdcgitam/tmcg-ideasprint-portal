@@ -4,6 +4,7 @@ import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { sortCampuses } from "@/lib/dashboard/campus-config";
 import { FilterSelect, YEAR_OPTIONS } from "./TeamFormFields";
 import { MEMBER_STATUS_OPTIONS, memberStatusLabel } from "./ExitStatusBadge";
+import { PARTICIPATION_OPTIONS } from "./TeamFilterBar";
 
 export interface MemberRow {
   member: TeamMemberProfile;
@@ -28,6 +29,7 @@ export interface MemberFilters {
   room: string;
   spoc: string;
   status: string;
+  participation: string;
 }
 
 export const EMPTY_MEMBER_FILTERS: MemberFilters = {
@@ -48,6 +50,7 @@ export const EMPTY_MEMBER_FILTERS: MemberFilters = {
   room: "",
   spoc: "",
   status: "",
+  participation: "",
 };
 
 /** "View by Participants"' filter set — one row per member. Search matches User ID, Team Name, Participant Name, Reg No, Email, Phone No. */
@@ -82,6 +85,7 @@ export function filterMembers(rows: MemberRow[], filters: MemberFilters, rooms: 
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
     if (filters.status && memberStatusLabel(member) !== filters.status) return false;
+    if (filters.participation && (team.is_active ? "Participated" : "No-Show") !== filters.participation) return false;
     return true;
   });
 }
@@ -196,6 +200,12 @@ export function MembersFilterBar({
           />
         )}
         <FilterSelect label="Status" value={filters.status} onChange={(v) => set("status", v)} options={[...MEMBER_STATUS_OPTIONS]} />
+        <FilterSelect
+          label="Participation"
+          value={filters.participation}
+          onChange={(v) => set("participation", v)}
+          options={[...PARTICIPATION_OPTIONS]}
+        />
       </div>
     </div>
   );

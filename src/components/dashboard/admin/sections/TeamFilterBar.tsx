@@ -14,6 +14,7 @@ export interface TeamFilters {
   room: string;
   spoc: string;
   status: string;
+  participation: string;
 }
 
 export const EMPTY_TEAM_FILTERS: TeamFilters = {
@@ -25,7 +26,11 @@ export const EMPTY_TEAM_FILTERS: TeamFilters = {
   room: "",
   spoc: "",
   status: "",
+  participation: "",
 };
+
+/** Team-level no-show flag (0073) — distinct from the member-count-derived Status above. */
+export const PARTICIPATION_OPTIONS = ["Participated", "No-Show"] as const;
 
 /** "View by Teams"' filter set — Campus / Team Size / Zone / Zone Manager / Venue / SPOC / Status. Search matches Team Name, Team ID, Team Lead, and Lead Phone No only. */
 export function filterTeams(
@@ -57,6 +62,7 @@ export function filterTeams(
     if (filters.room && team.room_id !== filters.room) return false;
     if (filters.spoc && team.spoc_profile_id !== filters.spoc) return false;
     if (filters.status && teamActiveStatus(members) !== filters.status) return false;
+    if (filters.participation && (team.is_active ? "Participated" : "No-Show") !== filters.participation) return false;
     return true;
   });
 }
@@ -164,6 +170,12 @@ export function TeamFilterBar({
           />
         )}
         <FilterSelect label="Status" value={filters.status} onChange={(v) => set("status", v)} options={[...TEAM_STATUS_OPTIONS]} />
+        <FilterSelect
+          label="Participation"
+          value={filters.participation}
+          onChange={(v) => set("participation", v)}
+          options={[...PARTICIPATION_OPTIONS]}
+        />
       </div>
     </div>
   );

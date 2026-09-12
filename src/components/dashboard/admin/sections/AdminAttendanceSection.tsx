@@ -600,12 +600,12 @@ export function AdminAttendanceSection({
                                 <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                                 <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                                 <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
-                                <td className="px-4 py-3">
+                                <td className="px-4 py-3 whitespace-nowrap">
                                   <button
                                     type="button"
                                     disabled={noShowBusyId === team.id}
                                     onClick={() => handleMarkNoShow(team.id)}
-                                    className="rounded-full border border-danger/40 px-3 py-1.5 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
+                                    className="rounded-full border border-danger/40 px-3 py-1.5 text-xs whitespace-nowrap text-danger transition-colors hover:bg-danger/10 disabled:opacity-60"
                                   >
                                     {noShowBusyId === team.id ? "Working…" : "Mark as No-Show"}
                                   </button>
