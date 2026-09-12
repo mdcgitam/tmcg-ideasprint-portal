@@ -58,7 +58,7 @@ export function filterMembers(rows: MemberRow[], filters: MemberFilters, rooms: 
 
     if (q) {
       const haystack =
-        `${member.user_id} ${team.team_name} ${member.name} ${member.reg_no} ${member.gitam_email} ${member.phone}`.toLowerCase();
+        `${member.user_id} ${team.team_id} ${team.team_name} ${member.name} ${member.reg_no} ${member.gitam_email} ${member.phone}`.toLowerCase();
       if (!haystack.includes(q)) return false;
     }
     if (filters.campus && member.campus !== filters.campus) return false;
@@ -134,7 +134,7 @@ export function MembersFilterBar({
         <input
           value={filters.search}
           onChange={(e) => set("search", e.target.value)}
-          placeholder="Search by user ID, team name, participant name, reg no, email, or phone…"
+          placeholder="Search by user ID, team ID, team name, participant name, reg no, email, or phone…"
           className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
         />
         {extraActions}

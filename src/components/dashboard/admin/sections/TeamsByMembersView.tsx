@@ -92,9 +92,10 @@ export function TeamsByMembersView({
       "all-members",
       filteredRows.map(({ member: m, team }) => ({
         ...(singleCampus ? {} : { Campus: m.campus }),
-        "User ID": m.user_id,
+        "Team ID": team.team_id,
         "Team Name": team.team_name,
         "Team Size": String(teamSize(team)),
+        "User ID": m.user_id,
         "Participant Name": m.name,
         Position: m.is_lead ? "Team Lead" : "Member",
         "Reg No": m.reg_no,
@@ -165,9 +166,10 @@ export function TeamsByMembersView({
             <thead>
               <tr className="border-b border-border bg-gold text-xs text-void uppercase">
                 {!singleCampus && <th className="px-4 py-3">Campus</th>}
-                <th className="px-4 py-3">User ID</th>
+                <th className="px-4 py-3">Team ID</th>
                 <th className="px-4 py-3">Team Name</th>
                 <th className="px-4 py-3">Team Size</th>
+                <th className="px-4 py-3">User ID</th>
                 <th className="px-4 py-3">Participant Name</th>
                 <th className="px-4 py-3">Position</th>
                 <th className="px-4 py-3">Reg No</th>
@@ -200,9 +202,10 @@ export function TeamsByMembersView({
                       return (
                         <tr key={m.id} className="border-b border-border align-top last:border-0">
                           {!singleCampus && <td className="px-4 py-3 text-ink-muted">{m.campus}</td>}
-                          <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
+                          <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                           <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
                           <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
+                          <td className="px-4 py-3 text-ink-muted">{m.user_id}</td>
                           <td className="px-4 py-3 text-ink">{m.name}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.is_lead ? "Team Lead" : "Member"}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
