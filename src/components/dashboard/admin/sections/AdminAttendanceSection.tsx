@@ -2,7 +2,7 @@
 
 import { Fragment, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
-import type { AttendanceRow, AttendanceSessionRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
+import type { AttendanceRow, AttendanceSessionRow, CampusCode, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { recordAttendance, createAttendanceSession, DashboardActionError } from "@/lib/dashboard/admin-actions";
 import { sortCampuses } from "@/lib/dashboard/campus-config";
@@ -67,12 +67,15 @@ function uniqueValues(values: (string | undefined | null)[]): string[] {
 }
 
 /**
- * Attendance sessions are global — shared by all 3 campuses, no per-campus
- * list — so only Super Admin viewing "All" can add one (canAddSession),
- * keeping every campus on the same session lineup instead of each Campus
- * Admin creating their own. Marking attendance is separate: SPOC for their
- * own assigned teams (RLS-scoped), Campus Admin/Super Admin for any team
- * in scope (record_attendance's own role checks).
+ * Only Super Admin can add a session (canAddSession) — never Campus Admin,
+ * keeping campuses from drifting apart. A session created while viewing
+ * "All" (addSessionCampus null) applies to every campus; one created while
+ * a specific campus module is selected is scoped to just that campus, and
+ * only shows there (and in "All", never — a campus-scoped session can't
+ * apply to the other campuses' rows in that merged view). Marking
+ * attendance is separate: SPOC for their own assigned teams (RLS-scoped),
+ * Campus Admin/Super Admin for any team in scope (record_attendance's own
+ * role checks).
  */
 export function AdminAttendanceSection({
   teams,
@@ -88,6 +91,7 @@ export function AdminAttendanceSection({
   hideVenueFilter = false,
   hideSpocFilter = false,
   canAddSession = false,
+  addSessionCampus = null,
 }: {
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
@@ -102,6 +106,7 @@ export function AdminAttendanceSection({
   hideVenueFilter?: boolean;
   hideSpocFilter?: boolean;
   canAddSession?: boolean;
+  addSessionCampus?: CampusCode | null;
 }) {
   const [localSessions, setLocalSessions] = useState(attendanceSessions);
   const [localAttendance, setLocalAttendance] = useState(attendance);
@@ -139,10 +144,10 @@ export function AdminAttendanceSection({
     setCreating(true);
     setError(null);
     try {
-      const id = await createAttendanceSession(sessionName.trim(), null, null, localSessions.length);
+      const id = await createAttendanceSession(sessionName.trim(), null, null, localSessions.length, addSessionCampus);
       setLocalSessions((prev) => [
         ...prev,
-        { id, name: sessionName.trim(), starts_at: null, ends_at: null, sort_order: prev.length },
+        { id, name: sessionName.trim(), starts_at: null, ends_at: null, sort_order: prev.length, campus: addSessionCampus },
       ]);
       setSessionName("");
     } catch (err) {
@@ -384,20 +389,27 @@ export function AdminAttendanceSection({
   return (
     <div className="flex flex-col gap-6">
       {canAddSession && (
-        <form onSubmit={handleCreateSession} className="flex gap-3 rounded-xl border border-border bg-surface p-5">
-          <input
-            value={sessionName}
-            onChange={(e) => setSessionName(e.target.value)}
-            placeholder="Session name, e.g. Session 1"
-            className="flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
-          />
-          <button
-            type="submit"
-            disabled={creating}
-            className="rounded-full bg-gold px-6 py-2 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-          >
-            {creating ? "Adding…" : "Add Session"}
-          </button>
+        <form onSubmit={handleCreateSession} className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-5">
+          <div className="flex gap-3">
+            <input
+              value={sessionName}
+              onChange={(e) => setSessionName(e.target.value)}
+              placeholder="Session name, e.g. Session 1"
+              className="flex-1 rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+            />
+            <button
+              type="submit"
+              disabled={creating}
+              className="rounded-full bg-gold px-6 py-2 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+            >
+              {creating ? "Adding…" : "Add Session"}
+            </button>
+          </div>
+          <span className="font-heading text-xs text-ink-muted">
+            {addSessionCampus
+              ? `This session will only apply to ${addSessionCampus}.`
+              : "This session will apply to all 3 campuses. Switch to a campus module to add one for that campus only."}
+          </span>
         </form>
       )}
 

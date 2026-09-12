@@ -213,7 +213,13 @@ export async function fetchAdminDashboardData(
     teams: scopedTeams,
     membersByTeam: scopedMembersByTeam,
     pendingApprovals: scopedPendingApprovals,
-    attendanceSessions: (attendanceSessions ?? []) as AttendanceSessionRow[],
+    // A session with campus = null applies to all 3 campuses; a
+    // campus-scoped one only shows to that campus (or to a Super Admin
+    // who has that specific module selected) — never merged into the "All"
+    // view, since it wouldn't apply to the other campuses' rows there.
+    attendanceSessions: ((attendanceSessions ?? []) as AttendanceSessionRow[]).filter((s) =>
+      selectedCampus == null ? s.campus == null : s.campus == null || s.campus === selectedCampus,
+    ),
     attendance: scopedAttendance,
     idCardCertRecords: scopedIdCardCertRecords,
     nocs: scopedNocs,

@@ -130,6 +130,7 @@ export interface AttendanceSessionRow {
   starts_at: string | null;
   ends_at: string | null;
   sort_order: number;
+  campus: CampusCode | null;
 }
 
 export interface AttendanceRow {

@@ -143,7 +143,9 @@ export default async function TeamDashboardPage() {
       members={members}
       nocs={(nocRows ?? []) as NocRow[]}
       attendance={(attendanceRows ?? []) as AttendanceRow[]}
-      attendanceSessions={(attendanceSessionRows ?? []) as AttendanceSessionRow[]}
+      attendanceSessions={((attendanceSessionRows ?? []) as AttendanceSessionRow[]).filter(
+        (s) => s.campus == null || s.campus === teamRow.campus,
+      )}
       exitRequests={(exitRequestRows ?? []) as ExitRequestRow[]}
       notifications={(notificationRows ?? []) as NotificationRow[]}
       presentation={(presentationRow ?? null) as PresentationRow | null}

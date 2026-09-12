@@ -86,12 +86,20 @@ export function recordIdCardCertificate(item: "ID Card" | "Certificate", profile
   return callRpc<null>("record_id_card_certificate", { p_item: item, p_profile_id: profileId, p_status: status });
 }
 
-export function createAttendanceSession(name: string, startsAt: string | null, endsAt: string | null, sortOrder: number) {
+/** campus null = applies to all 3 campuses; a specific campus scopes the session to just that one. */
+export function createAttendanceSession(
+  name: string,
+  startsAt: string | null,
+  endsAt: string | null,
+  sortOrder: number,
+  campus: string | null,
+) {
   return callRpc<string>("create_attendance_session", {
     p_name: name,
     p_starts_at: startsAt,
     p_ends_at: endsAt,
     p_sort_order: sortOrder,
+    p_campus: campus,
   });
 }
 
