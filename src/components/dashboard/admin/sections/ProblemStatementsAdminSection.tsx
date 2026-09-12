@@ -135,19 +135,20 @@ export function ProblemStatementsAdminSection({
 
   // The spreadsheet URL is one shared global value, editable only from
   // "All" — frozen (read-only) while viewing a specific campus module, so
-  // there's never a divergent link per campus. Only Go Live is genuinely
-  // independent per campus.
+  // there's never a divergent link per campus. Only Go Live/Hide is
+  // genuinely independent per campus.
   const [spreadsheetUrl, setSpreadsheetUrl] = useState(configString(config, URL_KEY) ?? "");
   const [savingUrl, setSavingUrl] = useState(false);
   const [urlMessage, setUrlMessage] = useState<string | null>(null);
   const [liveAt, setLiveAt] = useState(configString(config, writeKeyFor(LIVE_AT_KEY)));
-  const [goingLive, setGoingLive] = useState(false);
-  const [goLiveError, setGoLiveError] = useState<string | null>(null);
 
   // What everyone else (Campus Admin, SPOC, Zone Manager) actually sees:
   // the shared URL, revealed once their own campus's live_at is set (or
   // the global one, if that campus never got its own).
   const effectiveLiveAt = campusOverrideValue(config, LIVE_AT_KEY, viewerCampus);
+  // "Has this scope ever gone live" — local optimistic value if this
+  // session already changed it, else whatever's effective from config.
+  const isLive = !!(liveAt ?? effectiveLiveAt);
 
   // Super-Admin-only pause: blocks new selections and hides the sheet link
   // for this scope without touching the already-created catalog or any
@@ -156,31 +157,21 @@ export function ProblemStatementsAdminSection({
   // record. Same campus-override-wins rule as the URL/live_at.
   const HIDDEN_KEY = "problem_statement.hidden";
   const [hidden, setHidden] = useState(campusOverrideBoolean(config, HIDDEN_KEY, viewerCampus));
-  const [togglingHidden, setTogglingHidden] = useState(false);
-  const [hideError, setHideError] = useState<string | null>(null);
 
-  async function handleToggleHidden() {
-    const next = !hidden;
-    setTogglingHidden(true);
-    setHideError(null);
-    try {
-      await setConfiguration(
-        writeKeyFor(HIDDEN_KEY),
-        next,
-        next ? "Problem statement selection temporarily paused." : "Problem statement selection resumed.",
-      );
-      setHidden(next);
-    } catch (err) {
-      setHideError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
-    } finally {
-      setTogglingHidden(false);
-    }
-  }
+  // One button covers all three states — go live, hide, unhide — instead
+  // of a separate Go Live button that stays active (and confusing) forever
+  // after the first click: !isLive -> "Go Live"; isLive && !hidden ->
+  // "Hide"; isLive && hidden -> "Unhide". Unhiding re-syncs the catalog
+  // too, so raising a campus's problem statement count while paused still
+  // gets picked up without needing a separate "re-run Go Live" step.
+  const primaryAction: "go-live" | "hide" | "unhide" = !isLive ? "go-live" : hidden ? "unhide" : "hide";
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Each campus's problem statement count ceiling (numbering starts at 1)
-  // — Super-Admin-set from the Configuration page, read-only here. Go Live
-  // creates exactly this many per campus, and it's the ceiling Team
-  // Leads/admins can enter for that campus.
+  // — Super-Admin-set from the Configuration page, read-only here. Going
+  // live/unhiding creates/catches up exactly this many per campus, and
+  // it's the ceiling Team Leads/admins can enter for that campus.
   const psMax: Record<CampusCode, number> = {
     VSP: problemStatementMaxNumber(config, "VSP"),
     HYD: problemStatementMaxNumber(config, "HYD"),
@@ -200,68 +191,81 @@ export function ProblemStatementsAdminSection({
     }
   }
 
-  async function handleGoLive() {
-    const selectionStart = effectiveConfigValue(config, "problem_statement.selection_start", viewerCampus);
-    const selectionEnd = effectiveConfigValue(config, "problem_statement.selection_end", viewerCampus);
-    if (!selectionStart || !selectionEnd) {
-      setGoLiveError("Set the selection window (start & end) in Configuration before going live.");
-      return;
+  /** Creates/updates every problem statement this scope should have, matching the currently configured per-campus count. Idempotent — safe to call on both first Go Live and on Unhide (to catch up a count raised while paused). */
+  async function syncCatalog() {
+    const campusesToRelease = viewerCampus ? [viewerCampus] : CAMPUS_ORDER;
+    const codes = campusesToRelease.flatMap((campus) =>
+      Array.from({ length: psMax[campus] }, (_, i) => ({ campus, code: problemStatementCode(campus, PS_MIN + i) })),
+    );
+    const results = await Promise.all(
+      codes.map(async ({ campus, code }) => {
+        const existing = local.find((p) => p.number === code);
+        const id = await upsertProblemStatement({
+          id: existing?.id ?? null,
+          number: code,
+          title: existing?.title || `Problem Statement ${code}`,
+          description: existing?.description ?? "",
+          status: "Released",
+          campus,
+        });
+        return { id, code, campus, existing };
+      }),
+    );
+
+    setLocal((prev) => {
+      const next = [...prev];
+      for (const { id, code, campus, existing } of results) {
+        const row: ProblemStatementRow = {
+          id,
+          number: code,
+          title: existing?.title || `Problem Statement ${code}`,
+          description: existing?.description ?? null,
+          status: "Released",
+          campus,
+          created_at: existing?.created_at ?? new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        const idx = next.findIndex((p) => p.id === id);
+        if (idx >= 0) next[idx] = row;
+        else next.push(row);
+      }
+      return next;
+    });
+  }
+
+  async function handlePrimaryAction() {
+    if (primaryAction === "go-live") {
+      const selectionStart = effectiveConfigValue(config, "problem_statement.selection_start", viewerCampus);
+      const selectionEnd = effectiveConfigValue(config, "problem_statement.selection_end", viewerCampus);
+      if (!selectionStart || !selectionEnd) {
+        setActionError("Set the selection window (start & end) in Configuration before going live.");
+        return;
+      }
+      if (!spreadsheetUrl.trim()) {
+        setActionError("Add the spreadsheet URL from the \"All\" module before going live.");
+        return;
+      }
     }
-    if (!spreadsheetUrl.trim()) {
-      setGoLiveError("Add the spreadsheet URL from the \"All\" module before going live.");
-      return;
-    }
-    setGoingLive(true);
-    setGoLiveError(null);
+    setBusy(true);
+    setActionError(null);
     try {
-      // "All" releases every campus's track; a specific module releases
-      // only that one campus, leaving the others untouched.
-      const campusesToRelease = viewerCampus ? [viewerCampus] : CAMPUS_ORDER;
-      const codes = campusesToRelease.flatMap((campus) =>
-        Array.from({ length: psMax[campus] }, (_, i) => ({ campus, code: problemStatementCode(campus, PS_MIN + i) })),
-      );
-      const results = await Promise.all(
-        codes.map(async ({ campus, code }) => {
-          const existing = local.find((p) => p.number === code);
-          const id = await upsertProblemStatement({
-            id: existing?.id ?? null,
-            number: code,
-            title: existing?.title || `Problem Statement ${code}`,
-            description: existing?.description ?? "",
-            status: "Released",
-            campus,
-          });
-          return { id, code, campus, existing };
-        }),
-      );
-
-      setLocal((prev) => {
-        const next = [...prev];
-        for (const { id, code, campus, existing } of results) {
-          const row: ProblemStatementRow = {
-            id,
-            number: code,
-            title: existing?.title || `Problem Statement ${code}`,
-            description: existing?.description ?? null,
-            status: "Released",
-            campus,
-            created_at: existing?.created_at ?? new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          };
-          const idx = next.findIndex((p) => p.id === id);
-          if (idx >= 0) next[idx] = row;
-          else next.push(row);
-        }
-        return next;
-      });
-
-      const nowIso = new Date().toISOString();
-      await setConfiguration(writeKeyFor(LIVE_AT_KEY), nowIso, "When problem statements were released (Go Live).");
-      setLiveAt(nowIso);
+      if (primaryAction === "go-live") {
+        await syncCatalog();
+        const nowIso = new Date().toISOString();
+        await setConfiguration(writeKeyFor(LIVE_AT_KEY), nowIso, "When problem statements were released (Go Live).");
+        setLiveAt(nowIso);
+      } else if (primaryAction === "unhide") {
+        await syncCatalog();
+        await setConfiguration(writeKeyFor(HIDDEN_KEY), false, "Problem statement selection resumed.");
+        setHidden(false);
+      } else {
+        await setConfiguration(writeKeyFor(HIDDEN_KEY), true, "Problem statement selection temporarily paused.");
+        setHidden(true);
+      }
     } catch (err) {
-      setGoLiveError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
+      setActionError(err instanceof DashboardActionError ? err.message : "Something went wrong.");
     } finally {
-      setGoingLive(false);
+      setBusy(false);
     }
   }
 
@@ -551,44 +555,33 @@ export function ProblemStatementsAdminSection({
           </div>
           {!viewerCampus && urlMessage && <p className="mt-2 font-heading text-xs text-ink-muted">{urlMessage}</p>}
 
-          <div className="mt-5 flex flex-wrap items-start gap-6 border-t border-border pt-5">
-            <div className="flex flex-col items-start gap-1.5">
-              <button
-                type="button"
-                disabled={goingLive}
-                onClick={handleGoLive}
-                className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-              >
-                {goingLive ? "Going Live…" : viewerCampus ? `Go Live for ${viewerCampus}` : "Go Live for All Campuses"}
-              </button>
-              <span className="max-w-[220px] font-heading text-xs text-ink-muted">
-                {liveAt ?? effectiveLiveAt
-                  ? `Live for ${viewerCampus ?? "all campuses"} since ${fmtDateTime(liveAt ?? effectiveLiveAt)}`
-                  : `Not live for ${viewerCampus ?? "all campuses"} yet.`}
-              </span>
-              {goLiveError && <p className="font-heading text-xs text-danger">{goLiveError}</p>}
-            </div>
-
-            <div className="flex flex-col items-start gap-1.5">
-              <button
-                type="button"
-                disabled={togglingHidden}
-                onClick={handleToggleHidden}
-                className={`rounded-full px-6 py-2.5 font-heading text-sm font-medium transition-colors disabled:opacity-60 ${
-                  hidden
-                    ? "bg-gold text-void hover:bg-gold-light"
-                    : "border border-danger/40 text-danger hover:bg-danger/10"
-                }`}
-              >
-                {togglingHidden ? "Working…" : hidden ? `Unhide for ${viewerCampus ?? "All Campuses"}` : `Hide for ${viewerCampus ?? "All Campuses"}`}
-              </button>
-              <span className="max-w-[220px] font-heading text-xs text-ink-muted">
-                {hidden
-                  ? `Paused for ${viewerCampus ?? "all campuses"} — the sheet link is hidden and no new selections are accepted.`
-                  : "Not paused — selection works normally for this scope."}
-              </span>
-              {hideError && <p className="font-heading text-xs text-danger">{hideError}</p>}
-            </div>
+          <div className="mt-5 flex flex-col items-start gap-1.5 border-t border-border pt-5">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={handlePrimaryAction}
+              className={`rounded-full px-6 py-2.5 font-heading text-sm font-medium transition-colors disabled:opacity-60 ${
+                primaryAction === "hide"
+                  ? "border border-danger/40 text-danger hover:bg-danger/10"
+                  : "bg-gold text-void hover:bg-gold-light"
+              }`}
+            >
+              {busy
+                ? "Working…"
+                : primaryAction === "go-live"
+                  ? `Go Live for ${viewerCampus ?? "All Campuses"}`
+                  : primaryAction === "unhide"
+                    ? `Unhide for ${viewerCampus ?? "All Campuses"}`
+                    : `Hide for ${viewerCampus ?? "All Campuses"}`}
+            </button>
+            <span className="max-w-md font-heading text-xs text-ink-muted">
+              {!isLive
+                ? `Not live for ${viewerCampus ?? "all campuses"} yet.`
+                : hidden
+                  ? `Live since ${fmtDateTime(liveAt ?? effectiveLiveAt)} — currently paused, the sheet link is hidden and no new selections are accepted.`
+                  : `Live for ${viewerCampus ?? "all campuses"} since ${fmtDateTime(liveAt ?? effectiveLiveAt)}.`}
+            </span>
+            {actionError && <p className="font-heading text-xs text-danger">{actionError}</p>}
           </div>
         </div>
       ) : (
