@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import type { NocRow, ProblemStatementRow, ProfileRow, RoomRow, TeamRow, ZoneRow } from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { extendNocDeadline, DashboardActionError } from "@/lib/dashboard/team-actions";
-import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
+import { effectiveNocDeadlineDetailed, sortCampuses } from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
@@ -16,8 +16,6 @@ function toDatetimeLocal(iso: string | null | undefined): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-
-const GENERAL_DEADLINE_KEY = "noc.general_deadline";
 
 /** "Teams" view of the NOC page (NOC1/NOC2 reference) — one row per team. Attendance lives on the Attendance page only, not duplicated here. */
 export function NocTeamsView({
@@ -96,14 +94,15 @@ export function NocTeamsView({
   function teamDeadline(team: TeamRow): { display: string; iso: string | null; mixed: boolean; expired: boolean; isGeneral: boolean } {
     const members = membersByTeam[team.id] ?? [];
     if (members.length === 0) return { display: "—", iso: null, mixed: false, expired: false, isGeneral: false };
-    const generalDeadline = effectiveConfigValue(config, GENERAL_DEADLINE_KEY, team.campus);
-    const overrides = members.map((m) => localNocs.find((n) => n.profile_id === m.id)?.deadline ?? null);
-    const effective = overrides.map((d) => d ?? generalDeadline);
-    const allSame = effective.every((d) => d === effective[0]);
-    const anyExpired = effective.some((d) => d && new Date(d) < new Date());
-    const isGeneral = overrides.every((d) => !d) && !!generalDeadline;
+    const effective = members.map((m) => {
+      const noc = localNocs.find((n) => n.profile_id === m.id);
+      return effectiveNocDeadlineDetailed(config, team.campus, noc?.deadline, noc?.deadline_updated_at);
+    });
+    const allSame = effective.every((d) => d.value === effective[0].value);
+    const anyExpired = effective.some((d) => d.value && new Date(d.value) < new Date());
+    const isGeneral = effective.every((d) => !d.fromIndividualOverride);
     if (!allSame) return { display: "Mixed", iso: null, mixed: true, expired: anyExpired, isGeneral: false };
-    const iso = effective[0];
+    const iso = effective[0].value;
     if (!iso) return { display: "Not set", iso: null, mixed: false, expired: false, isGeneral: false };
     return {
       display: new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
@@ -177,15 +176,16 @@ export function NocTeamsView({
     setBulkError(null);
     try {
       const deadlineIso = new Date(bulkDeadline).toISOString();
+      const now = new Date().toISOString();
       const profileIds = Array.from(selected).flatMap((teamId) => (membersByTeam[teamId] ?? []).map((m) => m.id));
       await Promise.all(profileIds.map((id) => extendNocDeadline(id, deadlineIso)));
       setLocalNocs((prev) => {
         const touched = new Set(profileIds);
-        const updated = prev.map((n) => (touched.has(n.profile_id) ? { ...n, deadline: deadlineIso } : n));
+        const updated = prev.map((n) => (touched.has(n.profile_id) ? { ...n, deadline: deadlineIso, deadline_updated_at: now } : n));
         const missing = profileIds.filter((id) => !prev.some((n) => n.profile_id === id));
         return [
           ...updated,
-          ...missing.map((id) => ({ profile_id: id, status: "Not Uploaded", file_path: null, deadline: deadlineIso }) as NocRow),
+          ...missing.map((id) => ({ profile_id: id, status: "Not Uploaded", file_path: null, deadline: deadlineIso, deadline_updated_at: now }) as NocRow),
         ];
       });
       setSelected(new Set());
@@ -204,15 +204,16 @@ export function NocTeamsView({
     setRowErrors((prev) => ({ ...prev, [team.id]: "" }));
     try {
       const deadlineIso = new Date(value).toISOString();
+      const now = new Date().toISOString();
       const profileIds = (membersByTeam[team.id] ?? []).map((m) => m.id);
       await Promise.all(profileIds.map((id) => extendNocDeadline(id, deadlineIso)));
       setLocalNocs((prev) => {
         const touched = new Set(profileIds);
-        const updated = prev.map((n) => (touched.has(n.profile_id) ? { ...n, deadline: deadlineIso } : n));
+        const updated = prev.map((n) => (touched.has(n.profile_id) ? { ...n, deadline: deadlineIso, deadline_updated_at: now } : n));
         const missing = profileIds.filter((id) => !prev.some((n) => n.profile_id === id));
         return [
           ...updated,
-          ...missing.map((id) => ({ profile_id: id, status: "Not Uploaded", file_path: null, deadline: deadlineIso }) as NocRow),
+          ...missing.map((id) => ({ profile_id: id, status: "Not Uploaded", file_path: null, deadline: deadlineIso, deadline_updated_at: now }) as NocRow),
         ];
       });
     } catch (err) {
@@ -235,9 +236,9 @@ export function NocTeamsView({
         return {
           ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
           "Team Name": team.team_name,
+          "Team Size": String(teamSize(team)),
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
-          "Team Size": String(teamSize(team)),
           Zone: zone?.name ?? "Unassigned",
           "Zone Manager": zoneManagerName(zone) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
@@ -367,9 +368,9 @@ export function NocTeamsView({
                 <th className="px-4 py-3" />
                 {!singleCampus && <th className="px-4 py-3">Campus</th>}
                 <th className="px-4 py-3">Team Name</th>
+                <th className="px-4 py-3">Team Size</th>
                 <th className="px-4 py-3">Team Lead</th>
                 <th className="px-4 py-3">Lead Phone No</th>
-                <th className="px-4 py-3">Team Size</th>
                 <th className="px-4 py-3">Zone</th>
                 <th className="px-4 py-3">Zone Manager</th>
                 <th className="px-4 py-3">Venue</th>
@@ -400,9 +401,9 @@ export function NocTeamsView({
                     </td>
                     {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
                     <td className="px-4 py-3 text-ink">{team.team_name}</td>
+                    <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>

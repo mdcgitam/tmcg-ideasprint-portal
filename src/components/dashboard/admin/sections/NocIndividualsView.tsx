@@ -13,12 +13,10 @@ import {
   uploadNocFile,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
-import { effectiveConfigValue, sortCampuses } from "@/lib/dashboard/campus-config";
+import { effectiveNocDeadlineDetailed, sortCampuses } from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
-
-const GENERAL_DEADLINE_KEY = "noc.general_deadline";
 
 /** Same Completed/Pending vocabulary as the Teams tab's Status column — "Uploaded"/"Not Uploaded" stays the underlying stored value. */
 function statusLabel(raw: "Uploaded" | "Not Uploaded" | "Verified" | "Missing"): "Completed" | "Pending" {
@@ -97,9 +95,10 @@ export function NocIndividualsView({
     [teams, membersByTeam],
   );
 
-  function generalDeadlineFor(profileId: string): string | null {
+  function effectiveDeadlineFor(profileId: string): { value: string | null; fromIndividualOverride: boolean } {
     const campus = allRows.find((r) => r.member.id === profileId)?.member.campus ?? null;
-    return effectiveConfigValue(config, GENERAL_DEADLINE_KEY, campus);
+    const noc = nocOf(profileId);
+    return effectiveNocDeadlineDetailed(config, campus, noc?.deadline, noc?.deadline_updated_at);
   }
 
   const campusOptions = useMemo(
@@ -150,9 +149,10 @@ export function NocIndividualsView({
     setBulkError(null);
     try {
       const deadlineIso = new Date(bulkDeadline).toISOString();
+      const now = new Date().toISOString();
       await Promise.all(Array.from(selected).map((id) => extendNocDeadline(id, deadlineIso)));
       setLocalNocs((prev) =>
-        prev.map((n) => (selected.has(n.profile_id) ? { ...n, deadline: deadlineIso } : n)),
+        prev.map((n) => (selected.has(n.profile_id) ? { ...n, deadline: deadlineIso, deadline_updated_at: now } : n)),
       );
       setSelected(new Set());
       setBulkDeadline("");
@@ -164,18 +164,22 @@ export function NocIndividualsView({
   }
 
   async function handleRowExtend(profileId: string) {
-    const value = rowDeadlines[profileId] ?? toDatetimeLocal(nocOf(profileId)?.deadline ?? generalDeadlineFor(profileId));
+    const value = rowDeadlines[profileId] ?? toDatetimeLocal(effectiveDeadlineFor(profileId).value);
     if (!value) return;
     setRowBusy(profileId);
     setRowErrors((prev) => ({ ...prev, [profileId]: "" }));
     try {
       const deadlineIso = new Date(value).toISOString();
+      const now = new Date().toISOString();
       await extendNocDeadline(profileId, deadlineIso);
       setLocalNocs((prev) => {
         const exists = prev.find((n) => n.profile_id === profileId);
         return exists
-          ? prev.map((n) => (n.profile_id === profileId ? { ...n, deadline: deadlineIso } : n))
-          : [...prev, { profile_id: profileId, status: "Not Uploaded", file_path: null, deadline: deadlineIso } as NocRow];
+          ? prev.map((n) => (n.profile_id === profileId ? { ...n, deadline: deadlineIso, deadline_updated_at: now } : n))
+          : [
+              ...prev,
+              { profile_id: profileId, status: "Not Uploaded", file_path: null, deadline: deadlineIso, deadline_updated_at: now } as NocRow,
+            ];
       });
     } catch (err) {
       setRowErrors((prev) => ({
@@ -212,7 +216,7 @@ export function NocIndividualsView({
         const exists = prev.find((n) => n.profile_id === profileId);
         return exists
           ? prev.map((n) => (n.profile_id === profileId ? { ...n, status: "Uploaded", file_path: path } : n))
-          : [...prev, { profile_id: profileId, status: "Uploaded", file_path: path, deadline: null } as NocRow];
+          : [...prev, { profile_id: profileId, status: "Uploaded", file_path: path, deadline: null, deadline_updated_at: null } as NocRow];
       });
       router.refresh(); // reconcile with server truth so the row can't silently drift
     } catch (err) {
@@ -255,14 +259,11 @@ export function NocIndividualsView({
   }
 
   function deadlineDisplay(profileId: string): string {
-    const noc = nocOf(profileId);
-    const generalDeadline = generalDeadlineFor(profileId);
-    const currentDeadline = noc?.deadline ?? generalDeadline;
+    const { value: currentDeadline, fromIndividualOverride } = effectiveDeadlineFor(profileId);
     if (!currentDeadline) return "Not set";
-    const isGeneral = !noc?.deadline && !!generalDeadline;
     const expired = new Date(currentDeadline) < new Date();
     const formatted = new Date(currentDeadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
-    return `${formatted}${isGeneral ? " (General)" : ""}${expired ? " — Time exceeded" : ""}`;
+    return `${formatted}${!fromIndividualOverride ? " (General)" : ""}${expired ? " — Time exceeded" : ""}`;
   }
 
   function handleExportCsv() {
@@ -428,7 +429,12 @@ export function NocIndividualsView({
                 const uploaded = noc?.status === "Uploaded" && noc.file_path;
                 const busy = rowBusy === member.id;
                 const rowError = rowErrors[member.id];
-                const generalDeadline = effectiveConfigValue(config, GENERAL_DEADLINE_KEY, member.campus);
+                const { value: currentDeadline, fromIndividualOverride } = effectiveNocDeadlineDetailed(
+                  config,
+                  member.campus,
+                  noc?.deadline,
+                  noc?.deadline_updated_at,
+                );
                 return (
                   <tr key={member.id} className="border-b border-border align-top last:border-0">
                     <td className="px-4 py-3">
@@ -499,8 +505,7 @@ export function NocIndividualsView({
                     <td className="px-4 py-3">
                       <div className="flex flex-col gap-1">
                         {(() => {
-                          const currentDeadline = noc?.deadline ?? generalDeadline;
-                          const isGeneral = !noc?.deadline && !!generalDeadline;
+                          const isGeneral = !fromIndividualOverride;
                           const expired = !!currentDeadline && new Date(currentDeadline) < new Date();
                           return (
                             <span className={`font-heading text-[11px] ${expired ? "text-danger" : "text-ink-muted"}`}>
@@ -519,17 +524,17 @@ export function NocIndividualsView({
                         <div className="flex items-center gap-1">
                           <input
                             type="datetime-local"
-                            value={rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline)}
+                            value={rowDeadlines[member.id] ?? toDatetimeLocal(currentDeadline)}
                             onChange={(e) => setRowDeadlines((prev) => ({ ...prev, [member.id]: e.target.value }))}
                             className="rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
                           />
                           <button
                             type="button"
-                            disabled={busy || !(rowDeadlines[member.id] ?? toDatetimeLocal(noc?.deadline ?? generalDeadline))}
+                            disabled={busy || !(rowDeadlines[member.id] ?? toDatetimeLocal(currentDeadline))}
                             onClick={() => handleRowExtend(member.id)}
                             className="w-fit shrink-0 rounded-full border border-gold/50 px-3 py-1 font-heading text-[11px] font-medium text-gold transition-colors hover:bg-gold/10 disabled:opacity-60"
                           >
-                            {noc?.deadline ?? generalDeadline ? "Update" : "Extend"}
+                            {currentDeadline ? "Update" : "Extend"}
                           </button>
                         </div>
                         {rowError && <span className="font-heading text-[11px] text-danger">{rowError}</span>}

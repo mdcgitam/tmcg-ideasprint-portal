@@ -11,10 +11,9 @@ import {
   getSignedUrl,
   DashboardActionError,
 } from "@/lib/dashboard/team-actions";
-import { effectiveConfigValue } from "@/lib/dashboard/campus-config";
+import { effectiveNocDeadline } from "@/lib/dashboard/campus-config";
 
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
-const GENERAL_DEADLINE_KEY = "noc.general_deadline";
 
 /**
  * SPEC §39-48: every participant has an individual NOC. Team Lead can
@@ -51,7 +50,8 @@ export function NocSection({
   }
 
   function effectiveDeadlineFor(profileId: string, campus: CampusCode | null): string | null {
-    return nocFor(profileId)?.deadline ?? effectiveConfigValue(config, GENERAL_DEADLINE_KEY, campus);
+    const noc = nocFor(profileId);
+    return effectiveNocDeadline(config, campus, noc?.deadline, noc?.deadline_updated_at);
   }
 
   async function handleUpload(profileId: string, campus: CampusCode | null, file: File) {
@@ -88,6 +88,7 @@ export function NocSection({
           uploaded_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
           deadline: existing?.deadline ?? null,
+          deadline_updated_at: existing?.deadline_updated_at ?? null,
         };
         return existing ? prev.map((n) => (n.profile_id === profileId ? updated : n)) : [...prev, updated];
       });

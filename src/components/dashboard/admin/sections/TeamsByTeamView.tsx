@@ -85,9 +85,9 @@ export function TeamsByTeamView({
           ...(singleCampus ? {} : { Campus: team.campus }),
           "Team ID": team.team_id,
           "Team Name": team.team_name,
+          "Team Size": String(activeMemberCount(members) || members.length),
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
-          "Team Size": String(activeMemberCount(members) || members.length),
           Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
           "Zone Manager": zoneManagerName(zoneOf(roomOf(team))) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
@@ -150,9 +150,9 @@ export function TeamsByTeamView({
                 {!singleCampus && <th className="px-4 py-3">Campus</th>}
                 <th className="px-4 py-3">Team ID</th>
                 <th className="px-4 py-3">Team Name</th>
+                <th className="px-4 py-3">Team Size</th>
                 <th className="px-4 py-3">Team Lead</th>
                 <th className="px-4 py-3">Lead Phone No</th>
-                <th className="px-4 py-3">Team Size</th>
                 <th className="px-4 py-3">Zone</th>
                 <th className="px-4 py-3">Zone Manager</th>
                 <th className="px-4 py-3">Venue</th>
@@ -172,9 +172,9 @@ export function TeamsByTeamView({
                     {!singleCampus && <td className="px-4 py-3 text-ink-muted">{team.campus}</td>}
                     <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                     <td className="px-4 py-3 text-ink">{team.team_name}</td>
+                    <td className="px-4 py-3 text-ink-muted">{activeMemberCount(members) || members.length}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-muted">{activeMemberCount(members) || members.length}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>

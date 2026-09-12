@@ -347,6 +347,7 @@ export function TeamDetailModal({
                                     uploaded_at: new Date().toISOString(),
                                     updated_at: new Date().toISOString(),
                                     deadline: null,
+                                    deadline_updated_at: null,
                                   },
                                 ];
                           })

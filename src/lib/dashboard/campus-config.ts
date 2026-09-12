@@ -50,6 +50,35 @@ function updatedAtOf(config: Record<string, unknown>, key: string): number {
  * record_presentation / select_problem_statement, see 0048/0049): between a
  * Campus Admin's campus-scoped override of `baseKey` and the Super-Admin-set
  * global default, whichever was saved most recently wins — not "campus always
+ * wins". If only one of the two exists, that one is used. Also returns the
+ * winning value's own updated_at (epoch ms, 0 if unset) so a caller with a
+ * third candidate of its own (e.g. a per-member NOC deadline override) can
+ * fold it into the same "latest edit wins" comparison — see
+ * effectiveNocDeadline below.
+ */
+export function effectiveConfigValueWithTimestamp(
+  config: Record<string, unknown>,
+  baseKey: string,
+  campus: CampusCode | null | undefined,
+): { value: string | null; updatedAt: number } {
+  const global = stringValue(config, baseKey);
+  const globalUpdated = updatedAtOf(config, baseKey);
+  if (!campus) return { value: global, updatedAt: globalUpdated };
+
+  const scopedKey = campusConfigKey(baseKey, campus);
+  const scoped = stringValue(config, scopedKey);
+  const scopedUpdated = updatedAtOf(config, scopedKey);
+  if (!scoped) return { value: global, updatedAt: globalUpdated };
+  if (!global) return { value: scoped, updatedAt: scopedUpdated };
+
+  return scopedUpdated >= globalUpdated ? { value: scoped, updatedAt: scopedUpdated } : { value: global, updatedAt: globalUpdated };
+}
+
+/**
+ * Resolves a config value the same way the server RPCs do (record_noc_metadata /
+ * record_presentation / select_problem_statement, see 0048/0049): between a
+ * Campus Admin's campus-scoped override of `baseKey` and the Super-Admin-set
+ * global default, whichever was saved most recently wins — not "campus always
  * wins". If only one of the two exists, that one is used.
  */
 export function effectiveConfigValue(
@@ -57,13 +86,39 @@ export function effectiveConfigValue(
   baseKey: string,
   campus: CampusCode | null | undefined,
 ): string | null {
-  const global = stringValue(config, baseKey);
-  if (!campus) return global;
+  return effectiveConfigValueWithTimestamp(config, baseKey, campus).value;
+}
 
-  const scopedKey = campusConfigKey(baseKey, campus);
-  const scoped = stringValue(config, scopedKey);
-  if (!scoped) return global;
-  if (!global) return scoped;
+/**
+ * A person's actual NOC deadline: whichever of {global general default,
+ * campus-scoped general default, this person's individual override} has
+ * the latest updated_at wins — same rule effectiveConfigValue already uses
+ * between global/campus, extended with the individual override as a third
+ * candidate. Mirrors effective_noc_deadline (0064) so the UI never shows
+ * something the backend wouldn't also enforce.
+ */
+export function effectiveNocDeadline(
+  config: Record<string, unknown>,
+  campus: CampusCode | null | undefined,
+  individualDeadline: string | null | undefined,
+  individualDeadlineUpdatedAt: string | null | undefined,
+): string | null {
+  return effectiveNocDeadlineDetailed(config, campus, individualDeadline, individualDeadlineUpdatedAt).value;
+}
 
-  return updatedAtOf(config, scopedKey) >= updatedAtOf(config, baseKey) ? scoped : global;
+/** Same resolution as effectiveNocDeadline, plus which source actually won — for UI that needs to say "this is the general default" vs "this is an individual override". */
+export function effectiveNocDeadlineDetailed(
+  config: Record<string, unknown>,
+  campus: CampusCode | null | undefined,
+  individualDeadline: string | null | undefined,
+  individualDeadlineUpdatedAt: string | null | undefined,
+): { value: string | null; fromIndividualOverride: boolean } {
+  const general = effectiveConfigValueWithTimestamp(config, "noc.general_deadline", campus);
+  if (!individualDeadline) return { value: general.value, fromIndividualOverride: false };
+
+  const individualUpdated = individualDeadlineUpdatedAt ? new Date(individualDeadlineUpdatedAt).getTime() : 0;
+  if (!general.value || individualUpdated >= general.updatedAt) {
+    return { value: individualDeadline, fromIndividualOverride: true };
+  }
+  return { value: general.value, fromIndividualOverride: false };
 }
