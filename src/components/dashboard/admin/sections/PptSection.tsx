@@ -317,6 +317,9 @@ export function PptSection({
     return sortByLayout(filtered, {
       singleCampus,
       campusOf: (team) => (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.campus ?? team.campus,
+      zoneNameOf: (team) => zoneOf(roomOf(team))?.name ?? null,
+      venueNameOf: (team) => roomOf(team)?.name ?? null,
+      spocNameOf: (team) => spocName(team.spoc_profile_id),
       idOf: (team) => team.team_id,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps

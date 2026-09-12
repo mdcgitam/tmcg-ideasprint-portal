@@ -245,6 +245,9 @@ export function IdCardsSection({
     return sortByLayout(filtered, {
       singleCampus,
       campusOf: (team) => (membersByTeam[team.id] ?? []).find((m) => m.is_lead)?.campus ?? team.campus,
+      zoneNameOf: (team) => zoneOf(roomOf(team))?.name ?? null,
+      venueNameOf: (team) => roomOf(team)?.name ?? null,
+      spocNameOf: (team) => spocName(team.spoc_profile_id),
       idOf: (team) => team.team_id,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -312,6 +315,9 @@ export function IdCardsSection({
     return sortByLayout(filtered, {
       singleCampus,
       campusOf: (row) => row.member.campus,
+      zoneNameOf: (row) => zoneOf(roomOf(row.team))?.name ?? null,
+      venueNameOf: (row) => roomOf(row.team)?.name ?? null,
+      spocNameOf: (row) => spocName(row.team.spoc_profile_id),
       idOf: (row) => row.member.user_id,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
