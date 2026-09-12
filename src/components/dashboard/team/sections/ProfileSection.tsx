@@ -101,12 +101,23 @@ export function ProfileSection({
     setEditedMembers((prev) => prev.map((m) => (m.profileId === profileId ? { ...m, ...patch } : m)));
   }
 
+  // Whatever's currently drafted vs. what's actually saved — used both to
+  // gate the Submit button and to double-check inside handleSubmit, so a
+  // Team Lead can never send a request that changes nothing (a wasted
+  // review for whoever'd have to look at it).
+  const currentSnapshot = { team: { teamName: team.team_name }, members: toEditable(members) };
+  const requestedChanges = { team: { teamName }, members: editedMembers };
+  const draftDiff = buildEditDiff(currentSnapshot, requestedChanges);
+  const hasChanges = !!draftDiff.teamName || draftDiff.members.length > 0 || draftDiff.generic.length > 0;
+
   async function handleSubmit() {
+    if (!hasChanges) {
+      setError("You haven't changed anything — edit at least one field before submitting.");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      const currentSnapshot = { team: { teamName: team.team_name }, members: toEditable(members) };
-      const requestedChanges = { team: { teamName }, members: editedMembers };
       await submitTeamEditRequest(team.id, currentSnapshot, requestedChanges);
       setLocalRequests((prev) => [
         {
@@ -363,12 +374,15 @@ export function ProfileSection({
             </div>
           ))}
 
+          {!hasChanges && (
+            <p className="font-heading text-xs text-ink-muted">Change at least one field before submitting.</p>
+          )}
           {error && <p className="font-heading text-sm text-danger">{error}</p>}
 
           <div className="flex gap-3">
             <button
               type="button"
-              disabled={submitting}
+              disabled={submitting || !hasChanges}
               onClick={handleSubmit}
               className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
             >
