@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireProfile } from "@/lib/auth/require-profile";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
@@ -32,8 +31,9 @@ export default async function SuperDashboardPage() {
         </Reveal>
 
         <nav aria-label="Campus modules" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Plain <a>, not <Link> — see AdminDashboardShell.tsx for why: avoids a stale client-router-cached render of /dashboard/admin?campus=X. */}
           {MODULES.map((m) => (
-            <Link
+            <a
               key={m.code}
               href={`/dashboard/admin?campus=${m.code}`}
               className="flex flex-col gap-2 rounded-2xl border border-border bg-surface px-6 py-6 transition-colors hover:border-gold hover:bg-surface/80"
@@ -43,7 +43,7 @@ export default async function SuperDashboardPage() {
               <span className="font-heading text-sm text-ink-muted">
                 {m.code === "all" ? `${totalTeams} teams total` : `${teamsByCampus[m.code]} teams`}
               </span>
-            </Link>
+            </a>
           ))}
         </nav>
       </div>

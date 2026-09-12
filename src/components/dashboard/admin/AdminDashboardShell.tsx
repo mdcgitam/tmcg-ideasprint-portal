@@ -112,14 +112,24 @@ export function AdminDashboardShell({
         {isSuper && (
           <Reveal className="mb-6 flex flex-wrap items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3">
             <span className="mr-1 font-mono text-xs tracking-[0.2em] text-ink-faint uppercase">Campus</span>
-            <Link
+            {/*
+              Plain <a> tags, not <Link>, on purpose: this same page
+              (/dashboard/admin) is revisited with only ?campus= changing,
+              and Next's client-side router cache can serve a stale render
+              for that — the module icons below would then carry a
+              stale campus into their href, landing on a module page whose
+              data doesn't match, which looks like "no data available"
+              until a hard refresh. A real navigation here avoids that
+              entirely.
+            */}
+            <a
               href="/dashboard/super"
               className="rounded-full border border-border px-3 py-1 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold"
             >
               ← Modules
-            </Link>
+            </a>
             {CAMPUS_TABS.map((c) => (
-              <Link
+              <a
                 key={c.code}
                 href={`/dashboard/admin?campus=${c.code}`}
                 className={`rounded-full px-3 py-1 font-heading text-xs transition-colors ${
@@ -129,7 +139,7 @@ export function AdminDashboardShell({
                 }`}
               >
                 {c.label}
-              </Link>
+              </a>
             ))}
           </Reveal>
         )}
