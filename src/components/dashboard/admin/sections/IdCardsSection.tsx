@@ -262,9 +262,9 @@ export function IdCardsSection({
         return {
           ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
           "Team Name": team.team_name,
+          "Team Size": String(teamSize(team)),
           "Team Lead": lead?.name ?? "—",
           "Lead Phone No": lead?.phone ?? "—",
-          "Team Size": String(teamSize(team)),
           Zone: zone?.name ?? "Unassigned",
           "Zone Manager": zoneManagerName(zone) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
@@ -346,7 +346,7 @@ export function IdCardsSection({
     );
   }
 
-  const TEAM_FIXED_COLS = singleCampus ? 9 : 10; // chevron, [Campus], Team Name, Team Lead, Lead Phone No, Team Size, Zone, Zone Manager, Venue, SPOC
+  const TEAM_FIXED_COLS = singleCampus ? 9 : 10; // chevron, [Campus], Team Name, Team Size, Team Lead, Lead Phone No, Zone, Zone Manager, Venue, SPOC
   const MEMBER_FIXED_COLS = singleCampus ? 9 : 10; // [Campus], Team Name, Team Size, Participant Name, Position, Phone No, Zone, Zone Manager, Venue, SPOC
 
   if (teams.length === 0) {
@@ -466,9 +466,9 @@ export function IdCardsSection({
                     <th className="px-2 py-3" />
                     {!singleCampus && <th className="px-4 py-3">Campus</th>}
                     <th className="px-4 py-3">Team Name</th>
+                    <th className="px-4 py-3">Team Size</th>
                     <th className="px-4 py-3">Team Lead</th>
                     <th className="px-4 py-3">Lead Phone No</th>
-                    <th className="px-4 py-3">Team Size</th>
                     <th className="px-4 py-3">Zone</th>
                     <th className="px-4 py-3">Zone Manager</th>
                     <th className="px-4 py-3">Venue</th>
@@ -505,9 +505,9 @@ export function IdCardsSection({
                             </td>
                             {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
                             <td className="px-4 py-3 text-ink">{team.team_name}</td>
+                            <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                             <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
                             <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                            <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
                             <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
