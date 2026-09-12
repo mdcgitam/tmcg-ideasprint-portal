@@ -10,6 +10,10 @@ export async function ExitSubmissionsRoute({ profile }: { profile: ProfileRow })
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
   const isSpoc = profile.role === "SPOC";
   const hideZoneFilters = isSpoc || profile.role === "Zone Manager";
+  // A no-show team was never at the event to file an exit request — drop
+  // it from view here; still visible (and reversible) in Rooms and Venues
+  // or the Profile module.
+  const activeTeams = teams.filter((t) => t.is_active);
 
   // History's "Reviewed By" needs names beyond staffAccounts (campus-scoped,
   // 0058) — a reviewer can be a Super Admin (no campus) reviewing across
@@ -25,7 +29,7 @@ export async function ExitSubmissionsRoute({ profile }: { profile: ProfileRow })
   return (
     <SectionPageShell title="Exit Form Submissions" scope={scope} campus={profile.campus}>
       <ExitSubmissionsSection
-        teams={teams}
+        teams={activeTeams}
         membersByTeam={membersByTeam}
         exitRequests={exitRequests}
         reviewerNames={reviewerNames}

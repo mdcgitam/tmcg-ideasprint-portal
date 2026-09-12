@@ -14,6 +14,10 @@ export async function ProblemStatementsRoute({ profile }: { profile: ProfileRow 
   // For everyone but Super Admin this is just their own fixed campus; for
   // Super Admin it's whichever module they're viewing (null = "All").
   const viewerCampus = profile.campus;
+  // A no-show team never selected (or is going to select) a problem
+  // statement — drop it here (Analytics included); still visible (and
+  // reversible) in Rooms and Venues or the Profile module.
+  const activeTeams = teams.filter((t) => t.is_active);
 
   return (
     <SectionPageShell title="Problem Statements" scope={scope} campus={profile.campus}>
@@ -24,7 +28,7 @@ export async function ProblemStatementsRoute({ profile }: { profile: ProfileRow 
         hideSpocFilter={isSpoc}
         problemStatements={problemStatements}
         problemStatementExtensions={problemStatementExtensions}
-        teams={teams}
+        teams={activeTeams}
         membersByTeam={membersByTeam}
         rooms={rooms}
         zones={zones}

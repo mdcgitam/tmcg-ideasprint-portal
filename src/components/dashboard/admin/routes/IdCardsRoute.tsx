@@ -10,6 +10,10 @@ export async function IdCardsRoute({ profile }: { profile: ProfileRow }) {
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
   const isSpoc = profile.role === "SPOC";
   const hideZoneFilters = isSpoc || profile.role === "Zone Manager";
+  // A no-show team isn't getting an ID card or certificate — drop it from
+  // view here; still visible (and reversible) in Rooms and Venues or the
+  // Profile module.
+  const activeTeams = teams.filter((t) => t.is_active);
 
   return (
     <SectionPageShell title="ID Cards & Certificates" scope={scope} campus={profile.campus}>
@@ -18,7 +22,7 @@ export async function IdCardsRoute({ profile }: { profile: ProfileRow }) {
         hideZoneFilters={hideZoneFilters}
         hideVenueFilter={isSpoc}
         hideSpocFilter={isSpoc}
-        teams={teams}
+        teams={activeTeams}
         membersByTeam={membersByTeam}
         records={idCardCertRecords}
         scope={scope}
