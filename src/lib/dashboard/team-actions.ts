@@ -20,6 +20,9 @@ function friendlyError(raw: string): string {
   if (raw.includes("TEAM_MIN_SIZE")) {
     return "This team is at the 3-member minimum — every other active member must also submit (and have approved) an exit request before this one can go through. A single member can't exit alone from a 3-person team.";
   }
+  if (raw.includes("TEAM_NOT_ACTIVE")) {
+    return "This team is marked inactive and can't submit requests — contact your SPOC, Zone Manager, or Campus Admin.";
+  }
   if (raw.includes("SELECTION_PAUSED")) return "Problem statement selection is temporarily paused — check back shortly.";
   if (raw.includes("SELECTION_NOT_CONFIGURED")) return "Problem statement selection hasn't been opened yet.";
   if (raw.includes("SELECTION_CLOSED")) return "The problem statement selection window is currently closed.";

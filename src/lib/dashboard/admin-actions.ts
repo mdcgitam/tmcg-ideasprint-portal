@@ -275,6 +275,11 @@ export function assignTeamToRoom(teamId: string, roomId: string | null) {
   return callRpc<null>("assign_team_to_room", { p_team_id: teamId, p_room_id: roomId });
 }
 
+/** Marks a team active (participating) or a no-show — independent of member-level exits, reversible any time. SPOC/Zone Manager/Campus Admin/Super Admin. */
+export function setTeamActive(teamId: string, active: boolean) {
+  return callRpc<null>("set_team_active", { p_team_id: teamId, p_active: active });
+}
+
 // ── Deletes (item 11: "Delete teams, members and SPOCs") ─────────────────
 
 export function deleteTeam(teamId: string) {

@@ -57,6 +57,8 @@ export interface TeamRow {
   spoc_profile_id: string | null;
   room_id: string | null;
   status: TeamStatus;
+  /** Did this team actually participate — independent of member-level is_active/exits. Defaults true; flipped false for a no-show. */
+  is_active: boolean;
   current_problem_statement_id: string | null;
   created_at: string;
   updated_at: string;
