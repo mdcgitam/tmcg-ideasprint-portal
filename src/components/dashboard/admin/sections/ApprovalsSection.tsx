@@ -19,12 +19,15 @@ export function ApprovalsSection({
   teams,
   membersByTeam,
   staffAccounts,
+  reviewerNames,
   singleCampus = false,
 }: {
   approvalRequests: ApprovalRequestRow[];
   teams: TeamRow[];
   membersByTeam: Record<string, TeamMemberProfile[]>;
   staffAccounts: ProfileRow[];
+  /** id -> name for reviewers, unscoped by campus (a Super Admin may review any campus's request). */
+  reviewerNames: Record<string, string>;
   singleCampus?: boolean;
 }) {
   const [localRequests, setLocalRequests] = useState(approvalRequests);
@@ -40,7 +43,8 @@ export function ApprovalsSection({
   const campusOf = (team: TeamRow | undefined) => leadOf(team)?.campus ?? team?.campus ?? null;
   const requesterName = (req: ApprovalRequestRow) =>
     (membersByTeam[req.team_id] ?? []).find((m) => m.id === req.requested_by)?.name ?? "Unknown";
-  const reviewerName = (id: string | null) => (id ? (staffAccounts.find((s) => s.id === id)?.name ?? "Unknown") : "—");
+  const reviewerName = (id: string | null) =>
+    id ? (reviewerNames[id] ?? staffAccounts.find((s) => s.id === id)?.name ?? "Unknown") : "—";
 
   async function handleResolve(requestId: string, decision: "Approved" | "Rejected") {
     setBusyId(requestId);
