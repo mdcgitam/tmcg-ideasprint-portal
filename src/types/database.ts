@@ -200,6 +200,8 @@ export interface NotificationRow {
   message: string;
   read: boolean;
   created_at: string;
+  /** Sender's role at send time — set only for AdminBroadcast; null for system-generated notifications (0077). Powers the Inbox "From" filter. */
+  sender_role: string | null;
 }
 
 /** One row per broadcast_notification call (0076) — distinct from the per-recipient NotificationRow it also inserts. Powers the Notifications module's "Sent" tab, RLS-scoped to sender_profile_id = self. */
@@ -212,6 +214,8 @@ export interface NotificationBroadcastRow {
   scope_value: string | null;
   role_filter: string;
   recipient_count: number;
+  /** Set when this broadcast was narrowed to one specific person (0077) rather than everyone matching role+scope. */
+  target_profile_id: string | null;
   created_at: string;
 }
 
