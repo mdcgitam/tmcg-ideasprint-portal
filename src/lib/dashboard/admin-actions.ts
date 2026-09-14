@@ -181,11 +181,6 @@ export type BroadcastScope = "all" | "zone" | "venue" | "campus";
  *   Zone Manager -> SPOC in their zone + Team Leads / Members of their zone
  *   SPOC         -> Team Leads / Members in their room(s) only
  * `scope` narrows by area ("all" | a zone | a venue); `roleFilter` narrows by role.
- * `targetProfileId` (0077) narrows further to one specific person — for
- * cases role+scope can't isolate alone (more than one Campus Admin at a
- * campus, a specific Super Admin, one named Team Lead/Member rather than
- * "everyone at this venue"). Still gated server-side by can_notify_target,
- * the same check used per-row in the bulk path.
  * Returns the recipient count.
  */
 export function broadcastNotification(
@@ -194,7 +189,6 @@ export function broadcastNotification(
   scope: BroadcastScope,
   scopeValue: string,
   roleFilter: BroadcastRoleFilter = "",
-  targetProfileId: string | null = null,
 ) {
   return callRpc<number>("broadcast_notification", {
     p_title: title,
@@ -202,7 +196,6 @@ export function broadcastNotification(
     p_scope: scope,
     p_scope_value: scopeValue,
     p_role_filter: roleFilter,
-    p_target_profile_id: targetProfileId,
   });
 }
 
