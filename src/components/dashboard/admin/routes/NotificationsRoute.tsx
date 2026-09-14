@@ -7,7 +7,7 @@ import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPag
 // No venue tab bar here — notifications aren't venue-scoped data; the
 // compose box has its own Who / Where pickers.
 export async function NotificationsRoute({ profile }: { profile: ProfileRow }) {
-  const { notifications, rooms, zones, staffAccounts, teams, membersByTeam } = await fetchAdminDashboardData(profile);
+  const { notifications, rooms, zones } = await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
 
   // Only this route needs the Sent tab's data, so it's fetched here rather
@@ -31,9 +31,6 @@ export async function NotificationsRoute({ profile }: { profile: ProfileRow }) {
         sentBroadcasts={sentBroadcasts ?? []}
         rooms={rooms}
         zones={zones}
-        staffAccounts={staffAccounts}
-        teams={teams}
-        membersByTeam={membersByTeam}
       />
     </SectionPageShell>
   );
