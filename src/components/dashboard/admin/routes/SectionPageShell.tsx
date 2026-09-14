@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { CampusCode } from "@/types/database";
 import { CloseTabButton } from "./CloseTabButton";
+import { RefreshOnFocus } from "./RefreshOnFocus";
 
 /**
  * Shared header (title + close-tab button) for every standalone section page
@@ -25,6 +26,7 @@ export function SectionPageShell({
   const displayTitle = campus ? `${title} - ${campus} Campus` : title;
   return (
     <main className="min-h-screen bg-void px-6 pt-12 pb-16 sm:px-10 sm:pt-14 lg:px-16">
+      <RefreshOnFocus />
       <div className="mx-auto max-w-7xl">
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <h1 className="font-display text-3xl text-ink sm:text-4xl">{displayTitle}</h1>

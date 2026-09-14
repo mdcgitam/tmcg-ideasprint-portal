@@ -8,6 +8,13 @@ import { createServerClient } from "@supabase/ssr";
  * redirected to /login. No other protected paths exist yet.
  */
 export async function proxy(request: NextRequest) {
+  // Only /dashboard/** needs the auth check below (a real network round-trip
+  // to Supabase Auth) — skip it entirely for public pages so they don't pay
+  // that latency for no reason.
+  if (!request.nextUrl.pathname.startsWith("/dashboard")) {
+    return NextResponse.next();
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
