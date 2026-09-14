@@ -1,9 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { NotificationRow } from "@/types/database";
 import { createClient } from "@/lib/supabase/client";
+
+const FROM_LABEL: Record<string, string> = {
+  "Super Admin": "Super Admin",
+  "Campus Admin": "Campus Admin",
+  SPOC: "SPOC",
+  "Zone Manager": "Zone Manager",
+};
+/** sender_role is null for system-generated notifications (NOC uploaded, exit decisions, ...). */
+const SYSTEM_KEY = "__system__";
 
 /**
  * Every notification addressed to this person, newest first (already
@@ -29,6 +38,7 @@ export function NotificationsInbox({
   const [local, setLocal] = useState(notifications);
   const [openId, setOpenId] = useState<string | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [fromFilter, setFromFilter] = useState("any");
 
   useEffect(() => {
     const supabase = createClient();
@@ -71,6 +81,12 @@ export function NotificationsInbox({
 
   const openNotification = openId ? (local.find((n) => n.id === openId) ?? null) : null;
 
+  const fromKeysPresent = useMemo(
+    () => Array.from(new Set(local.map((n) => n.sender_role ?? SYSTEM_KEY))),
+    [local],
+  );
+  const visible = fromFilter === "any" ? local : local.filter((n) => (n.sender_role ?? SYSTEM_KEY) === fromFilter);
+
   if (local.length === 0) {
     return (
       <div className="rounded-xl border border-border bg-surface p-8 text-center">
@@ -80,8 +96,32 @@ export function NotificationsInbox({
   }
 
   return (
-    <div className="flex flex-col gap-2">
-      {local.map((n) => (
+    <div className="flex flex-col gap-3">
+      {fromKeysPresent.length > 1 && (
+        <label className="flex flex-col gap-1 font-heading text-xs text-ink-muted">
+          From
+          <select
+            value={fromFilter}
+            onChange={(e) => setFromFilter(e.target.value)}
+            className="w-fit rounded-lg border border-border bg-void px-4 py-2 font-heading text-sm text-ink outline-none focus:border-gold"
+          >
+            <option value="any">Everyone</option>
+            {fromKeysPresent.map((key) => (
+              <option key={key} value={key}>
+                {key === SYSTEM_KEY ? "System" : (FROM_LABEL[key] ?? key)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
+      {visible.length === 0 && (
+        <div className="rounded-xl border border-border bg-surface p-8 text-center">
+          <p className="font-heading text-sm text-ink-muted">No notifications match this filter.</p>
+        </div>
+      )}
+
+      {visible.map((n) => (
         <button
           key={n.id}
           type="button"
