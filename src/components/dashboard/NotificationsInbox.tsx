@@ -102,12 +102,19 @@ export function NotificationsInbox({
         </button>
       ))}
 
-      {openNotification && <NotificationModal notification={openNotification} onClose={() => setOpenId(null)} />}
+      {openNotification && <MessageModal notification={openNotification} onClose={() => setOpenId(null)} />}
     </div>
   );
 }
 
-function NotificationModal({ notification, onClose }: { notification: NotificationRow; onClose: () => void }) {
+/** Minimal shape so this also works for NotificationBroadcastRow ("Sent" tab), not just NotificationRow. */
+export function MessageModal({
+  notification,
+  onClose,
+}: {
+  notification: { title: string; message: string; created_at: string };
+  onClose: () => void;
+}) {
   useEffect(() => {
     document.body.classList.add("overflow-hidden");
     return () => document.body.classList.remove("overflow-hidden");

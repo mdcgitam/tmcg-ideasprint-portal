@@ -202,6 +202,19 @@ export interface NotificationRow {
   created_at: string;
 }
 
+/** One row per broadcast_notification call (0076) — distinct from the per-recipient NotificationRow it also inserts. Powers the Notifications module's "Sent" tab, RLS-scoped to sender_profile_id = self. */
+export interface NotificationBroadcastRow {
+  id: string;
+  sender_profile_id: string;
+  title: string;
+  message: string;
+  scope: "all" | "zone" | "venue" | "campus";
+  scope_value: string | null;
+  role_filter: string;
+  recipient_count: number;
+  created_at: string;
+}
+
 export interface ApprovalRequestRow {
   id: string;
   team_id: string;
