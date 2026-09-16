@@ -142,6 +142,8 @@ export function ExitHistorySection({
         </button>
       </div>
 
+      <p className="font-heading text-xs text-ink-muted">Showing {filteredRows.length} requests</p>
+
       <div className="overflow-hidden rounded-xl border border-border bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full text-left font-heading text-sm">

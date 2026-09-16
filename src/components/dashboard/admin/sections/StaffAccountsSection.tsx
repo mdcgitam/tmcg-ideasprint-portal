@@ -365,6 +365,7 @@ export function StaffAccountsSection({
             </button>
           </div>
         )}
+        {local.length > 0 && <p className="font-heading text-xs text-ink-muted">Showing {visibleStaff.length} staff</p>}
         {local.length === 0 ? (
           <div className="rounded-xl border border-border bg-surface p-8 text-center">
             <p className="font-heading text-sm text-ink-muted">No staff accounts yet.</p>

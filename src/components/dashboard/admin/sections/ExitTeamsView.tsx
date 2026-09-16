@@ -135,6 +135,8 @@ export function ExitTeamsView({
         />
       </div>
 
+      <p className="font-heading text-xs text-ink-muted">Showing {filteredTeams.length} teams</p>
+
       <div className="overflow-hidden rounded-xl border border-border bg-surface">
         <div className="overflow-x-auto">
           <table className="w-full text-left font-heading text-sm">

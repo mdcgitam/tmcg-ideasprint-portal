@@ -198,6 +198,8 @@ export function ExitIndividualsView({
         </button>
       </div>
 
+      <p className="font-heading text-xs text-ink-muted">Showing {filteredRequests.length} requests</p>
+
       {error && <p className="font-heading text-sm text-danger">{error}</p>}
 
       <div className="overflow-hidden rounded-xl border border-border bg-surface">
