@@ -704,20 +704,29 @@ export function RoomsZonesSection({
                             {!singleCampus && <span className="ml-2 font-heading text-xs text-ink-faint">({z.campus})</span>}
                           </span>
                           <div className="flex flex-wrap items-center gap-2">
-                            <select
-                              value={z.zone_manager_profile_id ?? ""}
-                              disabled={busy === `zone-manager:${z.id}` || zoneManagers.length === 0}
-                              onChange={(e) => handleAssignZoneManager(z.id, e.target.value)}
-                              className={selectClass}
-                              aria-label={`Zone manager for ${z.name}`}
-                            >
-                              <option value="">{zoneManagers.length === 0 ? "No Zone Manager accounts yet" : "No zone manager"}</option>
-                              {zoneManagers.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                  {m.name}
-                                </option>
-                              ))}
-                            </select>
+                            {(() => {
+                              // Only this zone's own campus — assign_zone_manager
+                              // already rejects a cross-campus pick server-side
+                              // (CROSS_CAMPUS), this just stops the dropdown from
+                              // offering one in the first place.
+                              const eligible = zoneManagers.filter((m) => m.campus === z.campus);
+                              return (
+                                <select
+                                  value={z.zone_manager_profile_id ?? ""}
+                                  disabled={busy === `zone-manager:${z.id}` || eligible.length === 0}
+                                  onChange={(e) => handleAssignZoneManager(z.id, e.target.value)}
+                                  className={selectClass}
+                                  aria-label={`Zone manager for ${z.name}`}
+                                >
+                                  <option value="">{eligible.length === 0 ? "No Zone Manager accounts yet" : "No zone manager"}</option>
+                                  {eligible.map((m) => (
+                                    <option key={m.id} value={m.id}>
+                                      {m.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              );
+                            })()}
                             <button type="button" onClick={() => { setEditZoneId(z.id); setZoneDraft({ name: z.name, campus: z.campus }); }} className="text-xs text-gold underline">
                               Edit
                             </button>
@@ -1091,6 +1100,8 @@ export function RoomsZonesSection({
               </button>
             </div>
 
+            <p className="font-heading text-xs text-ink-muted">Showing {viewRows.length} teams</p>
+
             <div className="overflow-x-auto rounded-xl border border-border bg-surface">
               <table className="w-full text-left font-heading text-sm">
                 <thead>
@@ -1288,6 +1299,7 @@ export function RoomsZonesSection({
                   </button>
                 )}
               </div>
+              <p className="font-heading text-xs text-ink-muted">Showing {zoneHeadcountRows.length} zones</p>
               <div className="overflow-x-auto rounded-xl border border-border bg-surface">
                 <table className="w-full text-left font-heading text-sm">
                   <thead>
@@ -1403,6 +1415,7 @@ export function RoomsZonesSection({
                   </button>
                 )}
               </div>
+              <p className="font-heading text-xs text-ink-muted">Showing {venueHeadcountRows.length} venues</p>
               <div className="overflow-x-auto rounded-xl border border-border bg-surface">
                 <table className="w-full text-left font-heading text-sm">
                   <thead>
