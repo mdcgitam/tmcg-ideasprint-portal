@@ -88,6 +88,7 @@ export function GalleryCarousel({ images }: GalleryCarouselProps) {
   // available during SSR, and defaulting to `false` there while the real
   // client value could be `true` would be a hydration mismatch.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReduced(prefersReducedMotion());
   }, []);
 

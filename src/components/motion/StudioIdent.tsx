@@ -34,6 +34,9 @@ export function StudioIdent() {
   const rootRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
+    // Deliberate — see the file doc comment above for why this starts
+    // visible=true (matching SSR) and corrects here instead of the reverse.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!isHome || !WILL_PLAY_IDENT) setVisible(false);
   }, [isHome]);
 
