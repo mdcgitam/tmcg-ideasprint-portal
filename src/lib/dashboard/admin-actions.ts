@@ -28,6 +28,10 @@ function friendlyError(raw: string): string {
     const venue = raw.split(":").slice(1).join(":").trim();
     return venue ? `That SPOC is already assigned to "${venue}" — unassign them there first.` : "That SPOC is already assigned to another venue.";
   }
+  if (raw.includes("ZONE_MANAGER_ALREADY_ASSIGNED")) {
+    const zone = raw.split(":").slice(1).join(":").trim();
+    return zone ? `That Zone Manager already manages "${zone}" — unassign them there first.` : "That Zone Manager already manages another zone.";
+  }
   if (raw.includes("TEAM_NOT_FOUND")) return "That team couldn't be found.";
   if (raw.includes("ALREADY_LEAD")) return "That member is already the Team Lead.";
   if (raw.includes("CANNOT_DELETE_LEAD")) return "This member is the Team Lead — delete the whole team instead.";

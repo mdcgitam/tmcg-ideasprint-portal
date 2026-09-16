@@ -705,11 +705,17 @@ export function RoomsZonesSection({
                           </span>
                           <div className="flex flex-wrap items-center gap-2">
                             {(() => {
-                              // Only this zone's own campus — assign_zone_manager
-                              // already rejects a cross-campus pick server-side
-                              // (CROSS_CAMPUS), this just stops the dropdown from
-                              // offering one in the first place.
-                              const eligible = zoneManagers.filter((m) => m.campus === z.campus);
+                              // Only this zone's own campus, and only managers not
+                              // already assigned to a *different* zone (a manager
+                              // is tied to exactly one zone) — assign_zone_manager
+                              // rejects both server-side (CROSS_CAMPUS /
+                              // ZONE_MANAGER_ALREADY_ASSIGNED), this just stops the
+                              // dropdown from offering an invalid pick at all.
+                              const eligible = zoneManagers.filter(
+                                (m) =>
+                                  m.campus === z.campus &&
+                                  (m.id === z.zone_manager_profile_id || !localZones.some((z2) => z2.zone_manager_profile_id === m.id)),
+                              );
                               return (
                                 <select
                                   value={z.zone_manager_profile_id ?? ""}
