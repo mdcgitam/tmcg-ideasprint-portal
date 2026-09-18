@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { CampusCode } from "@/types/database";
 import { CloseTabButton } from "./CloseTabButton";
-import { RefreshOnFocus } from "./RefreshOnFocus";
+import { RefreshOnFocus } from "@/components/dashboard/RefreshOnFocus";
 
 /**
  * Shared header (title + close-tab button) for every standalone section page

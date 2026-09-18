@@ -7,7 +7,9 @@ import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
 
 export interface ScheduleEntry {
-  time: string;
+  /** ISO datetime (stored UTC, entered/shown in the viewer's local time via <input type="datetime-local">). */
+  startsAt: string;
+  durationMinutes: number;
   description: string;
   /** null/undefined = shown on every campus's Schedule. A campus code = added by that campus's edit view, shown only there. */
   campus?: CampusCode | null;
@@ -20,15 +22,112 @@ export function parseScheduleEntries(config: Record<string, unknown>): ScheduleE
   const raw = config[SCHEDULE_KEY];
   if (!Array.isArray(raw)) return [];
   return raw
-    .filter(
-      (e): e is ScheduleEntry =>
-        typeof e === "object" && e !== null && typeof (e as ScheduleEntry).time === "string" && typeof (e as ScheduleEntry).description === "string",
-    )
-    .map((e) => ({ time: e.time, description: e.description, campus: e.campus ?? null }));
+    .filter((e): e is ScheduleEntry => {
+      const entry = e as ScheduleEntry;
+      return (
+        typeof entry === "object" &&
+        entry !== null &&
+        typeof entry.startsAt === "string" &&
+        typeof entry.durationMinutes === "number" &&
+        entry.durationMinutes > 0 &&
+        typeof entry.description === "string"
+      );
+    })
+    .map((e) => ({ startsAt: e.startsAt, durationMinutes: e.durationMinutes, description: e.description, campus: e.campus ?? null }));
 }
 
 function campusView(entries: ScheduleEntry[], campus: CampusCode): ScheduleEntry[] {
   return entries.filter((e) => !e.campus || e.campus === campus);
+}
+
+function toDatetimeLocal(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function endDate(entry: ScheduleEntry): Date {
+  return new Date(new Date(entry.startsAt).getTime() + entry.durationMinutes * 60000);
+}
+
+function formatDuration(minutes: number): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
+
+/** "25 Sept, 4:00 pm – 5:40 pm" when the entry fits in one day, else a full start/end stamp. */
+function formatRange(entry: ScheduleEntry): string {
+  const start = new Date(entry.startsAt);
+  const end = endDate(entry);
+  if (start.toDateString() === end.toDateString()) {
+    return `${start.toLocaleDateString("en-IN", { dateStyle: "medium" })}, ${start.toLocaleTimeString("en-IN", {
+      timeStyle: "short",
+    })} – ${end.toLocaleTimeString("en-IN", { timeStyle: "short" })}`;
+  }
+  return `${start.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })} – ${end.toLocaleString("en-IN", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  })}`;
+}
+
+/** Two entries can only ever be seen together if they share a campus, or either one is untagged ("every campus"). */
+function scopesOverlap(a: CampusCode | null | undefined, b: CampusCode | null | undefined): boolean {
+  return !a || !b || a === b;
+}
+
+/** First existing entry (other than `exclude`) whose time range overlaps `candidate` in a scope where both would render together. */
+function findOverlap(entries: ScheduleEntry[], candidate: ScheduleEntry, exclude?: ScheduleEntry): ScheduleEntry | null {
+  const cStart = new Date(candidate.startsAt).getTime();
+  const cEnd = cStart + candidate.durationMinutes * 60000;
+  for (const e of entries) {
+    if (e === exclude) continue;
+    if (!scopesOverlap(candidate.campus, e.campus)) continue;
+    const eStart = new Date(e.startsAt).getTime();
+    const eEnd = eStart + e.durationMinutes * 60000;
+    if (cStart < eEnd && eStart < cEnd) return e;
+  }
+  return null;
+}
+
+function DurationInputs({
+  hours,
+  minutes,
+  onHours,
+  onMinutes,
+  size = "md",
+}: {
+  hours: string;
+  minutes: string;
+  onHours: (v: string) => void;
+  onMinutes: (v: string) => void;
+  size?: "md" | "sm";
+}) {
+  const pad = size === "sm" ? "px-2 py-1.5 text-xs" : "px-3 py-2.5 text-sm";
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="number"
+        min={0}
+        placeholder="Hrs"
+        value={hours}
+        onChange={(e) => onHours(e.target.value)}
+        className={`w-16 rounded-lg border border-border bg-void font-heading text-ink outline-none focus:border-gold ${pad}`}
+      />
+      <input
+        type="number"
+        min={0}
+        max={59}
+        placeholder="Min"
+        value={minutes}
+        onChange={(e) => onMinutes(e.target.value)}
+        className={`w-16 rounded-lg border border-border bg-void font-heading text-ink outline-none focus:border-gold ${pad}`}
+      />
+    </div>
+  );
 }
 
 /** Plain read-only table — the "VSP View"/"HYD View"/"BLR View" tabs, and what every non-managing viewer sees. */
@@ -38,7 +137,7 @@ function ReadOnlyTable({ entries }: { entries: ScheduleEntry[] }) {
       <table className="w-full text-left font-heading text-sm">
         <thead>
           <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-            <th className="px-4 py-3">Time</th>
+            <th className="px-4 py-3">Date &amp; Time</th>
             <th className="px-4 py-3">Action</th>
           </tr>
         </thead>
@@ -52,7 +151,12 @@ function ReadOnlyTable({ entries }: { entries: ScheduleEntry[] }) {
           ) : (
             entries.map((entry, i) => (
               <tr key={i} className="border-b border-border align-top last:border-0">
-                <td className="px-4 py-3 whitespace-nowrap text-ink">{entry.time}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-ink">
+                  {formatRange(entry)}
+                  <div className="mt-0.5 font-mono text-[10px] tracking-wide text-ink-faint uppercase">
+                    {formatDuration(entry.durationMinutes)}
+                  </div>
+                </td>
                 <td className="px-4 py-3 whitespace-pre-line text-ink-muted">{entry.description}</td>
               </tr>
             ))
@@ -65,8 +169,13 @@ function ReadOnlyTable({ entries }: { entries: ScheduleEntry[] }) {
 
 /**
  * Shared by every dashboard (admin/spoc/zone launcher pages and the Team
- * dashboard) — the read-only two-column Time/Action table everyone sees,
- * plus (for Super Admin and Campus Admin) the editing controls.
+ * dashboard) — the read-only two-column Date&Time/Action table everyone
+ * sees, plus (for Super Admin and Campus Admin) the editing controls.
+ *
+ * Each entry is a calendar start (date + time) plus a duration, not free
+ * text — the displayed range and end time are always derived from those, and
+ * two entries that would ever appear together on the same campus view are
+ * blocked from overlapping (see findOverlap/scopesOverlap above).
  *
  * Editing scope follows the viewer's current campus, same as the Zones
  * tabs: a Campus Admin, or a Super Admin viewing one campus module, can
@@ -83,14 +192,18 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
   const viewCampus = profile.campus;
 
   const [entries, setEntries] = useState<ScheduleEntry[]>(() => parseScheduleEntries(config));
-  const [newTime, setNewTime] = useState("");
+  const [newStart, setNewStart] = useState("");
+  const [newDurationH, setNewDurationH] = useState("");
+  const [newDurationM, setNewDurationM] = useState("");
   const [newDescription, setNewDescription] = useState("");
   const [newCampus, setNewCampus] = useState<CampusCode | "">("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [editingEntry, setEditingEntry] = useState<ScheduleEntry | null>(null);
-  const [editTime, setEditTime] = useState("");
+  const [editStart, setEditStart] = useState("");
+  const [editDurationH, setEditDurationH] = useState("");
+  const [editDurationM, setEditDurationM] = useState("");
   const [editDescription, setEditDescription] = useState("");
 
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -112,16 +225,34 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
     }
   }
 
+  function readDuration(h: string, m: string): number {
+    const hours = parseInt(h, 10) || 0;
+    const minutes = parseInt(m, 10) || 0;
+    return hours * 60 + minutes;
+  }
+
   function handleAdd() {
-    const time = newTime.trim();
     const description = newDescription.trim();
-    if (!time || !description) {
-      setError("Enter both a time and a description.");
+    const durationMinutes = readDuration(newDurationH, newDurationM);
+    if (!newStart || !description) {
+      setError("Enter both a date/time and a description.");
+      return;
+    }
+    if (durationMinutes <= 0) {
+      setError("Enter a duration greater than zero.");
       return;
     }
     const campus: CampusCode | null = isAllMode ? newCampus || null : (viewCampus ?? null);
-    save([...entries, { time, description, campus }]);
-    setNewTime("");
+    const candidate: ScheduleEntry = { startsAt: new Date(newStart).toISOString(), durationMinutes, description, campus };
+    const conflict = findOverlap(entries, candidate);
+    if (conflict) {
+      setError(`That overlaps "${conflict.description}" (${formatRange(conflict)}). Adjust the time or duration.`);
+      return;
+    }
+    save([...entries, candidate]);
+    setNewStart("");
+    setNewDurationH("");
+    setNewDurationM("");
     setNewDescription("");
     setNewCampus("");
   }
@@ -142,7 +273,9 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
 
   function startEdit(entry: ScheduleEntry) {
     setEditingEntry(entry);
-    setEditTime(entry.time);
+    setEditStart(toDatetimeLocal(entry.startsAt));
+    setEditDurationH(String(Math.floor(entry.durationMinutes / 60)));
+    setEditDurationM(String(entry.durationMinutes % 60));
     setEditDescription(entry.description);
     setError(null);
   }
@@ -153,13 +286,28 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
 
   function handleSaveEdit() {
     if (!editingEntry) return;
-    const time = editTime.trim();
     const description = editDescription.trim();
-    if (!time || !description) {
-      setError("Enter both a time and a description.");
+    const durationMinutes = readDuration(editDurationH, editDurationM);
+    if (!editStart || !description) {
+      setError("Enter both a date/time and a description.");
       return;
     }
-    save(entries.map((e) => (e === editingEntry ? { ...e, time, description } : e)));
+    if (durationMinutes <= 0) {
+      setError("Enter a duration greater than zero.");
+      return;
+    }
+    const candidate: ScheduleEntry = {
+      ...editingEntry,
+      startsAt: new Date(editStart).toISOString(),
+      durationMinutes,
+      description,
+    };
+    const conflict = findOverlap(entries, candidate, editingEntry);
+    if (conflict) {
+      setError(`That overlaps "${conflict.description}" (${formatRange(conflict)}). Adjust the time or duration.`);
+      return;
+    }
+    save(entries.map((e) => (e === editingEntry ? candidate : e)));
     setEditingEntry(null);
   }
 
@@ -226,11 +374,12 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
               </select>
             )}
             <input
-              value={newTime}
-              onChange={(e) => setNewTime(e.target.value)}
-              placeholder="e.g. 25th Sep, 04:00 PM"
-              className="min-w-[180px] rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+              type="datetime-local"
+              value={newStart}
+              onChange={(e) => setNewStart(e.target.value)}
+              className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
             />
+            <DurationInputs hours={newDurationH} minutes={newDurationM} onHours={setNewDurationH} onMinutes={setNewDurationM} />
             <textarea
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
@@ -247,7 +396,7 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
               {saving ? "Saving…" : "Add"}
             </button>
           </div>
-          {error && <p className="mt-2 font-heading text-xs text-danger">{error}</p>}
+          {error && !editingEntry && <p className="mt-2 font-heading text-xs text-danger">{error}</p>}
         </div>
       )}
 
@@ -256,7 +405,7 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
           <thead>
             <tr className="border-b border-border bg-gold text-xs text-void uppercase">
               {isAllMode && <th className="w-8 px-2 py-3" />}
-              <th className="px-4 py-3">Time</th>
+              <th className="px-4 py-3">Date &amp; Time</th>
               <th className="px-4 py-3">Action</th>
               {isAllMode && <th className="px-4 py-3">Campus</th>}
               {canManage && <th className="px-4 py-3" />}
@@ -306,11 +455,21 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
                     {isEditing ? (
                       <>
                         <td className="px-4 py-3">
-                          <input
-                            value={editTime}
-                            onChange={(e) => setEditTime(e.target.value)}
-                            className="w-full min-w-[160px] rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
-                          />
+                          <div className="flex flex-col gap-1.5">
+                            <input
+                              type="datetime-local"
+                              value={editStart}
+                              onChange={(e) => setEditStart(e.target.value)}
+                              className="w-full min-w-[190px] rounded-lg border border-border bg-void px-3 py-1.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                            />
+                            <DurationInputs
+                              hours={editDurationH}
+                              minutes={editDurationM}
+                              onHours={setEditDurationH}
+                              onMinutes={setEditDurationM}
+                              size="sm"
+                            />
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <textarea
@@ -344,7 +503,12 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
                       </>
                     ) : (
                       <>
-                        <td className="px-4 py-3 whitespace-nowrap text-ink">{entry.time}</td>
+                        <td className="px-4 py-3 whitespace-nowrap text-ink">
+                          {formatRange(entry)}
+                          <div className="mt-0.5 font-mono text-[10px] tracking-wide text-ink-faint uppercase">
+                            {formatDuration(entry.durationMinutes)}
+                          </div>
+                        </td>
                         <td className="px-4 py-3 whitespace-pre-line text-ink-muted">{entry.description}</td>
                         {isAllMode && <td className="px-4 py-3 text-ink-muted">{entry.campus ?? "All"}</td>}
                         {canManage && (
@@ -382,6 +546,7 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
           </tbody>
         </table>
       </div>
+      {error && editingEntry && <p className="font-heading text-xs text-danger">{error}</p>}
     </div>
   );
 }

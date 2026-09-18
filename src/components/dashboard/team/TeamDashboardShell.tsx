@@ -20,6 +20,7 @@ import { Reveal } from "@/components/motion/Reveal";
 import { LogoutButton } from "@/components/dashboard/LogoutButton";
 import { DocumentsSection } from "@/components/dashboard/DocumentsSection";
 import { ScheduleSection } from "@/components/dashboard/ScheduleSection";
+import { RefreshOnFocus } from "@/components/dashboard/RefreshOnFocus";
 import { useTabFade } from "@/hooks/useTabFade";
 import { teamActiveStatus } from "@/lib/dashboard/team-status";
 import { ProfileSection } from "./sections/ProfileSection";
@@ -81,6 +82,7 @@ export function TeamDashboardShell(props: TeamDashboardShellProps) {
 
   return (
     <main className="min-h-screen bg-void px-6 pt-12 pb-16 sm:px-10 sm:pt-14 lg:px-16">
+      <RefreshOnFocus />
       <div className="mx-auto max-w-6xl">
         <Reveal className="mb-10 flex flex-wrap items-start justify-between gap-4 rounded-2xl border border-border bg-surface px-6 py-6 sm:px-8 sm:py-7">
           <div>
