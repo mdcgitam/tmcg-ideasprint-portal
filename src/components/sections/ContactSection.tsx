@@ -11,7 +11,7 @@ export function ContactSection() {
   return (
     <section id="contact" className="border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16">
       <Reveal className="mx-auto mb-10 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 8 — Contact</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 8 - Contact</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-7xl">TALK TO US</h2>
       </Reveal>
 

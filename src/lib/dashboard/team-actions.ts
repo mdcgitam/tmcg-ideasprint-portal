@@ -15,27 +15,27 @@ function friendlyError(raw: string): string {
   if (raw.includes("NOT_TEAM_LEAD")) return "Only the Team Lead can do this.";
   if (raw.includes("NOT_ALLOWED")) return "You don't have permission to do this.";
   if (raw.includes("REQUEST_ALREADY_PENDING")) {
-    return "You already have a pending edit request — wait for it to be reviewed before submitting another.";
+    return "You already have a pending edit request - wait for it to be reviewed before submitting another.";
   }
   if (raw.includes("TEAM_MIN_SIZE")) {
-    return "This team is at the 3-member minimum — every other active member must also submit (and have approved) an exit request before this one can go through. A single member can't exit alone from a 3-person team.";
+    return "This team is at the 3-member minimum - every other active member must also submit (and have approved) an exit request before this one can go through. A single member can't exit alone from a 3-person team.";
   }
   if (raw.includes("TEAM_NOT_ACTIVE")) {
-    return "This team is marked inactive and can't submit requests — contact your SPOC, Zone Manager, or Campus Admin.";
+    return "This team is marked inactive and can't submit requests - contact your SPOC, Zone Manager, or Campus Admin.";
   }
-  if (raw.includes("SELECTION_PAUSED")) return "Problem statement selection is temporarily paused — check back shortly.";
+  if (raw.includes("SELECTION_PAUSED")) return "Problem statement selection is temporarily paused - check back shortly.";
   if (raw.includes("SELECTION_NOT_CONFIGURED")) return "Problem statement selection hasn't been opened yet.";
   if (raw.includes("SELECTION_CLOSED")) return "The problem statement selection window is currently closed.";
   if (raw.includes("INVALID_PS_NUMBER")) return "That problem statement number wasn't found. Double-check it and try again.";
-  if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant no longer exists — refresh the page.";
-  if (raw.includes("TEAM_NOT_FOUND")) return "That team no longer exists — refresh the page.";
+  if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant no longer exists - refresh the page.";
+  if (raw.includes("TEAM_NOT_FOUND")) return "That team no longer exists - refresh the page.";
   if (raw.includes("REQUEST_NOT_FOUND")) return "That request couldn't be found.";
   if (raw.includes("INVALID_DECISION")) return "Invalid decision.";
   if (raw.includes("DEADLINE_NOT_SET")) {
-    return "No deadline has been set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one before uploading.";
+    return "No deadline has been set yet - ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one before uploading.";
   }
   if (raw.includes("DEADLINE_PASSED")) {
-    return "Time exceeded — the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.";
+    return "Time exceeded - the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.";
   }
   return "Something went wrong. Please try again.";
 }
@@ -118,42 +118,42 @@ export async function uploadNocFile(profileId: string, file: File): Promise<stri
   const supabase = createClient();
   const path = pdfKey(profileId, file.name);
   const { error } = await supabase.storage.from("noc-uploads").upload(path, file, { upsert: true, contentType: "application/pdf" });
-  if (error) { console.error("storage upload failed:", error); throw new DashboardActionError(error.message || "Couldn't upload the file — please try again."); }
+  if (error) { console.error("storage upload failed:", error); throw new DashboardActionError(error.message || "Couldn't upload the file - please try again."); }
   return path;
 }
 
 export async function deleteNocFile(path: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.storage.from("noc-uploads").remove([path]);
-  if (error) throw new DashboardActionError("Couldn't delete the file — please try again.");
+  if (error) throw new DashboardActionError("Couldn't delete the file - please try again.");
 }
 
 export async function uploadExitRequestFile(profileId: string, file: File): Promise<string> {
   const supabase = createClient();
   const path = pdfKey(profileId, file.name);
   const { error } = await supabase.storage.from("exit-requests").upload(path, file, { upsert: true, contentType: "application/pdf" });
-  if (error) { console.error("storage upload failed:", error); throw new DashboardActionError(error.message || "Couldn't upload the file — please try again."); }
+  if (error) { console.error("storage upload failed:", error); throw new DashboardActionError(error.message || "Couldn't upload the file - please try again."); }
   return path;
 }
 
 export async function deleteExitRequestFile(path: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.storage.from("exit-requests").remove([path]);
-  if (error) throw new DashboardActionError("Couldn't delete the file — please try again.");
+  if (error) throw new DashboardActionError("Couldn't delete the file - please try again.");
 }
 
 export async function uploadPresentationFile(teamId: string, file: File): Promise<string> {
   const supabase = createClient();
   const path = pdfKey(teamId, file.name);
   const { error } = await supabase.storage.from("ppt-uploads").upload(path, file, { upsert: true, contentType: "application/pdf" });
-  if (error) { console.error("storage upload failed:", error); throw new DashboardActionError(error.message || "Couldn't upload the file — please try again."); }
+  if (error) { console.error("storage upload failed:", error); throw new DashboardActionError(error.message || "Couldn't upload the file - please try again."); }
   return path;
 }
 
 export async function deletePresentationFile(path: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.storage.from("ppt-uploads").remove([path]);
-  if (error) throw new DashboardActionError("Couldn't delete the file — please try again.");
+  if (error) throw new DashboardActionError("Couldn't delete the file - please try again.");
 }
 
 export async function getSignedUrl(

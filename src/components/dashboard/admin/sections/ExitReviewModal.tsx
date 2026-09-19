@@ -134,7 +134,7 @@ export function ExitReviewModal({
                         <button
                           type="button"
                           disabled={busy || !eligible}
-                          title={!eligible ? "This team is at the 3-member minimum — every other active member must also be exiting first." : undefined}
+                          title={!eligible ? "This team is at the 3-member minimum - every other active member must also be exiting first." : undefined}
                           onClick={() => handleResolve(req.id, "Approved")}
                           className="rounded-full bg-gitam px-4 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:opacity-90 disabled:opacity-40"
                         >

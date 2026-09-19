@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://tmcg.mdcgitam.in"),
   title: "TMCG IdeaSprint 4.0 | GITAM Visakhapatnam",
   description:
-    "TMCG IdeaSprint 4.0 — the official campus innovation event portal for GITAM University Visakhapatnam, jointly organized by TMCG and Meta Developer Communities (MDC) GITAM Visakhapatnam.",
+    "TMCG IdeaSprint 4.0 - the official campus innovation event portal for GITAM University Visakhapatnam, jointly organized by TMCG and Meta Developer Communities (MDC) GITAM Visakhapatnam.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

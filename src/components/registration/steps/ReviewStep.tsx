@@ -13,7 +13,7 @@ export function ReviewStep() {
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Step 3</span>
         <h1 className="mt-3 font-display text-4xl tracking-wide text-ink sm:text-5xl">Review &amp; Submit</h1>
         <p className="mt-2 font-heading text-sm text-ink-muted">
-          Confirm everything below is correct — you can go back to fix any field before submitting.
+          Confirm everything below is correct - you can go back to fix any field before submitting.
         </p>
       </div>
 
@@ -60,7 +60,7 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
       <dt className="font-mono text-[10px] tracking-wide text-ink-faint uppercase">{label}</dt>
-      <dd className="font-heading text-sm text-ink">{value || "—"}</dd>
+      <dd className="font-heading text-sm text-ink">{value || "-"}</dd>
     </div>
   );
 }

@@ -57,11 +57,11 @@ export function NocSection({
   async function handleUpload(profileId: string, campus: CampusCode | null, file: File) {
     const deadline = effectiveDeadlineFor(profileId, campus);
     if (!deadline) {
-      setError("No deadline has been set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one before uploading.");
+      setError("No deadline has been set yet - ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one before uploading.");
       return;
     }
     if (new Date(deadline) < new Date()) {
-      setError("Time exceeded — the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.");
+      setError("Time exceeded - the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.");
       return;
     }
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
@@ -161,7 +161,7 @@ export function NocSection({
               </p>
               <p className={`mt-1 font-heading text-xs ${notConfigured || expired ? "text-danger" : "text-ink-faint"}`}>
                 Deadline: {deadline ? new Date(deadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "Not yet set"}
-                {expired && " — Time exceeded"}
+                {expired && " - Time exceeded"}
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -195,7 +195,7 @@ export function NocSection({
                     onClick={() => fileInputRefs.current[m.id]?.click()}
                     title={
                       notConfigured
-                        ? "No deadline set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one."
+                        ? "No deadline set yet - ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one."
                         : undefined
                     }
                     className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"

@@ -65,7 +65,7 @@ export function Footer() {
             <Image src="/assets/brand/mdc-logo.png" alt="MDC" width={512} height={257} className="h-8 w-auto" />
           </div>
           <p className="mt-4 max-w-sm font-heading text-sm text-ink-muted">
-            TMCG IdeaSprint 4.0 — jointly organized by TMCG and Meta Developer Communities (MDC) GITAM Visakhapatnam.
+            TMCG IdeaSprint 4.0 - jointly organized by TMCG and Meta Developer Communities (MDC) GITAM Visakhapatnam.
           </p>
         </div>
 

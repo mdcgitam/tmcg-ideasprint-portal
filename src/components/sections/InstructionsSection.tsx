@@ -25,7 +25,7 @@ export function InstructionsSection({
     <section id="instructions" className="border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16">
       <div className="mx-auto max-w-5xl">
         <Reveal className="mb-10">
-          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 3 — The Briefing</span>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 3 - The Briefing</span>
           <h2 className="mt-4 font-display text-5xl tracking-wide text-ink sm:text-7xl">INSTRUCTIONS</h2>
         </Reveal>
 
@@ -52,7 +52,7 @@ export function InstructionsSection({
         </Reveal>
 
         <Reveal className="mt-8 overflow-hidden rounded-2xl border border-border bg-surface/60 px-6 py-6 sm:px-8">
-          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Available Slots — One Slot Per Team</span>
+          <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Available Slots - One Slot Per Team</span>
           <div className="mt-5 grid gap-4 sm:grid-cols-3">
             {CAMPUS_OPTIONS.map((c) => {
               const info = campusSlots[c.code];
@@ -62,7 +62,7 @@ export function InstructionsSection({
                 <div key={c.code} className="rounded-xl border border-border bg-void/60 px-5 py-4">
                   <span className="font-heading text-sm text-ink-muted">{c.label}</span>
                   <p className={`mt-1 font-display text-3xl tracking-wide ${full ? "text-danger" : "text-ink"}`}>
-                    {remaining === null ? "—" : full ? "Full" : remaining}
+                    {remaining === null ? "-" : full ? "Full" : remaining}
                   </p>
                   <p className="mt-1 font-mono text-[11px] tracking-wide text-ink-faint uppercase">
                     {info ? `of ${info.cap} slots` : "slots"}

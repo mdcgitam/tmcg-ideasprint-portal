@@ -93,7 +93,7 @@ export function NocTeamsView({
    */
   function teamDeadline(team: TeamRow): { display: string; iso: string | null; mixed: boolean; expired: boolean; isGeneral: boolean } {
     const members = membersByTeam[team.id] ?? [];
-    if (members.length === 0) return { display: "—", iso: null, mixed: false, expired: false, isGeneral: false };
+    if (members.length === 0) return { display: "-", iso: null, mixed: false, expired: false, isGeneral: false };
     const effective = members.map((m) => {
       const noc = localNocs.find((n) => n.profile_id === m.id);
       return effectiveNocDeadlineDetailed(config, team.campus, noc?.deadline, noc?.deadline_updated_at);
@@ -234,11 +234,11 @@ export function NocTeamsView({
         const lead = members.find((m) => m.is_lead);
         const zone = zoneOf(roomOf(team));
         return {
-          ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
+          ...(singleCampus ? {} : { Campus: lead?.campus ?? "-" }),
           "Team Name": team.team_name,
           "Team Size": String(teamSize(team)),
-          "Team Lead": lead?.name ?? "—",
-          "Lead Phone No": lead?.phone ?? "—",
+          "Team Lead": lead?.name ?? "-",
+          "Lead Phone No": lead?.phone ?? "-",
           Zone: zone?.name ?? "Unassigned",
           "Zone Manager": zoneManagerName(zone) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
@@ -400,11 +400,11 @@ export function NocTeamsView({
                         onChange={() => toggleSelected(team.id)}
                       />
                     </td>
-                    {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
+                    {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "-"}</td>}
                     <td className="px-4 py-3 text-ink">{team.team_name}</td>
                     <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
-                    <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "-"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "-"}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
@@ -425,7 +425,7 @@ export function NocTeamsView({
                         <span className={`font-heading text-[11px] ${deadline.expired ? "text-danger" : "text-ink-muted"}`}>
                           {deadline.display}
                           {deadline.isGeneral && " (General)"}
-                          {deadline.expired && " — Time exceeded"}
+                          {deadline.expired && " - Time exceeded"}
                         </span>
                         <div className="flex items-center gap-1">
                           <input

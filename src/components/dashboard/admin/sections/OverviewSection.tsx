@@ -200,7 +200,7 @@ export function OverviewSection({
       rows: rows.map(({ member, team }) => ({
         key: member.id,
         cells: [
-          ...(singleCampus ? [] : [member.campus ?? "—"]),
+          ...(singleCampus ? [] : [member.campus ?? "-"]),
           <>
             {member.name} {member.is_lead && <span className="text-xs text-gold">(Lead)</span>}
           </>,
@@ -214,15 +214,15 @@ export function OverviewSection({
       })),
       csvFilename: `overview-${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
       csvRows: rows.map(({ member, team }) => ({
-        ...(singleCampus ? {} : { Campus: member.campus ?? "—" }),
+        ...(singleCampus ? {} : { Campus: member.campus ?? "-" }),
         "User ID": member.user_id,
         Name: member.name,
         Team: team.team_name,
         Position: member.is_lead ? "Team Lead" : "Member",
         Email: member.gitam_email,
         Phone: member.phone,
-        Graduation: member.graduation ?? "—",
-        Program: member.program ?? "—",
+        Graduation: member.graduation ?? "-",
+        Program: member.program ?? "-",
         Year: member.year_of_study,
         School: member.school,
         Department: member.department,
@@ -247,7 +247,7 @@ export function OverviewSection({
             ...(singleCampus ? [] : [team.campus]),
             team.team_id,
             team.team_name,
-            lead?.name ?? "—",
+            lead?.name ?? "-",
             size,
             team.is_active ? "Participated" : "No-Show",
             team.current_problem_statement_id ? "Yes" : "No",
@@ -259,7 +259,7 @@ export function OverviewSection({
         ...(singleCampus ? {} : { Campus: team.campus }),
         "Team ID": team.team_id,
         "Team Name": team.team_name,
-        "Team Lead": leadOf(team.id)?.name ?? "—",
+        "Team Lead": leadOf(team.id)?.name ?? "-",
         Size: (membersByTeam[team.id] ?? []).filter((m) => m.is_active).length,
         Participation: team.is_active ? "Participated" : "No-Show",
         "PS Selected": team.current_problem_statement_id ? "Yes" : "No",
@@ -278,7 +278,7 @@ export function OverviewSection({
         return {
           key: r.id,
           cells: [
-            ...(singleCampus ? [] : [team?.campus ?? "—"]),
+            ...(singleCampus ? [] : [team?.campus ?? "-"]),
             team?.team_name ?? "Unknown team",
             personName(r.team_id, r.requested_by),
             new Date(r.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
@@ -289,8 +289,8 @@ export function OverviewSection({
       csvRows: rows.map((r) => {
         const team = teamOf(r.team_id);
         return {
-          ...(singleCampus ? {} : { Campus: team?.campus ?? "—" }),
-          "Team ID": team?.team_id ?? "—",
+          ...(singleCampus ? {} : { Campus: team?.campus ?? "-" }),
+          "Team ID": team?.team_id ?? "-",
           Team: team?.team_name ?? "Unknown team",
           "Requested By": personName(r.team_id, r.requested_by),
           "Requested At": r.created_at,
@@ -310,7 +310,7 @@ export function OverviewSection({
         return {
           key: r.id,
           cells: [
-            ...(singleCampus ? [] : [team?.campus ?? "—"]),
+            ...(singleCampus ? [] : [team?.campus ?? "-"]),
             team?.team_name ?? "Unknown team",
             personName(r.team_id, r.profile_id),
             new Date(r.requested_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }),
@@ -321,8 +321,8 @@ export function OverviewSection({
       csvRows: rows.map((r) => {
         const team = teamOf(r.team_id);
         return {
-          ...(singleCampus ? {} : { Campus: team?.campus ?? "—" }),
-          "Team ID": team?.team_id ?? "—",
+          ...(singleCampus ? {} : { Campus: team?.campus ?? "-" }),
+          "Team ID": team?.team_id ?? "-",
           Team: team?.team_name ?? "Unknown team",
           Participant: personName(r.team_id, r.profile_id),
           "Requested At": r.requested_at,

@@ -387,7 +387,7 @@ export function TeamDetailModal({
                       ].map(([label, value]) => (
                         <div key={label}>
                           <dt className="font-mono text-[10px] tracking-[0.2em] text-ink-faint uppercase">{label}</dt>
-                          <dd className="mt-0.5 font-heading text-sm text-ink">{value || "—"}</dd>
+                          <dd className="mt-0.5 font-heading text-sm text-ink">{value || "-"}</dd>
                         </div>
                       ))}
                     </dl>

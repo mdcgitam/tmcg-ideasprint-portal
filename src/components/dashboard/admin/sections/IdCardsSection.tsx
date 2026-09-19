@@ -260,11 +260,11 @@ export function IdCardsSection({
         const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
         const zone = zoneOf(roomOf(team));
         return {
-          ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
+          ...(singleCampus ? {} : { Campus: lead?.campus ?? "-" }),
           "Team Name": team.team_name,
           "Team Size": String(teamSize(team)),
-          "Team Lead": lead?.name ?? "—",
-          "Lead Phone No": lead?.phone ?? "—",
+          "Team Lead": lead?.name ?? "-",
+          "Lead Phone No": lead?.phone ?? "-",
           Zone: zone?.name ?? "Unassigned",
           "Zone Manager": zoneManagerName(zone) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
@@ -503,11 +503,11 @@ export function IdCardsSection({
                                 {expanded ? <ChevronDown className="size-4" /> : <ChevronRight className="size-4" />}
                               </button>
                             </td>
-                            {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
+                            {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "-"}</td>}
                             <td className="px-4 py-3 text-ink">{team.team_name}</td>
                             <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
-                            <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
-                            <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
+                            <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "-"}</td>
+                            <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "-"}</td>
                             <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                             <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
@@ -572,7 +572,7 @@ export function IdCardsSection({
                                                   onClick={() => handleToggleMember(item, m.id, team.id, mStatus)}
                                                   className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-60 ${statusClassName(mStatus)}`}
                                                 >
-                                                  {m.is_active ? mStatus : "—"}
+                                                  {m.is_active ? mStatus : "-"}
                                                 </button>
                                               </td>
                                             );
@@ -741,7 +741,7 @@ export function IdCardsSection({
                                 onClick={() => handleToggleMember(item, m.id, team.id, status)}
                                 className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-60 ${statusClassName(status)}`}
                               >
-                                {m.is_active ? status : "—"}
+                                {m.is_active ? status : "-"}
                               </button>
                             </td>
                           );

@@ -57,7 +57,7 @@ export function AttendanceSection({
                         {record.status}
                       </span>
                     ) : (
-                      <span className="text-ink-faint">—</span>
+                      <span className="text-ink-faint">-</span>
                     )}
                   </td>
                 );

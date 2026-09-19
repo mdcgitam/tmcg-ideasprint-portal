@@ -23,7 +23,7 @@ export type SubmitRegistrationOutcome = ({ success: true } & SubmitRegistrationR
 
 function friendlyMessage(raw: string): string {
   if (raw.startsWith("DUPLICATE_TEAM_NAME")) {
-    return "This team name is already taken — please choose another.";
+    return "This team name is already taken - please choose another.";
   }
   if (raw.startsWith("DUPLICATE_EMAIL")) {
     const email = raw.split(":").slice(1).join(":").trim();
@@ -52,7 +52,7 @@ function friendlyMessage(raw: string): string {
   if (raw.startsWith("CAMPUS_FULL")) {
     const code = raw.split(":").slice(1).join(":").trim();
     const label = CAMPUS_OPTIONS.find((c) => c.code === code)?.label ?? "This campus";
-    return `${label} has reached its registration cap — no slots remaining. Please check back in case a slot frees up, or choose a different campus if you're eligible.`;
+    return `${label} has reached its registration cap - no slots remaining. Please check back in case a slot frees up, or choose a different campus if you're eligible.`;
   }
   // validate_member_academics (supabase/migrations/0026) raises
   // `CODE: <member> — <field-specific sentence>` — surface the sentence as-is.

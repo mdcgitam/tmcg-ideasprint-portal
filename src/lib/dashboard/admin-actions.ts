@@ -11,30 +11,30 @@ function friendlyError(raw: string): string {
   if (raw.includes("REQUEST_NOT_FOUND")) return "That request couldn't be found.";
   if (raw.includes("TEAM_MIN_SIZE"))
     return "A team can't go below 3 members. To exit a 3-member team, every member must submit an exit form together.";
-  if (raw.includes("TEAM_MAX_SIZE")) return "This team already has 4 members — you can't add another.";
-  if (raw.includes("MEMBER_EXITED")) return "That member has exited the event — they're no longer marked for attendance.";
+  if (raw.includes("TEAM_MAX_SIZE")) return "This team already has 4 members - you can't add another.";
+  if (raw.includes("MEMBER_EXITED")) return "That member has exited the event - they're no longer marked for attendance.";
   if (raw.includes("TEAM_INACTIVE")) return "This team is inactive (fewer than 3 active members) and isn't part of attendance.";
   if (raw.includes("PARTICIPANT_NOT_FOUND")) return "That participant couldn't be found.";
-  if (raw.includes("NOT_A_SPOC")) return "That account isn't a SPOC — assign the SPOC role first.";
+  if (raw.includes("NOT_A_SPOC")) return "That account isn't a SPOC - assign the SPOC role first.";
   if (raw.includes("NOT_A_ZONE_MANAGER")) return "Only a Zone Manager account can manage a zone.";
   if (raw.includes("SELECTION_PAUSED")) return "Problem statement selection is temporarily paused for this campus.";
   if (raw.includes("DUPLICATE_PS_NUMBER")) return "That problem statement number is already in use.";
   if (raw.includes("DUPLICATE_ROOM_NAME")) return "A room with that name already exists.";
   if (raw.includes("DUPLICATE_ZONE_NAME")) return "A zone with that name already exists.";
-  if (raw.includes("ROOM_NOT_FOUND")) return "That venue no longer exists — refresh the page.";
-  if (raw.includes("ZONE_NOT_FOUND")) return "That zone no longer exists — refresh the page.";
-  if (raw.includes("ZONE_HAS_VENUES")) return "This zone still has venues in it — move or delete them first.";
+  if (raw.includes("ROOM_NOT_FOUND")) return "That venue no longer exists - refresh the page.";
+  if (raw.includes("ZONE_NOT_FOUND")) return "That zone no longer exists - refresh the page.";
+  if (raw.includes("ZONE_HAS_VENUES")) return "This zone still has venues in it - move or delete them first.";
   if (raw.includes("SPOC_ALREADY_ASSIGNED")) {
     const venue = raw.split(":").slice(1).join(":").trim();
-    return venue ? `That SPOC is already assigned to "${venue}" — unassign them there first.` : "That SPOC is already assigned to another venue.";
+    return venue ? `That SPOC is already assigned to "${venue}" - unassign them there first.` : "That SPOC is already assigned to another venue.";
   }
   if (raw.includes("ZONE_MANAGER_ALREADY_ASSIGNED")) {
     const zone = raw.split(":").slice(1).join(":").trim();
-    return zone ? `That Zone Manager already manages "${zone}" — unassign them there first.` : "That Zone Manager already manages another zone.";
+    return zone ? `That Zone Manager already manages "${zone}" - unassign them there first.` : "That Zone Manager already manages another zone.";
   }
   if (raw.includes("TEAM_NOT_FOUND")) return "That team couldn't be found.";
   if (raw.includes("ALREADY_LEAD")) return "That member is already the Team Lead.";
-  if (raw.includes("CANNOT_DELETE_LEAD")) return "This member is the Team Lead — delete the whole team instead.";
+  if (raw.includes("CANNOT_DELETE_LEAD")) return "This member is the Team Lead - delete the whole team instead.";
   if (raw.includes("DUPLICATE_EMAIL")) {
     const email = raw.split(":").slice(1).join(":").trim();
     return email ? `${email} is already registered.` : "That email is already registered.";
@@ -54,7 +54,7 @@ function friendlyError(raw: string): string {
   if (raw.includes("INVALID_CAMPUS")) return "That isn't a valid campus.";
   if (raw.includes("NAME_REQUIRED")) return "Name can't be empty.";
   if (raw.includes("EMAIL_REQUIRED")) return "Email can't be empty.";
-  if (raw.includes("NOT_FOUND")) return "That account couldn't be found — refresh the page.";
+  if (raw.includes("NOT_FOUND")) return "That account couldn't be found - refresh the page.";
   // validate_member_academics (supabase/migrations/0026) raises
   // `CODE: <member> — <field-specific sentence>` — show the sentence.
   const academic = raw.match(

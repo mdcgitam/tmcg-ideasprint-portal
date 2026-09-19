@@ -13,7 +13,7 @@ export function GallerySection() {
   return (
     <section id="gallery" className="border-t border-border bg-surface px-6 py-16 sm:px-10 lg:px-16">
       <Reveal className="mx-auto mb-14 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 6 — The Energy</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 6 - The Energy</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">IDEASPRINT 3.0</h2>
       </Reveal>
 
@@ -23,7 +23,7 @@ export function GallerySection() {
             <span className="font-mono text-xs tracking-[0.3em] text-ink-faint uppercase">Gallery pending</span>
             <p className="mt-4 max-w-md font-heading text-ink-muted">
               Previous-year event photography will appear here as soon as the organizers publish it through Admin
-              Configuration — no placeholder images are shown in their place.
+              Configuration - no placeholder images are shown in their place.
             </p>
           </Reveal>
         ) : (

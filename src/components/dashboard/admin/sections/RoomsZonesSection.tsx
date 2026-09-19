@@ -187,8 +187,8 @@ export function RoomsZonesSection({
           "Team Id": team.team_id,
           "Team Name": team.team_name,
           "Team Size": String(sizeOf(team)),
-          "Team Lead": lead?.name ?? "—",
-          "Lead Phone Number": lead?.phone ?? "—",
+          "Team Lead": lead?.name ?? "-",
+          "Lead Phone Number": lead?.phone ?? "-",
           Zone: zn ?? "Unassigned",
           "Zone Manager": zoneManager ?? "Unassigned",
           Venue: venueName ?? "Unassigned",
@@ -252,7 +252,7 @@ export function RoomsZonesSection({
     downloadCsv(
       "zones-venues",
       zoneGroups.flatMap(({ zone, venues }) => {
-        const rowCampus = zone?.campus ?? venues[0]?.campus ?? "—";
+        const rowCampus = zone?.campus ?? venues[0]?.campus ?? "-";
         const zoneManager = zone ? staffById(zone.zone_manager_profile_id) : null;
         if (venues.length === 0) {
           return [
@@ -261,7 +261,7 @@ export function RoomsZonesSection({
               Zone: zone?.name ?? "Unassigned",
               "Zone Manager": zoneManager ?? "Unassigned",
               "Venues in that Zone": "No venues",
-              SPOC: "—",
+              SPOC: "-",
             },
           ];
         }
@@ -343,7 +343,7 @@ export function RoomsZonesSection({
           key: room.id,
           campus: room.campus,
           zoneName: zone?.name ?? "Unassigned",
-          zoneManager: zone ? (staffById(zone.zone_manager_profile_id) ?? "Unassigned") : "—",
+          zoneManager: zone ? (staffById(zone.zone_manager_profile_id) ?? "Unassigned") : "-",
           venueName: room.name,
           spoc: staffById(room.spoc_profile_id) ?? "Unassigned",
           teams: teamsHere.length,
@@ -837,7 +837,7 @@ export function RoomsZonesSection({
                     </tr>
                   ) : (
                     zoneGroups.map(({ zone, venues }) => {
-                      const rowCampus = zone?.campus ?? venues[0]?.campus ?? "—";
+                      const rowCampus = zone?.campus ?? venues[0]?.campus ?? "-";
                       const span = Math.max(venues.length, 1);
                       const zoneCell = (
                         <td rowSpan={span} className="px-4 py-3 align-top text-ink">
@@ -846,7 +846,7 @@ export function RoomsZonesSection({
                       );
                       const zoneManagerCell = (
                         <td rowSpan={span} className="px-4 py-3 align-top text-ink-muted">
-                          {zone ? (staffById(zone.zone_manager_profile_id) ?? "Unassigned") : "—"}
+                          {zone ? (staffById(zone.zone_manager_profile_id) ?? "Unassigned") : "-"}
                         </td>
                       );
                       if (venues.length === 0) {
@@ -856,8 +856,8 @@ export function RoomsZonesSection({
                             {zoneCell}
                             {zoneManagerCell}
                             <td className="px-4 py-3 text-ink-faint">No venues</td>
-                            <td className="px-4 py-3 text-ink-faint">—</td>
-                            <td className="px-4 py-3 text-ink-faint">—</td>
+                            <td className="px-4 py-3 text-ink-faint">-</td>
+                            <td className="px-4 py-3 text-ink-faint">-</td>
                           </tr>
                         );
                       }
@@ -1159,10 +1159,10 @@ export function RoomsZonesSection({
                           <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                           <td className="px-4 py-3 text-ink">{team.team_name}</td>
                           <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>
-                          <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
-                          <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                          <td className="px-4 py-3 text-ink-muted">{zoneName ?? "—"}</td>
-                          <td className="px-4 py-3 text-ink-muted">{zoneManager ?? "—"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "-"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "-"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{zoneName ?? "-"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{zoneManager ?? "-"}</td>
                           <td className="px-4 py-3 text-ink-muted">
                             {editing ? (
                               <select
@@ -1180,10 +1180,10 @@ export function RoomsZonesSection({
                                 ))}
                               </select>
                             ) : (
-                              (venueName ?? "—")
+                              (venueName ?? "-")
                             )}
                           </td>
-                          <td className="px-4 py-3 text-ink-muted">{spoc ?? "—"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{spoc ?? "-"}</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-col items-start gap-1.5">
                               <span

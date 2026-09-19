@@ -215,8 +215,8 @@ export function TeamsByMembersView({
                           <td className="px-4 py-3 text-ink-muted">{m.reg_no}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.gitam_email}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.phone}</td>
-                          <td className="px-4 py-3 text-ink-muted">{m.graduation ?? "—"}</td>
-                          <td className="px-4 py-3 text-ink-muted">{m.program ?? "—"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{m.graduation ?? "-"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{m.program ?? "-"}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.year_of_study}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.school}</td>
                           <td className="px-4 py-3 text-ink-muted">{m.department}</td>

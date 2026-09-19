@@ -154,7 +154,7 @@ export function TimelineSection({
       className="border-t border-border bg-surface px-6 py-16 sm:px-10 lg:px-16"
     >
       <div className="mx-auto mb-12 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 2 — The Journey</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 2 - The Journey</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">THE JOURNEY</h2>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-3">
@@ -166,13 +166,13 @@ export function TimelineSection({
           />
           <DateHighlightCard
             icon={CalendarDays}
-            kicker="Campus Level — Campus Round"
+            kicker="Campus Level - Campus Round"
             dateText={formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)}
             sub={`Reporting ${eventConfig.reportingTime} · ${eventConfig.venue}`}
           />
           <DateHighlightCard
             icon={Trophy}
-            kicker="University Level — Grand Finale"
+            kicker="University Level - Grand Finale"
             dateText={grandFinaleDate ?? "Date to be announced"}
             sub={grandFinaleVenue ?? "Venue to be announced"}
           />

@@ -167,7 +167,7 @@ function EditSelect({
         <option value="" disabled>
           {placeholder}
         </option>
-        {isLegacy && <option value={value}>{value} (current — not in list)</option>}
+        {isLegacy && <option value={value}>{value} (current - not in list)</option>}
         {options.map((opt) => (
           <option key={opt} value={opt}>
             {opt}

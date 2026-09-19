@@ -53,7 +53,7 @@ export function RegistrationClosedPopup({ isFull }: { isFull: boolean }) {
         <p className="mt-4 font-display text-2xl text-ink">All Campus Slots Are Full</p>
         <p className="mt-3 font-heading text-sm text-ink-muted">
           Every campus (Visakhapatnam, Hyderabad, Bangalore) has reached its registration cap. Thanks for your
-          interest — follow our socials for updates on future events.
+          interest - follow our socials for updates on future events.
         </p>
         <button
           type="button"

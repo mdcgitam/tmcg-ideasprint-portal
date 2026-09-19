@@ -65,7 +65,7 @@ export function TeamManagePanel({
         Gender: m.gender,
         Stay: m.stay,
         "Team Name": team.team_name,
-        "Team Lead": lead?.name ?? "—",
+        "Team Lead": lead?.name ?? "-",
         Zone: zone?.name ?? "Unassigned",
         "Zone Manager": zoneManagerName ?? "Unassigned",
         Venue: room?.name ?? "Unassigned",
@@ -177,12 +177,12 @@ export function TeamManagePanel({
       <p className="font-heading text-xs text-ink-muted">
         {zone && `Zone: ${zone.name} · `}Zone Manager: {zoneManagerName ?? "Unassigned"} · Venue: {room?.name ?? "Unassigned"} · SPOC:{" "}
         {spocName ?? "Unassigned"}
-        {scope === "admin" && <span className="text-ink-faint"> — change this from Zones and Venues</span>}
+        {scope === "admin" && <span className="text-ink-faint"> - change this from Zones and Venues</span>}
       </p>
 
       {ps && (
         <p className="font-heading text-xs text-ink-muted">
-          Problem Statement: {ps.number} — {ps.title}
+          Problem Statement: {ps.number} - {ps.title}
         </p>
       )}
 

@@ -61,7 +61,7 @@ function toDatetimeLocal(iso: string | null | undefined): string {
 }
 
 function fmtDateTime(iso: string | null | undefined): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
 }
 
@@ -460,17 +460,17 @@ export function ProblemStatementsAdminSection({
         const lead = (membersByTeam[team.id] ?? []).find((m) => m.is_lead);
         const room = roomOf(team);
         return {
-          ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
+          ...(singleCampus ? {} : { Campus: lead?.campus ?? "-" }),
           "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Size": String(sizeOf(team)),
-          "Team Lead": lead?.name ?? "—",
-          "Lead Phone No": lead?.phone ?? "—",
-          Zone: zoneOf(room)?.name ?? "—",
+          "Team Lead": lead?.name ?? "-",
+          "Lead Phone No": lead?.phone ?? "-",
+          Zone: zoneOf(room)?.name ?? "-",
           Venue: room?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
-          "PS Code": psNumberOf(team) || "—",
-          Deadline: deadlineOf(team.id) ?? "—",
+          "PS Code": psNumberOf(team) || "-",
+          Deadline: deadlineOf(team.id) ?? "-",
         };
       }),
     );
@@ -530,7 +530,7 @@ export function ProblemStatementsAdminSection({
           </p>
           {viewerCampus && (
             <p className="mt-1 font-heading text-xs text-gold">
-              One shared link for all campuses — frozen here. Switch to the &ldquo;All&rdquo; module to change it; Go Live below still
+              One shared link for all campuses - frozen here. Switch to the &ldquo;All&rdquo; module to change it; Go Live below still
               works independently for {viewerCampus}.
             </p>
           )}
@@ -578,7 +578,7 @@ export function ProblemStatementsAdminSection({
               {!isLive
                 ? `Not live for ${viewerCampus ?? "all campuses"} yet.`
                 : hidden
-                  ? `Live since ${fmtDateTime(liveAt ?? effectiveLiveAt)} — currently paused, the sheet link is hidden and no new selections are accepted.`
+                  ? `Live since ${fmtDateTime(liveAt ?? effectiveLiveAt)} - currently paused, the sheet link is hidden and no new selections are accepted.`
                   : `Live for ${viewerCampus ?? "all campuses"} since ${fmtDateTime(liveAt ?? effectiveLiveAt)}.`}
             </span>
             {actionError && <p className="font-heading text-xs text-danger">{actionError}</p>}
@@ -588,7 +588,7 @@ export function ProblemStatementsAdminSection({
         <div className="rounded-xl border border-border bg-surface p-4">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Sheet</span>
           {campusOverrideBoolean(config, HIDDEN_KEY, viewerCampus) ? (
-            <p className="mt-2 font-heading text-xs text-gold">Temporarily paused — check back shortly.</p>
+            <p className="mt-2 font-heading text-xs text-gold">Temporarily paused - check back shortly.</p>
           ) : effectiveLiveAt && spreadsheetUrl ? (
             <>
               <p className="mt-2 font-heading text-sm text-ink">
@@ -749,13 +749,13 @@ export function ProblemStatementsAdminSection({
                           <td className="px-4 py-3">
                             <input type="checkbox" checked={selected.has(team.id)} onChange={() => toggleSelected(team.id)} />
                           </td>
-                          {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
+                          {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "-"}</td>}
                           <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                           <td className="px-4 py-3 text-ink">{team.team_name}</td>
                           <td className="px-4 py-3 text-ink-muted">{sizeOf(team)}</td>
-                          <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
-                          <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
-                          <td className="px-4 py-3 text-ink-muted">{zone?.name ?? "—"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "-"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "-"}</td>
+                          <td className="px-4 py-3 text-ink-muted">{zone?.name ?? "-"}</td>
                           <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                           <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
                           <td className="px-4 py-3">
@@ -851,7 +851,7 @@ export function ProblemStatementsAdminSection({
               <div key={campus} className="flex flex-col gap-2">
                 {!singleCampus && (
                   <span className="font-mono text-xs tracking-[0.2em] text-gold uppercase">
-                    {campus} — {totalSelected} of {totalTeams} selected
+                    {campus} - {totalSelected} of {totalTeams} selected
                   </span>
                 )}
                 <div className="overflow-x-auto rounded-xl border border-border bg-surface">
@@ -875,7 +875,7 @@ export function ProblemStatementsAdminSection({
                           <tr key={row.number} className="border-b border-border align-top last:border-0">
                             <td className="px-4 py-3 text-ink">{row.number}</td>
                             <td className="px-4 py-3 text-ink-muted">{row.count}</td>
-                            <td className="px-4 py-3 text-ink-muted">{row.teamNames.length === 0 ? "—" : row.teamNames.join(", ")}</td>
+                            <td className="px-4 py-3 text-ink-muted">{row.teamNames.length === 0 ? "-" : row.teamNames.join(", ")}</td>
                           </tr>
                         ))
                       )}

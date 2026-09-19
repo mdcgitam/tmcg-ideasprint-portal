@@ -97,7 +97,7 @@ export function ProblemStatementSection({
             </a>
           </p>
         ) : paused ? (
-          <p className="mt-3 font-heading text-sm text-gold">Temporarily paused — check back shortly.</p>
+          <p className="mt-3 font-heading text-sm text-gold">Temporarily paused - check back shortly.</p>
         ) : (
           <p className="mt-3 font-heading text-sm text-ink-muted">The problem statement list hasn&rsquo;t gone live yet.</p>
         )}
@@ -107,7 +107,7 @@ export function ProblemStatementSection({
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Current Selection</span>
         {selected ? (
           <p className="mt-3 font-heading text-lg text-ink">
-            #{selected.number} — {selected.title}
+            #{selected.number} - {selected.title}
           </p>
         ) : (
           <p className="mt-3 font-heading text-sm text-ink-muted">Your team hasn&rsquo;t selected a problem statement yet.</p>
@@ -118,15 +118,15 @@ export function ProblemStatementSection({
         <form onSubmit={handleSubmit} className="rounded-xl border border-border bg-surface p-6">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Select / Change</span>
           {paused ? (
-            <p className="mt-2 font-heading text-xs text-gold">Selection is temporarily paused — check back shortly.</p>
+            <p className="mt-2 font-heading text-xs text-gold">Selection is temporarily paused - check back shortly.</p>
           ) : notConfigured ? (
             <p className="mt-2 font-heading text-xs text-danger">
-              Selection deadline not yet set — ask your Campus Admin or Super Admin to configure it before you can select.
+              Selection deadline not yet set - ask your Campus Admin or Super Admin to configure it before you can select.
             </p>
           ) : (
             <p className="mt-2 font-heading text-xs text-ink-muted">
               Pick a problem statement from your campus&rsquo;s tab in the sheet above and enter its code ({psPrefix}1–{psPrefix}
-              {psMax}) — you can change this any number of times until the selection window closes.
+              {psMax}) - you can change this any number of times until the selection window closes.
             </p>
           )}
           <div className="mt-4 flex gap-3">

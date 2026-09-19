@@ -162,9 +162,9 @@ export function ExitRequestSection({
             <div className="max-w-2xl rounded-lg border border-gold/40 bg-gold/5 px-4 py-3">
               <p className="font-heading text-xs font-semibold tracking-wide text-gold uppercase">Note</p>
               <ul className="mt-1.5 list-disc space-y-1 pl-4 font-heading text-xs text-ink-muted">
-                <li>Optional — upload your signed exit form for review by your SPOC, Zone Manager, Campus Admin, or Super Admin.</li>
+                <li>Optional - upload your signed exit form for review by your SPOC, Zone Manager, Campus Admin, or Super Admin.</li>
                 {activeCount <= 3 && (
-                  <li>Team at the {activeCount}-member minimum — all {activeCount} must exit together for it to go through.</li>
+                  <li>Team at the {activeCount}-member minimum - all {activeCount} must exit together for it to go through.</li>
                 )}
               </ul>
             </div>
@@ -287,9 +287,9 @@ export function ExitRequestSection({
                             {r.status}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-ink-muted">{r.reviewed_by ? (reviewerNames[r.reviewed_by] ?? nameOf(r.reviewed_by)) : "—"}</td>
+                        <td className="px-4 py-3 text-ink-muted">{r.reviewed_by ? (reviewerNames[r.reviewed_by] ?? nameOf(r.reviewed_by)) : "-"}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
-                          {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                          {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "-"}
                         </td>
                         <td className="px-4 py-3">
                           {r.file_path && (

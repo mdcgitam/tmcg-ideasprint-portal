@@ -48,11 +48,11 @@ export function PresentationSection({
 
   async function handleUpload(file: File) {
     if (notConfigured) {
-      setError("No deadline has been set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one before uploading.");
+      setError("No deadline has been set yet - ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one before uploading.");
       return;
     }
     if (expired) {
-      setError("Time exceeded — the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.");
+      setError("Time exceeded - the upload deadline has passed. Ask your SPOC, Zone Manager, or Super Admin to extend it.");
       return;
     }
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
@@ -111,14 +111,14 @@ export function PresentationSection({
       <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Presentation (PPT)</span>
       <p className={`mt-3 font-heading text-lg ${uploaded ? "text-gitam" : "text-ink-muted"}`}>{status}</p>
       <p className="mt-2 max-w-lg font-heading text-xs text-ink-muted">
-        Upload your team&rsquo;s pitch deck. Only the Team Lead can upload — PDF only, max 2MB.
+        Upload your team&rsquo;s pitch deck. Only the Team Lead can upload - PDF only, max 2MB.
       </p>
       <p className={`mt-2 font-heading text-xs ${notConfigured || expired ? "text-danger" : "text-ink-faint"}`}>
         Deadline:{" "}
         {effectiveDeadline
           ? new Date(effectiveDeadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })
           : "Not yet set"}
-        {expired && " — Time exceeded"}
+        {expired && " - Time exceeded"}
       </p>
 
       <div className="mt-4 flex items-center gap-3">
@@ -146,7 +146,7 @@ export function PresentationSection({
               onClick={() => fileInputRef.current?.click()}
               title={
                 notConfigured
-                  ? "No deadline set yet — ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one."
+                  ? "No deadline set yet - ask your SPOC, Zone Manager, Campus Admin, or Super Admin to set one."
                   : undefined
               }
               className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:border-gold hover:text-gold disabled:opacity-60"

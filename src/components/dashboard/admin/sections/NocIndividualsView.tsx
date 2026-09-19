@@ -263,7 +263,7 @@ export function NocIndividualsView({
     if (!currentDeadline) return "Not set";
     const expired = new Date(currentDeadline) < new Date();
     const formatted = new Date(currentDeadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
-    return `${formatted}${!fromIndividualOverride ? " (General)" : ""}${expired ? " — Time exceeded" : ""}`;
+    return `${formatted}${!fromIndividualOverride ? " (General)" : ""}${expired ? " - Time exceeded" : ""}`;
   }
 
   function handleExportCsv() {
@@ -272,7 +272,7 @@ export function NocIndividualsView({
       filteredRows.map(({ member, team }) => {
         const zone = zoneOf(roomOf(team));
         return {
-          ...(singleCampus ? {} : { Campus: member.campus ?? "—" }),
+          ...(singleCampus ? {} : { Campus: member.campus ?? "-" }),
           "Team Name": team.team_name,
           "Participant Name": member.name,
           Position: member.is_lead ? "Team Lead" : "Member",
@@ -445,7 +445,7 @@ export function NocIndividualsView({
                         onChange={() => toggleSelected(member.id)}
                       />
                     </td>
-                    {!singleCampus && <td className="px-4 py-3 text-ink-muted">{member.campus ?? "—"}</td>}
+                    {!singleCampus && <td className="px-4 py-3 text-ink-muted">{member.campus ?? "-"}</td>}
                     <td className="px-4 py-3 text-ink-muted">{team.team_name}</td>
                     <td className="px-4 py-3 text-ink">{member.name}</td>
                     <td className="px-4 py-3 text-ink-muted">{member.is_lead ? "Team Lead" : "Member"}</td>
@@ -518,7 +518,7 @@ export function NocIndividualsView({
                                   })
                                 : "Not set"}
                               {isGeneral && " (General)"}
-                              {expired && " — Time exceeded"}
+                              {expired && " - Time exceeded"}
                             </span>
                           );
                         })()}

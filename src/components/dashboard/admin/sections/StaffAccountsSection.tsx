@@ -107,16 +107,16 @@ export function StaffAccountsSection({
   );
 
   const assignmentOf = (s: ProfileRow): string => {
-    if (s.role === "Campus Admin") return s.campus ?? "—";
+    if (s.role === "Campus Admin") return s.campus ?? "-";
     if (s.role === "SPOC") {
       const assignedRooms = rooms.filter((r) => r.spoc_profile_id === s.id).map((r) => r.name);
-      return assignedRooms.length > 0 ? assignedRooms.join(", ") : "—";
+      return assignedRooms.length > 0 ? assignedRooms.join(", ") : "-";
     }
     if (s.role === "Zone Manager") {
       const managedZones = zones.filter((z) => z.zone_manager_profile_id === s.id).map((z) => z.name);
-      return managedZones.length > 0 ? managedZones.join(", ") : "—";
+      return managedZones.length > 0 ? managedZones.join(", ") : "-";
     }
-    return "—";
+    return "-";
   };
 
   const visibleStaff = useMemo(() => {
@@ -350,7 +350,7 @@ export function StaffAccountsSection({
                 downloadCsv(
                   "staff-accounts",
                   visibleStaff.map((s) => ({
-                    Campus: s.campus ?? "—",
+                    Campus: s.campus ?? "-",
                     Name: s.name,
                     Email: s.gitam_email,
                     Role: s.role,
@@ -429,7 +429,7 @@ export function StaffAccountsSection({
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-3 text-ink-muted">{s.campus ?? "—"}</td>
+                            <td className="px-4 py-3 text-ink-muted">{s.campus ?? "-"}</td>
                             <td className="px-4 py-3 text-ink">
                               {isEditing ? (
                                 <input

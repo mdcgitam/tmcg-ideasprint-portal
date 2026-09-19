@@ -64,14 +64,14 @@ export const timeline: TimelineItem[] = [
     stage: "round-1",
     label: "Campus Level – Round 1",
     duration: "100 Minutes",
-    detail: "Naukri Assessment — mandatory for every registered participant.",
+    detail: "Naukri Assessment - mandatory for every registered participant.",
   },
   {
     id: "round-2",
     stage: "round-2",
     label: "Campus Level – Round 2",
     duration: "18 Hours",
-    detail: "Build Hackathon — mandatory for every registered participant.",
+    detail: "Build Hackathon - mandatory for every registered participant.",
   },
   {
     id: "grand-finale",
@@ -93,7 +93,7 @@ export const gallery: GalleryImage[] = Array.from({ length: 10 }, (_, i) => {
   return {
     id: `gallery-${n}`,
     src: `/assets/gallery/ideasprint-2025-${n}.jpg`,
-    alt: `IdeaSprint — previous year, photo ${i + 1}`,
+    alt: `IdeaSprint - previous year, photo ${i + 1}`,
   };
 });
 
@@ -110,7 +110,7 @@ export const faqs: FAQItem[] = [
   {
     id: "f2",
     question: "Is there a registration fee?",
-    answer: "No — there is no registration fee for IdeaSprint 4.0.",
+    answer: "No - there is no registration fee for IdeaSprint 4.0.",
   },
   {
     id: "f3",
@@ -120,12 +120,12 @@ export const faqs: FAQItem[] = [
   {
     id: "f4",
     question: "Is NOC submission mandatory?",
-    answer: "Yes — NOC submission is compulsory for every participant, tracked individually within your team dashboard.",
+    answer: "Yes - NOC submission is compulsory for every participant, tracked individually within your team dashboard.",
   },
   {
     id: "f5",
     question: "What rounds does the campus-level event include?",
-    answer: "Round 1 is a 100-minute Naukri Assessment and Round 2 is an 18-hour Build Hackathon. Both are mandatory and non-eliminatory — teams progress to the Grand Finale based on overall performance.",
+    answer: "Round 1 is a 100-minute Naukri Assessment and Round 2 is an 18-hour Build Hackathon. Both are mandatory and non-eliminatory - teams progress to the Grand Finale based on overall performance.",
   },
 ];
 

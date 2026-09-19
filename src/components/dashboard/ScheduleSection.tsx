@@ -355,7 +355,7 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Add Entry</span>
           {!isAllMode && (
             <p className="mt-1 font-heading text-xs text-ink-muted">
-              Added for {viewCampus} only — switch to the &ldquo;All&rdquo; module to add an entry shown on every campus.
+              Added for {viewCampus} only - switch to the &ldquo;All&rdquo; module to add an entry shown on every campus.
             </p>
           )}
           <div className="mt-3 flex flex-wrap items-start gap-3">
@@ -383,7 +383,7 @@ export function ScheduleSection({ config, profile }: { config: Record<string, un
             <textarea
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
-              placeholder="What happens — one line per detail"
+              placeholder="What happens - one line per detail"
               rows={2}
               className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
             />

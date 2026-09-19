@@ -344,17 +344,17 @@ export function PptSection({
         const presentation = localPresentations.find((p) => p.team_id === team.id);
         const { iso: currentDeadline, isOverride } = effectiveDeadline(team.id);
         return {
-          ...(singleCampus ? {} : { Campus: lead?.campus ?? "—" }),
+          ...(singleCampus ? {} : { Campus: lead?.campus ?? "-" }),
           "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Size": String(teamSize(team)),
-          "Team Lead": lead?.name ?? "—",
-          "Lead Phone No": lead?.phone ?? "—",
+          "Team Lead": lead?.name ?? "-",
+          "Lead Phone No": lead?.phone ?? "-",
           Zone: zone?.name ?? "Unassigned",
           "Zone Manager": zoneManagerName(zone) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
           SPOC: spocName(team.spoc_profile_id) ?? "Unassigned",
-          "PS Code": psOf(team)?.number ?? "—",
+          "PS Code": psOf(team)?.number ?? "-",
           "PPT Status": presentation?.status ?? "Not Uploaded",
           Deadline: currentDeadline
             ? `${new Date(currentDeadline).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}${isOverride ? "" : " (General)"}`
@@ -532,17 +532,17 @@ export function PptSection({
                           onChange={() => toggleSelected(team.id)}
                         />
                       </td>
-                      {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "—"}</td>}
+                      {!singleCampus && <td className="px-4 py-3 text-ink-muted">{lead?.campus ?? "-"}</td>}
                       <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                       <td className="px-4 py-3 text-ink">{team.team_name}</td>
                       <td className="px-4 py-3 text-ink-muted">{teamSize(team)}</td>
-                      <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
-                      <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "-"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "-"}</td>
                       <td className="px-4 py-3 text-ink-muted">{zone?.name ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zone) ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>
                       <td className="px-4 py-3 text-ink-muted">{spocName(team.spoc_profile_id) ?? "Unassigned"}</td>
-                      <td className="px-4 py-3 text-ink-muted">{ps?.number ?? "—"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{ps?.number ?? "-"}</td>
                       <td className="px-4 py-3">
                         <span className={uploaded ? "text-gitam" : "text-gold"}>
                           {presentation?.status ?? "Not Uploaded"}
@@ -569,7 +569,7 @@ export function PptSection({
                               </button>
                             </>
                           ) : (
-                            "—"
+                            "-"
                           )}
                           {rowError && <span className="w-full font-heading text-[11px] text-danger">{rowError}</span>}
                         </div>
@@ -610,7 +610,7 @@ export function PptSection({
                                 })
                               : "Not set"}
                             {currentDeadline && !isOverride && " (General)"}
-                            {expired && " — Time exceeded"}
+                            {expired && " - Time exceeded"}
                           </span>
                           <div className="flex items-center gap-1">
                             <input

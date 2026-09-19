@@ -174,20 +174,20 @@ export function ExitIndividualsView({
                 const member = memberOf(r);
                 const team = teamOf(r);
                 return {
-                  Campus: member?.campus ?? "—",
-                  Team: team?.team_name ?? "—",
-                  Participant: member?.name ?? "—",
+                  Campus: member?.campus ?? "-",
+                  Team: team?.team_name ?? "-",
+                  Participant: member?.name ?? "-",
                   Position: member?.is_lead ? "Team Lead" : "Member",
-                  "Reg No": member?.reg_no ?? "—",
-                  Email: member?.gitam_email ?? "—",
-                  Phone: member?.phone ?? "—",
-                  Zone: zoneOf(team)?.name ?? "—",
-                  "Zone Manager": zoneManagerNameOf(team) ?? "—",
-                  Venue: roomOf(team)?.name ?? "—",
-                  SPOC: spocNameOf(team) ?? "—",
+                  "Reg No": member?.reg_no ?? "-",
+                  Email: member?.gitam_email ?? "-",
+                  Phone: member?.phone ?? "-",
+                  Zone: zoneOf(team)?.name ?? "-",
+                  "Zone Manager": zoneManagerNameOf(team) ?? "-",
+                  Venue: roomOf(team)?.name ?? "-",
+                  SPOC: spocNameOf(team) ?? "-",
                   Status: r.status,
                   "Requested At": r.requested_at,
-                  "Reviewed At": r.reviewed_at ?? "—",
+                  "Reviewed At": r.reviewed_at ?? "-",
                 };
               }),
             )
@@ -246,15 +246,15 @@ export function ExitIndividualsView({
                   const eligible = !!member?.is_active && canApproveExit(r.profile_id, activeMemberIds, currentStatusByProfileId);
                   return (
                     <tr key={r.id} className="border-b border-border align-top last:border-0">
-                      {!singleCampus && <td className="px-4 py-3 text-ink-muted">{member?.campus ?? "—"}</td>}
-                      <td className="px-4 py-3 text-ink-muted">{team?.team_name ?? "—"}</td>
+                      {!singleCampus && <td className="px-4 py-3 text-ink-muted">{member?.campus ?? "-"}</td>}
+                      <td className="px-4 py-3 text-ink-muted">{team?.team_name ?? "-"}</td>
                       <td className="px-4 py-3 text-ink">
                         {member?.name ?? "Unknown"} {member?.is_lead && <span className="text-xs text-gold">(Lead)</span>}
                       </td>
                       <td className="px-4 py-3 text-ink-muted">{member?.is_lead ? "Team Lead" : "Member"}</td>
-                      <td className="px-4 py-3 text-ink-muted">{member?.reg_no ?? "—"}</td>
-                      <td className="px-4 py-3 text-ink-muted">{member?.gitam_email ?? "—"}</td>
-                      <td className="px-4 py-3 text-ink-muted">{member?.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{member?.reg_no ?? "-"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{member?.gitam_email ?? "-"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{member?.phone ?? "-"}</td>
                       {!hideZoneFilters && (
                         <>
                           <td className="px-4 py-3 text-ink-muted">{zoneOf(team)?.name ?? "Unassigned"}</td>
@@ -291,7 +291,7 @@ export function ExitIndividualsView({
                               <button
                                 type="button"
                                 disabled={busy || !eligible}
-                                title={!eligible ? "This team is at the 3-member minimum — every other active member must also be exiting first." : undefined}
+                                title={!eligible ? "This team is at the 3-member minimum - every other active member must also be exiting first." : undefined}
                                 onClick={() => handleResolve(r.id, "Approved")}
                                 className="rounded-full bg-gitam px-3 py-1.5 font-heading text-xs font-medium text-void transition-colors hover:opacity-90 disabled:opacity-40"
                               >

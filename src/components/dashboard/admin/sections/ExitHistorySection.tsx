@@ -43,12 +43,12 @@ export function ExitHistorySection({
       "Unknown"
     );
   }
-  function positionOf(profileId: string, teamId: string): "Team Lead" | "Member" | "—" {
+  function positionOf(profileId: string, teamId: string): "Team Lead" | "Member" | "-" {
     const member = (membersByTeam[teamId] ?? []).find((m) => m.id === profileId);
-    return member ? (member.is_lead ? "Team Lead" : "Member") : "—";
+    return member ? (member.is_lead ? "Team Lead" : "Member") : "-";
   }
   function reviewerName(reviewedBy: string | null): string {
-    return reviewedBy ? (reviewerNames[reviewedBy] ?? staffAccounts.find((s) => s.id === reviewedBy)?.name ?? "Unknown") : "—";
+    return reviewedBy ? (reviewerNames[reviewedBy] ?? staffAccounts.find((s) => s.id === reviewedBy)?.name ?? "Unknown") : "-";
   }
   async function handleView(filePath: string) {
     const url = await getSignedUrl("exit-requests", filePath);
@@ -123,15 +123,15 @@ export function ExitHistorySection({
                 const team = teamOf(r.team_id);
                 return {
                   "Request ID": r.id,
-                  ...(singleCampus ? {} : { Campus: campusOf(team) ?? "—" }),
-                  "Team ID": team?.team_id ?? "—",
-                  "Team Name": team?.team_name ?? "—",
+                  ...(singleCampus ? {} : { Campus: campusOf(team) ?? "-" }),
+                  "Team ID": team?.team_id ?? "-",
+                  "Team Name": team?.team_name ?? "-",
                   "Requested By": personName(r.requested_by, r.team_id),
                   Position: positionOf(r.requested_by, r.team_id),
                   "Requested At": r.requested_at,
                   Status: r.status,
                   "Reviewed By": reviewerName(r.reviewed_by),
-                  "Reviewed At": r.reviewed_at ?? "—",
+                  "Reviewed At": r.reviewed_at ?? "-",
                 };
               }),
             )
@@ -177,8 +177,8 @@ export function ExitHistorySection({
                       <td className="px-4 py-3 text-ink-faint" title={r.id}>
                         {r.id.slice(0, 8)}
                       </td>
-                      {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team) ?? "—"}</td>}
-                      <td className="px-4 py-3 text-ink-muted">{team?.team_id ?? "—"}</td>
+                      {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team) ?? "-"}</td>}
+                      <td className="px-4 py-3 text-ink-muted">{team?.team_id ?? "-"}</td>
                       <td className="px-4 py-3 text-ink">{team?.team_name ?? "Unknown"}</td>
                       <td className="px-4 py-3 text-ink-muted">{personName(r.requested_by, r.team_id)}</td>
                       <td className="px-4 py-3 text-ink-muted">{positionOf(r.requested_by, r.team_id)}</td>
@@ -196,7 +196,7 @@ export function ExitHistorySection({
                       </td>
                       <td className="px-4 py-3 text-ink-muted">{reviewerName(r.reviewed_by)}</td>
                       <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
-                        {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                        {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "-"}
                       </td>
                       <td className="px-4 py-3">
                         {r.file_path && (

@@ -112,7 +112,7 @@ export function ProfileSection({
 
   async function handleSubmit() {
     if (!hasChanges) {
-      setError("You haven't changed anything — edit at least one field before submitting.");
+      setError("You haven't changed anything - edit at least one field before submitting.");
       return;
     }
     setSubmitting(true);
@@ -196,10 +196,10 @@ export function ProfileSection({
                           </span>
                         </td>
                         <td className="px-4 py-3 text-ink-muted">
-                          {r.reviewed_by ? (reviewerNames[r.reviewed_by] ?? "Unknown") : "—"}
+                          {r.reviewed_by ? (reviewerNames[r.reviewed_by] ?? "Unknown") : "-"}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
-                          {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                          {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "-"}
                         </td>
                         <td className="max-w-md px-4 py-3 text-ink-muted">
                           {summarizeDiff(diff, (id) => members.find((m) => m.id === id)?.name ?? "Member")}
@@ -425,8 +425,8 @@ export function ProfileSection({
                 <Info label="Reg No" value={m.reg_no} />
                 <Info label="GITAM Mail" value={m.gitam_email} />
                 <Info label="Phone" value={m.phone} />
-                <Info label="Graduation" value={m.graduation ?? "—"} />
-                <Info label="Program" value={m.program ?? "—"} />
+                <Info label="Graduation" value={m.graduation ?? "-"} />
+                <Info label="Program" value={m.program ?? "-"} />
                 <Info label="Year" value={m.year_of_study} />
                 <Info label="School" value={m.school} />
                 <Info label="Department" value={m.department} />
@@ -496,7 +496,7 @@ function DepSelect({
         <option value="" disabled>
           {placeholder}
         </option>
-        {isLegacy && <option value={value}>{value} (current — not in list)</option>}
+        {isLegacy && <option value={value}>{value} (current - not in list)</option>}
         {options.map((o) => (
           <option key={o} value={o}>
             {o}

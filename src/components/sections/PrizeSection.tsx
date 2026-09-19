@@ -116,7 +116,7 @@ export function PrizeSection() {
         aria-hidden
       />
 
-      <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 4 — The Reward</span>
+      <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 4 - The Reward</span>
       <h2 className="mt-4 font-display text-5xl tracking-wide text-ink sm:text-7xl">GRAND FINALE PRIZES</h2>
       <p className="mx-auto mt-4 max-w-lg font-heading text-sm text-ink-muted">
         Awarded only at the Grand Finale, common across all three campuses.

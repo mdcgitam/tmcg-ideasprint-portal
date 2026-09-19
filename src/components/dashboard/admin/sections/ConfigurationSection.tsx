@@ -230,7 +230,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
     try {
       const iso = values[baseKey] ? new Date(values[baseKey]).toISOString() : null;
       await setConfiguration(writeKeyFor(baseKey), iso, description);
-      setMessage((m) => ({ ...m, [baseKey]: isAllMode ? "Saved." : `Saved — applies to ${campus} only.` }));
+      setMessage((m) => ({ ...m, [baseKey]: isAllMode ? "Saved." : `Saved - applies to ${campus} only.` }));
     } catch (err) {
       setMessage((m) => ({ ...m, [baseKey]: err instanceof DashboardActionError ? err.message : "Something went wrong." }));
     } finally {
@@ -255,7 +255,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
         <p className="mt-1 font-heading text-xs text-ink-muted">{hint}</p>
         {!isAllMode && (
           <p className="mt-1 font-heading text-xs text-gold">
-            Showing the value in effect for {campus} — your own override if set, otherwise the Super Admin&rsquo;s global default. Saving only changes it for {campus}.
+            Showing the value in effect for {campus} - your own override if set, otherwise the Super Admin&rsquo;s global default. Saving only changes it for {campus}.
           </p>
         )}
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -285,7 +285,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
       <div className="rounded-xl border border-border bg-surface p-6">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Count (per campus)</span>
         <p className="mt-1 font-heading text-xs text-ink-muted">
-          Each campus runs its own numbered track (V1… for VSP, H1… for HYD, B1… for BLR) — set how many each has. Go Live on the
+          Each campus runs its own numbered track (V1… for VSP, H1… for HYD, B1… for BLR) - set how many each has. Go Live on the
           Problem Statements page creates exactly this many per campus, and it&rsquo;s the ceiling Team Leads and admins can enter
           for that campus.
         </p>
@@ -351,7 +351,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
       <div className="rounded-xl border border-border bg-surface p-6">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Privacy Policy Content</span>
         <p className="mt-1 font-heading text-xs text-ink-muted">
-          Plain paragraphs — a blank line starts a new one. Leave empty to use the built-in default copy.
+          Plain paragraphs - a blank line starts a new one. Leave empty to use the built-in default copy.
         </p>
         <div className="mt-3 flex flex-col gap-3">
           <textarea

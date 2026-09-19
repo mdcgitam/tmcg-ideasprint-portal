@@ -44,7 +44,7 @@ export function ApprovalsSection({
   const requesterName = (req: ApprovalRequestRow) =>
     (membersByTeam[req.team_id] ?? []).find((m) => m.id === req.requested_by)?.name ?? "Unknown";
   const reviewerName = (id: string | null) =>
-    id ? (reviewerNames[id] ?? staffAccounts.find((s) => s.id === id)?.name ?? "Unknown") : "—";
+    id ? (reviewerNames[id] ?? staffAccounts.find((s) => s.id === id)?.name ?? "Unknown") : "-";
 
   async function handleResolve(requestId: string, decision: "Approved" | "Rejected") {
     setBusyId(requestId);
@@ -89,12 +89,12 @@ export function ApprovalsSection({
       const diff = buildEditDiff(r.current_snapshot, r.requested_changes);
       return {
         "Request ID": r.id,
-        ...(singleCampus ? {} : { Campus: campusOf(team) ?? "—" }),
-        "Team ID": team?.team_id ?? "—",
+        ...(singleCampus ? {} : { Campus: campusOf(team) ?? "-" }),
+        "Team ID": team?.team_id ?? "-",
         "Team Name": team?.team_name ?? "Unknown team",
         "Requested By": requesterName(r),
         "Requested At": r.created_at,
-        ...(view === "history" ? { Status: r.status, "Reviewed By": reviewerName(r.reviewed_by), "Reviewed At": r.reviewed_at ?? "—" } : {}),
+        ...(view === "history" ? { Status: r.status, "Reviewed By": reviewerName(r.reviewed_by), "Reviewed At": r.reviewed_at ?? "-" } : {}),
         Changes: summarizeDiff(diff, (id) => membersByTeam[r.team_id]?.find((m) => m.id === id)?.name ?? "Member"),
       };
     }));
@@ -176,8 +176,8 @@ export function ApprovalsSection({
                         <td className="px-4 py-3 text-ink-faint" title={r.id}>
                           {r.id.slice(0, 8)}
                         </td>
-                        {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team) ?? "—"}</td>}
-                        <td className="px-4 py-3 text-ink-muted">{team?.team_id ?? "—"}</td>
+                        {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team) ?? "-"}</td>}
+                        <td className="px-4 py-3 text-ink-muted">{team?.team_id ?? "-"}</td>
                         <td className="px-4 py-3 text-ink">{team?.team_name ?? "Unknown team"}</td>
                         <td className="px-4 py-3 text-ink-muted">{requesterName(r)}</td>
                         <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
@@ -196,7 +196,7 @@ export function ApprovalsSection({
                             </td>
                             <td className="px-4 py-3 text-ink-muted">{reviewerName(r.reviewed_by)}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-ink-muted">
-                              {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "—"}
+                              {r.reviewed_at ? new Date(r.reviewed_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "-"}
                             </td>
                           </>
                         )}

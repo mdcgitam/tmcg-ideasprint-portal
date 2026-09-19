@@ -71,7 +71,7 @@ export function TeamDetailsStep() {
             return (
               <option key={c.code} value={c.code} disabled={full}>
                 {c.label}
-                {remaining !== null ? (full ? " — Full" : ` — ${remaining} slot${remaining === 1 ? "" : "s"} left`) : ""}
+                {remaining !== null ? (full ? " - Full" : ` - ${remaining} slot${remaining === 1 ? "" : "s"} left`) : ""}
               </option>
             );
           })}
@@ -90,7 +90,7 @@ export function TeamDetailsStep() {
                     full ? "text-danger" : "text-ink-faint",
                   )}
                 >
-                  {c.label}: {remaining === null ? "—" : full ? "Full" : `${remaining} left`}
+                  {c.label}: {remaining === null ? "-" : full ? "Full" : `${remaining} left`}
                 </span>
               );
             })}

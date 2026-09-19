@@ -176,8 +176,8 @@ export function ExitTeamsView({
                       {!singleCampus && <td className="px-4 py-3 text-ink-muted">{campusOf(team)}</td>}
                       <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                       <td className="px-4 py-3 text-ink">{team.team_name}</td>
-                      <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
-                      <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "-"}</td>
+                      <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "-"}</td>
                       <td className="px-4 py-3 text-ink-muted">{team.member_count}</td>
                       {!hideZoneFilters && (
                         <>

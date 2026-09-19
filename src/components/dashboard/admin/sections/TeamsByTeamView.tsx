@@ -86,8 +86,8 @@ export function TeamsByTeamView({
           "Team ID": team.team_id,
           "Team Name": team.team_name,
           "Team Size": String(activeMemberCount(members) || members.length),
-          "Team Lead": lead?.name ?? "—",
-          "Lead Phone No": lead?.phone ?? "—",
+          "Team Lead": lead?.name ?? "-",
+          "Lead Phone No": lead?.phone ?? "-",
           Zone: zoneOf(roomOf(team))?.name ?? "Unassigned",
           "Zone Manager": zoneManagerName(zoneOf(roomOf(team))) ?? "Unassigned",
           Venue: roomOf(team)?.name ?? "Unassigned",
@@ -175,8 +175,8 @@ export function TeamsByTeamView({
                     <td className="px-4 py-3 text-ink-muted">{team.team_id}</td>
                     <td className="px-4 py-3 text-ink">{team.team_name}</td>
                     <td className="px-4 py-3 text-ink-muted">{activeMemberCount(members) || members.length}</td>
-                    <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{lead?.name ?? "-"}</td>
+                    <td className="px-4 py-3 text-ink-muted">{lead?.phone ?? "-"}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneOf(room)?.name ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{zoneManagerName(zoneOf(room)) ?? "Unassigned"}</td>
                     <td className="px-4 py-3 text-ink-muted">{room?.name ?? "Unassigned"}</td>

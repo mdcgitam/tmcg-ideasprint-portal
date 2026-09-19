@@ -98,11 +98,11 @@ export function buildEditDiff(currentRaw: unknown, requestedRaw: unknown): EditD
 /** One line per changed field, grouped by who it belongs to — for a table's Changes column or a CSV export. `memberName` resolves a profileId to a display name (e.g. via membersByTeam). */
 export function summarizeDiff(diff: EditDiff, memberName: (profileId: string) => string): string {
   const parts: string[] = [];
-  if (diff.teamName) parts.push(`Team Name: ${diff.teamName.from || "—"} → ${diff.teamName.to || "—"}`);
+  if (diff.teamName) parts.push(`Team Name: ${diff.teamName.from || "-"} → ${diff.teamName.to || "-"}`);
   for (const md of diff.members) {
-    const fields = md.changes.map((c) => `${c.label}: ${c.from || "—"} → ${c.to || "—"}`).join(", ");
-    parts.push(`${memberName(md.profileId)} — ${fields}`);
+    const fields = md.changes.map((c) => `${c.label}: ${c.from || "-"} → ${c.to || "-"}`).join(", ");
+    parts.push(`${memberName(md.profileId)} - ${fields}`);
   }
-  for (const c of diff.generic) parts.push(`${c.label}: ${c.from || "—"} → ${c.to || "—"}`);
+  for (const c of diff.generic) parts.push(`${c.label}: ${c.from || "-"} → ${c.to || "-"}`);
   return parts.length > 0 ? parts.join("; ") : "No field changes.";
 }

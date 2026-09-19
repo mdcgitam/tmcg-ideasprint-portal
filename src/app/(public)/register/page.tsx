@@ -3,7 +3,7 @@ import { RegistrationStepper } from "@/components/registration/RegistrationStepp
 
 export const metadata: Metadata = {
   title: "Register Your Team | TMCG IdeaSprint 4.0",
-  description: "Register your team for TMCG IdeaSprint 4.0 — GITAM Visakhapatnam.",
+  description: "Register your team for TMCG IdeaSprint 4.0 - GITAM Visakhapatnam.",
 };
 
 export default function RegisterPage() {
