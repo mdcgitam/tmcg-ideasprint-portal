@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { TeamsPage } from "@/components/dashboard/admin/sections/TeamsPage";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -12,7 +13,7 @@ export async function TeamsRoute({ profile }: { profile: ProfileRow }) {
   const hideZoneFilters = isSpoc || profile.role === "Zone Manager";
 
   return (
-    <SectionPageShell title="Profile" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="Profile" scope={scope} campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <TeamsPage
         teams={teams}
         membersByTeam={membersByTeam}

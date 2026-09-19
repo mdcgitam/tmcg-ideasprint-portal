@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { StaffAccountsSection } from "@/components/dashboard/admin/sections/StaffAccountsSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -8,7 +9,7 @@ export async function StaffAccountsRoute({ profile }: { profile: ProfileRow }) {
   const isSuperAdmin = profile.role === "Super Admin";
 
   return (
-    <SectionPageShell title="Staff Accounts" scope="admin" campus={profile.campus}>
+    <SectionPageShell title="Staff Accounts" scope="admin" campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <StaffAccountsSection
         campus={profile.campus}
         canManageCampusAdmins={isSuperAdmin}

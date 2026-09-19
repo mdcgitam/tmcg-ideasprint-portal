@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { RoomsZonesSection } from "@/components/dashboard/admin/sections/RoomsZonesSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -8,7 +9,7 @@ export async function RoomsZonesRoute({ profile }: { profile: ProfileRow }) {
     await fetchAdminDashboardData(profile);
 
   return (
-    <SectionPageShell title="Zones and Venues" scope="admin" campus={profile.campus}>
+    <SectionPageShell title="Zones and Venues" scope="admin" campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <RoomsZonesSection
         campus={profile.campus}
         teams={teams}

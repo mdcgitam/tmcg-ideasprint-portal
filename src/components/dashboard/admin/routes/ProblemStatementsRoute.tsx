@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { ProblemStatementsAdminSection } from "@/components/dashboard/admin/sections/ProblemStatementsAdminSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -20,7 +21,7 @@ export async function ProblemStatementsRoute({ profile }: { profile: ProfileRow 
   const activeTeams = teams.filter((t) => t.is_active);
 
   return (
-    <SectionPageShell title="Problem Statements" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="Problem Statements" scope={scope} campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <ProblemStatementsAdminSection
         singleCampus={singleCampus}
         hideZoneFilters={hideZoneFilters}

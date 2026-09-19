@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { AdminAttendanceSection } from "@/components/dashboard/admin/sections/AdminAttendanceSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -22,7 +23,7 @@ export async function AttendanceRoute({ profile }: { profile: ProfileRow }) {
   const activeTeams = teams.filter((t) => t.is_active);
 
   return (
-    <SectionPageShell title="Attendance" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="Attendance" scope={scope} campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <AdminAttendanceSection
         singleCampus={singleCampus}
         hideZoneFilters={hideZoneFilters}

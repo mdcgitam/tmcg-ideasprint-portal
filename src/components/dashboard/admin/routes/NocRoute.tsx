@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { NocSection } from "@/components/dashboard/admin/sections/NocSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -16,7 +17,7 @@ export async function NocRoute({ profile }: { profile: ProfileRow }) {
   const activeTeams = teams.filter((t) => t.is_active);
 
   return (
-    <SectionPageShell title="NOC" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="NOC" scope={scope} campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <NocSection
         singleCampus={singleCampus}
         hideZoneFilters={hideZoneFilters}

@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { OverviewSection } from "@/components/dashboard/admin/sections/OverviewSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -13,7 +14,7 @@ export async function OverviewRoute({ profile }: { profile: ProfileRow }) {
   const singleCampus = profile.role !== "Super Admin" || profile.campus != null;
 
   return (
-    <SectionPageShell title="Overview" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="Overview" scope={scope} campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <OverviewSection
         scope={scope}
         teams={teams}

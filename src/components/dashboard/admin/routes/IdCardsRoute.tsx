@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { IdCardsSection } from "@/components/dashboard/admin/sections/IdCardsSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -16,7 +17,7 @@ export async function IdCardsRoute({ profile }: { profile: ProfileRow }) {
   const activeTeams = teams.filter((t) => t.is_active);
 
   return (
-    <SectionPageShell title="ID Cards & Certificates" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="ID Cards & Certificates" scope={scope} campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <IdCardsSection
         singleCampus={singleCampus}
         hideZoneFilters={hideZoneFilters}

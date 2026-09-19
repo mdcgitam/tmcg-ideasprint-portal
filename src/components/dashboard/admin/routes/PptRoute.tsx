@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { PptSection } from "@/components/dashboard/admin/sections/PptSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -24,7 +25,7 @@ export async function PptRoute({ profile }: { profile: ProfileRow }) {
   const activeTeams = teams.filter((t) => t.is_active);
 
   return (
-    <SectionPageShell title="PPT" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="PPT" scope={scope} campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <PptSection
         singleCampus={singleCampus}
         hideZoneFilters={hideZoneFilters}

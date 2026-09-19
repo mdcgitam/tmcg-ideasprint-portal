@@ -1,5 +1,6 @@
 import type { ProfileRow } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { ApprovalsSection } from "@/components/dashboard/admin/sections/ApprovalsSection";
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
@@ -20,7 +21,7 @@ export async function ApprovalsRoute({ profile }: { profile: ProfileRow }) {
   const reviewerNames = Object.fromEntries(((reviewerRows ?? []) as { id: string; name: string }[]).map((r) => [r.id, r.name]));
 
   return (
-    <SectionPageShell title="Profile Requests" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="Profile Requests" scope={scope} campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <ApprovalsSection
         approvalRequests={approvalRequests}
         teams={teams}

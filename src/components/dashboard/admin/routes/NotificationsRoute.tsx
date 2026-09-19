@@ -1,4 +1,5 @@
 import type { ProfileRow } from "@/types/database";
+import { dashboardPathForRole } from "@/lib/auth/roles";
 import { fetchAdminDashboardData } from "@/lib/dashboard/admin-data";
 import { createClient } from "@/lib/supabase/server";
 import { AdminNotificationsSection } from "@/components/dashboard/admin/sections/AdminNotificationsSection";
@@ -23,7 +24,7 @@ export async function NotificationsRoute({ profile }: { profile: ProfileRow }) {
     .order("created_at", { ascending: false });
 
   return (
-    <SectionPageShell title="Notifications" scope={scope} campus={profile.campus}>
+    <SectionPageShell title="Notifications" scope={scope} campus={profile.campus} homeHref={dashboardPathForRole(profile.role)}>
       <AdminNotificationsSection
         profileId={profile.id}
         role={profile.role}
