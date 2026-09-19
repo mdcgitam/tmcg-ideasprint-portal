@@ -3,7 +3,6 @@
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
-import { ParticleField } from "@/components/motion/ParticleField";
 import { GrainOverlay } from "@/components/motion/GrainOverlay";
 import { MagneticButton } from "@/components/motion/MagneticButton";
 import { CampusCarousel } from "@/components/motion/CampusCarousel";
@@ -23,7 +22,6 @@ const ALL_HERO_SELECTORS = "[data-hero-brandmark], [data-hero-char], [data-hero-
 export function Hero() {
   const rootRef = useRef<HTMLElement>(null);
   const imageRef = useRef<HTMLDivElement>(null);
-  const particlesRef = useRef<HTMLDivElement>(null);
   const titleWords = heroContent.title.split(" ");
 
   useGSAP(
@@ -77,16 +75,11 @@ export function Hero() {
 
       // Continuous cursor-reactive depth (prompt.md §8 "hover depth /
       // cursor-based movement") once the sequence has settled — a small,
-      // direct translate (no scale, no perspective change), with the
-      // particle field, being "closer" to the viewer, drifting a bit
-      // further than the campus carousel.
+      // direct translate (no scale, no perspective change) on the campus
+      // carousel.
       const quickImage = {
         x: gsap.quickTo(imageRef.current, "x", { duration: 0.8, ease: "power3.out" }),
         y: gsap.quickTo(imageRef.current, "y", { duration: 0.8, ease: "power3.out" }),
-      };
-      const quickParticles = {
-        x: gsap.quickTo(particlesRef.current, "x", { duration: 0.6, ease: "power3.out" }),
-        y: gsap.quickTo(particlesRef.current, "y", { duration: 0.6, ease: "power3.out" }),
       };
 
       function handlePointerMove(e: PointerEvent) {
@@ -96,8 +89,6 @@ export function Hero() {
         const relY = (e.clientY - rect.top) / rect.height - 0.5;
         quickImage.x(relX * 8);
         quickImage.y(relY * 8);
-        quickParticles.x(relX * 18);
-        quickParticles.y(relY * 18);
       }
 
       rootRef.current?.addEventListener("pointermove", handlePointerMove);
@@ -116,10 +107,6 @@ export function Hero() {
       id="hero"
       className="relative isolate flex min-h-[100svh] flex-col justify-between overflow-hidden bg-void px-6 pt-28 pb-10 sm:px-10 lg:px-16"
     >
-      <div ref={particlesRef} className="absolute inset-0">
-        <ParticleField />
-      </div>
-
       {/* Campus imagery: the multi-campus carousel (CampusCarousel.tsx),
           fading in as one plain crossfade from black — no camera move, no
           per-building construction effect. */}
