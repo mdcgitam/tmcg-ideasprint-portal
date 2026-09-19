@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
-import type { MemberFormValues } from "./schema";
+import type { CampusCode, MemberFormValues } from "./schema";
 
 /**
  * Uniqueness checks against SPEC.md §12 (team name, university email,
@@ -31,6 +31,27 @@ export async function checkParticipantAvailable(
   const { data, error } = await supabase.rpc("check_participant_available", { p_field: field, p_value: value });
   if (error) return { available: true };
   return { available: (data as boolean | null) ?? true };
+}
+
+export interface CampusSlots {
+  registered: number;
+  cap: number;
+}
+
+/**
+ * One slot = one team (SPEC extension, 2026-09-19): live registered-count +
+ * configured cap per campus, straight from get_team_counts_by_campus
+ * (supabase/migrations/0080_campus_registration_caps.sql) — anon-safe,
+ * read-only. UX only: the authoritative stop is register_team's own cap
+ * check, same "fail open on error" stance as the other availability checks
+ * here, since the real gate is server-side regardless of what this shows.
+ */
+export async function getCampusSlotCounts(): Promise<Partial<Record<CampusCode, CampusSlots>>> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("get_team_counts_by_campus");
+  if (error || !data) return {};
+  const rows = data as { campus: CampusCode; registered: number; cap: number }[];
+  return Object.fromEntries(rows.map((r) => [r.campus, { registered: r.registered, cap: r.cap }]));
 }
 
 /** Detects duplicates *within* the team being submitted, entirely client-side. */

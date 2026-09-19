@@ -18,7 +18,7 @@ function getServerSnapshot() {
   return false;
 }
 
-/** Shown once per browser session when all 100 team slots are filled — informational only, doesn't block the registration form itself. */
+/** Shown once per browser session when every campus's team slots are filled — informational only, doesn't block the registration form itself. */
 export function RegistrationClosedPopup({ isFull }: { isFull: boolean }) {
   // useSyncExternalStore, not an effect+setState — this is a one-shot read of
   // an external store (sessionStorage), with a server snapshot that matches
@@ -50,10 +50,10 @@ export function RegistrationClosedPopup({ isFull }: { isFull: boolean }) {
         className="max-w-md rounded-2xl border border-gold/40 bg-surface p-8 text-center"
       >
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Registrations Closed</span>
-        <p className="mt-4 font-display text-2xl text-ink">All 100 Team Slots Are Full</p>
+        <p className="mt-4 font-display text-2xl text-ink">All Campus Slots Are Full</p>
         <p className="mt-3 font-heading text-sm text-ink-muted">
-          IdeaSprint 4.0 has reached its registration cap. Thanks for your interest — follow our socials for updates
-          on future events.
+          Every campus (Visakhapatnam, Hyderabad, Bangalore) has reached its registration cap. Thanks for your
+          interest — follow our socials for updates on future events.
         </p>
         <button
           type="button"

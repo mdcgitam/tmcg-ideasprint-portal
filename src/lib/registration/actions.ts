@@ -2,7 +2,7 @@
 
 import { createServiceClient } from "@/lib/supabase/service";
 import type { RegisterTeamResult } from "@/types/database";
-import type { MemberFormValues, TeamDetailsFormValues } from "./schema";
+import { CAMPUS_OPTIONS, type MemberFormValues, type TeamDetailsFormValues } from "./schema";
 
 export interface SubmitRegistrationInput {
   team: TeamDetailsFormValues;
@@ -49,6 +49,11 @@ function friendlyMessage(raw: string): string {
   if (raw.startsWith("INVALID_CAMPUS")) {
     return "Please choose a valid campus for your team.";
   }
+  if (raw.startsWith("CAMPUS_FULL")) {
+    const code = raw.split(":").slice(1).join(":").trim();
+    const label = CAMPUS_OPTIONS.find((c) => c.code === code)?.label ?? "This campus";
+    return `${label} has reached its registration cap — no slots remaining. Please check back in case a slot frees up, or choose a different campus if you're eligible.`;
+  }
   // validate_member_academics (supabase/migrations/0026) raises
   // `CODE: <member> — <field-specific sentence>` — surface the sentence as-is.
   const academic = raw.match(
@@ -79,9 +84,9 @@ export async function submitRegistration(input: SubmitRegistrationInput): Promis
   const { data, error } = await supabase.rpc("register_team", { p_payload: payload });
 
   if (error) {
-    const known = /^DUPLICATE_(TEAM_NAME|EMAIL|REGNO|PHONE|ENTRY)/.test(error.message);
+    const known = /^(DUPLICATE_(TEAM_NAME|EMAIL|REGNO|PHONE|ENTRY)|CAMPUS_FULL)/.test(error.message);
     if (!known) {
-      // Recognized duplicate errors are routine user input, not worth logging —
+      // Recognized duplicate/capacity errors are routine, not worth logging —
       // anything else is unexpected and worth keeping visible server-side.
       console.error("register_team RPC error:", error.message);
     }

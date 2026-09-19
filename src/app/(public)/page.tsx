@@ -9,8 +9,7 @@ import { GallerySection } from "@/components/sections/GallerySection";
 import { FAQSection } from "@/components/sections/FAQSection";
 import { ContactSection } from "@/components/sections/ContactSection";
 import { RegistrationClosedPopup } from "@/components/sections/RegistrationClosedPopup";
-
-const TEAM_CAP = 100;
+import type { CampusCode } from "@/lib/registration/schema";
 
 // Placeholder until the real Terms & Conditions doc is set via admin
 // Configuration → Site Content — keeps the box visible now instead of
@@ -34,20 +33,26 @@ function readConfigString(rows: { key: string; value: unknown }[] | null, key: s
 const getHomeData = unstable_cache(
   async () => {
     const supabase = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-    const [{ data: teamCount }, { data: configRows }] = await Promise.all([
-      supabase.rpc("get_confirmed_team_count"),
+    const [{ data: campusCounts }, { data: configRows }] = await Promise.all([
+      supabase.rpc("get_team_counts_by_campus"),
       supabase.from("configuration").select("key, value").in("key", CONFIG_KEYS),
     ]);
-    return { teamCount: (teamCount as number | null) ?? 0, configRows: configRows ?? [] };
+    return {
+      campusCounts: (campusCounts ?? []) as { campus: CampusCode; registered: number; cap: number }[],
+      configRows: configRows ?? [],
+    };
   },
   ["home-page-data"],
   { revalidate: 60 },
 );
 
 export default async function Home() {
-  const { teamCount, configRows } = await getHomeData();
+  const { campusCounts, configRows } = await getHomeData();
 
-  const isFull = teamCount >= TEAM_CAP;
+  const campusSlots = Object.fromEntries(
+    campusCounts.map((c) => [c.campus, { registered: c.registered, cap: c.cap }]),
+  ) as Partial<Record<CampusCode, { registered: number; cap: number }>>;
+  const isFull = campusCounts.length > 0 && campusCounts.every((c) => c.registered >= c.cap);
   const tncUrl = readConfigString(configRows, "terms_and_conditions.url") ?? PLACEHOLDER_TNC_URL;
   const grandFinaleDate = readConfigString(configRows, "grand_finale.date");
   const grandFinaleVenue = readConfigString(configRows, "grand_finale.venue");
@@ -56,7 +61,7 @@ export default async function Home() {
     <main>
       <Hero />
       <TimelineSection grandFinaleDate={grandFinaleDate} grandFinaleVenue={grandFinaleVenue} />
-      <InstructionsSection tncUrl={tncUrl} />
+      <InstructionsSection tncUrl={tncUrl} campusSlots={campusSlots} />
       <PrizeSection />
       <JudgesSection />
       <GallerySection />

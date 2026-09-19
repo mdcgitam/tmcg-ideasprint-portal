@@ -1,13 +1,28 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormContext } from "react-hook-form";
 import { FormField, fieldInputClass } from "@/components/registration/FormField";
-import { CAMPUS_OPTIONS, MAX_TEAM_SIZE, MIN_TEAM_SIZE, type RegistrationFormValues } from "@/lib/registration/schema";
+import { CAMPUS_OPTIONS, MAX_TEAM_SIZE, MIN_TEAM_SIZE, type CampusCode, type RegistrationFormValues } from "@/lib/registration/schema";
+import { getCampusSlotCounts, type CampusSlots } from "@/lib/registration/availability";
 import { cn } from "@/lib/utils";
 
+function remainingSlots(slots: CampusSlots | undefined): number | null {
+  if (!slots) return null;
+  return Math.max(slots.cap - slots.registered, 0);
+}
+
 /**
- * Step 1: Team Name, No. of Members. Domain has been dropped as a concept
- * (ideasprint_changes.pdf item 1) — no other information is requested here.
+ * Step 1: Campus, Team Name, No. of Members. Domain has been dropped as a
+ * concept (ideasprint_changes.pdf item 1) — no other information is
+ * requested here.
+ *
+ * Campus slot counts (one slot = one team) are fetched once on mount purely
+ * for UX — greying out a full campus in the dropdown before someone fills
+ * out the whole form only to be rejected at the end. The authoritative stop
+ * is register_team's own cap check (supabase/migrations/0080), so a stale
+ * read here (a slot fills between page load and submit) still fails
+ * correctly, just later, with the same friendly message.
  */
 export function TeamDetailsStep() {
   const {
@@ -18,6 +33,19 @@ export function TeamDetailsStep() {
   } = useFormContext<RegistrationFormValues>();
 
   const memberCount = watch("team.memberCount");
+  const [slots, setSlots] = useState<Partial<Record<CampusCode, CampusSlots>>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    getCampusSlotCounts().then((result) => {
+      if (!cancelled) setSlots(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hasSlotData = Object.keys(slots).length > 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -37,10 +65,37 @@ export function TeamDetailsStep() {
           <option value="" disabled>
             Select Campus
           </option>
-          {CAMPUS_OPTIONS.map((c) => (
-            <option key={c.code} value={c.code}>{c.label}</option>
-          ))}
+          {CAMPUS_OPTIONS.map((c) => {
+            const remaining = remainingSlots(slots[c.code]);
+            const full = remaining === 0;
+            return (
+              <option key={c.code} value={c.code} disabled={full}>
+                {c.label}
+                {remaining !== null ? (full ? " — Full" : ` — ${remaining} slot${remaining === 1 ? "" : "s"} left`) : ""}
+              </option>
+            );
+          })}
         </select>
+
+        {hasSlotData && (
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            {CAMPUS_OPTIONS.map((c) => {
+              const remaining = remainingSlots(slots[c.code]);
+              const full = remaining === 0;
+              return (
+                <span
+                  key={c.code}
+                  className={cn(
+                    "font-mono text-[11px] tracking-[0.1em] uppercase",
+                    full ? "text-danger" : "text-ink-faint",
+                  )}
+                >
+                  {c.label}: {remaining === null ? "—" : full ? "Full" : `${remaining} left`}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </FormField>
 
       <FormField label="Team Name" required error={errors.team?.teamName?.message} htmlFor="team-name">
