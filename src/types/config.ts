@@ -14,7 +14,6 @@ export interface BrandAsset {
 export interface HeroContent {
   eyebrow: string;
   title: string;
-  campusImage: BrandAsset;
   registerCtaLabel: string;
   loginCtaLabel: string;
 }

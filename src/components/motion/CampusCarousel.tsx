@@ -8,17 +8,20 @@ const SLIDE_MS = 6500;
 const FADE_MS = 1800;
 
 /**
- * The hero's "settled" state, once Act 1's building-construction reveal
- * (Hero.tsx) has finished with it: an ambient crossfade through every
- * campus running Phase 1 (SPEC.md §2), each with a slow Ken-Burns drift and
- * its own large, barely-there watermark of the campus name — mirrors the
- * grain overlay's `mix-blend-overlay` treatment so the type reads as
- * pressed into the photograph rather than sitting on top of it.
+ * The hero's campus imagery: an ambient crossfade through every campus
+ * running Phase 1 (SPEC.md §2), each with a slow Ken-Burns drift and its own
+ * giant, barely-there watermark of the campus name spanning the whole
+ * frame — mirrors the grain overlay's `mix-blend-overlay` treatment so the
+ * type reads as pressed into the photograph rather than sitting on top of
+ * it. Deliberately sized to bleed past the frame's edges on narrow
+ * viewports (the parent layer clips it) rather than shrinking small enough
+ * to always fit — the point is a wall of near-invisible type behind the
+ * real title, not a tidy caption.
  *
- * Hero.tsx controls *when* this becomes visible (fading it in as the final
- * beat of the arrival sequence, or immediately under prefers-reduced-motion)
- * — this component only owns which slide is showing, independent of that,
- * so it's already mid-rotation by the time it's revealed.
+ * Hero.tsx controls *when* this becomes visible (fading it in, or showing
+ * it immediately under prefers-reduced-motion) — this component only owns
+ * which slide is showing, independent of that, so it's already mid-rotation
+ * by the time it's revealed.
  */
 export function CampusCarousel({ slides }: { slides: CampusSlide[] }) {
   const [index, setIndex] = useState(0);
@@ -47,9 +50,9 @@ export function CampusCarousel({ slides }: { slides: CampusSlide[] }) {
               <Image src={slide.src} alt={slide.alt} fill sizes="100vw" priority={i === 0} className="object-cover" />
             </div>
 
-            {/* Large, near-invisible location watermark, crossfading in lockstep with its own photo. */}
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-4">
-              <span className="select-none text-center font-display text-[clamp(3rem,16vw,13rem)] leading-none tracking-[0.02em] text-ink/[0.09] uppercase mix-blend-overlay">
+            {/* Giant, near-invisible location watermark spanning the whole background, crossfading in lockstep with its own photo. */}
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
+              <span className="w-full text-center font-display text-[clamp(4.5rem,20vw,19rem)] leading-none whitespace-nowrap tracking-[0.02em] text-ink/[0.14] uppercase mix-blend-overlay">
                 {slide.label}
               </span>
             </div>

@@ -2,12 +2,11 @@ import { IDENT_DURATION, WILL_PLAY_IDENT } from "./ident-timing";
 
 /**
  * Shared timing so the NavBar's logo/link fade-in stays locked to the
- * Hero's blueprint-to-reality reveal even though they're separate
- * components — names kept as CURTAIN_* since that's still the conceptual
- * role (the thing hiding the photo until it's time to reveal it). The
- * sequence starts at CURTAIN_START and the whole "building constructs
- * itself" arc takes CURTAIN_DURATION seconds, so nothing outside the scene
- * itself may appear before REVEAL_AT.
+ * Hero's own reveal even though they're separate components — names kept
+ * as CURTAIN_* since that's still the conceptual role (the thing holding
+ * back the title/CTAs until the campus carousel has faded in behind them).
+ * The sequence starts at CURTAIN_START and takes CURTAIN_DURATION seconds,
+ * so nothing outside the scene itself may appear before REVEAL_AT.
  *
  * CURTAIN_START is pushed back by the studio ident's runway on loads where
  * it's about to play (see ident-timing.ts) — the sequence must not start
@@ -16,5 +15,5 @@ import { IDENT_DURATION, WILL_PLAY_IDENT } from "./ident-timing";
  * lifecycle without Hero/NavBar needing to coordinate with StudioIdent directly.
  */
 export const CURTAIN_START = (WILL_PLAY_IDENT ? IDENT_DURATION : 0) + 0.15;
-export const CURTAIN_DURATION = 3.4;
+export const CURTAIN_DURATION = 1.1;
 export const REVEAL_AT = CURTAIN_START + CURTAIN_DURATION;

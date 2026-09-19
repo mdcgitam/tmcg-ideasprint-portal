@@ -22,12 +22,8 @@ import type {
  */
 
 export const heroContent: HeroContent = {
-  eyebrow: "TMCG × MDC GITAM VISAKHAPATNAM",
+  eyebrow: "TMCG × MDC",
   title: "IDEASPRINT 4.0",
-  campusImage: {
-    src: "/assets/campus/gitam-academic-block-hires.webp",
-    alt: "GITAM Visakhapatnam campus — the academic block facade",
-  },
   registerCtaLabel: "Register Your Team",
   loginCtaLabel: "Login",
 };
