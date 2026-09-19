@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { CalendarPlus, CalendarDays, Trophy, type LucideIcon } from "lucide-react";
 import { useGSAP } from "@gsap/react";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import { timeline, eventConfig } from "@/data/site-config";
@@ -30,6 +31,37 @@ function formatEventDateRange(startIso: string, endIso: string) {
     return `${day(start)}–${day(end)} ${month(start)} ${year(start)}`;
   }
   return `${day(start)} ${month(start)} ${year(start)} – ${day(end)} ${month(end)} ${year(end)}`;
+}
+
+/**
+ * A date/venue callout that actually reads as an important fact instead of
+ * a caption line — an icon badge + kicker up top, the date itself set large
+ * in display type (not a small bold line lost among everything else), and
+ * a gold-tinted card so it stands apart from the plain timeline steps below.
+ */
+function DateHighlightCard({
+  icon: Icon,
+  kicker,
+  dateText,
+  sub,
+}: {
+  icon: LucideIcon;
+  kicker: string;
+  dateText: string;
+  sub: string;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 via-void to-void px-6 py-6 transition-colors hover:border-gold/70">
+      <div className="flex items-center gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold">
+          <Icon className="size-5" strokeWidth={1.75} />
+        </span>
+        <span className="font-mono text-[11px] tracking-[0.25em] text-gold uppercase">{kicker}</span>
+      </div>
+      <p className="mt-5 font-display text-2xl leading-tight tracking-wide text-ink sm:text-3xl">{dateText}</p>
+      <p className="mt-2 font-heading text-sm text-ink-muted">{sub}</p>
+    </div>
+  );
 }
 
 function toStep(item: (typeof timeline)[number]): Step {
@@ -125,20 +157,25 @@ export function TimelineSection({
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 2 — The Journey</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">THE JOURNEY</h2>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-border bg-void/60 px-5 py-4">
-            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Campus Level — Campus Round</span>
-            <p className="mt-2 font-heading text-sm font-semibold text-gold">
-              {formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)} · Reporting{" "}
-              {eventConfig.reportingTime}
-            </p>
-            <p className="mt-1 font-heading text-sm text-ink-muted">{eventConfig.venue}</p>
-          </div>
-          <div className="rounded-xl border border-border bg-void/60 px-5 py-4">
-            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">University Level — Grand Finale</span>
-            <p className="mt-2 font-heading text-sm font-semibold text-gold">{grandFinaleDate ?? "Date to be announced"}</p>
-            <p className="mt-1 font-heading text-sm text-ink-muted">{grandFinaleVenue ?? "Venue to be announced"}</p>
-          </div>
+        <div className="mt-6 grid gap-4 sm:grid-cols-3">
+          <DateHighlightCard
+            icon={CalendarPlus}
+            kicker="Registration Window"
+            dateText={formatEventDateRange(eventConfig.registrationStart, eventConfig.registrationEnd)}
+            sub={eventConfig.registrationStatus === "open" ? "Registration is currently open" : "Registration is now closed"}
+          />
+          <DateHighlightCard
+            icon={CalendarDays}
+            kicker="Campus Level — Campus Round"
+            dateText={formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)}
+            sub={`Reporting ${eventConfig.reportingTime} · ${eventConfig.venue}`}
+          />
+          <DateHighlightCard
+            icon={Trophy}
+            kicker="University Level — Grand Finale"
+            dateText={grandFinaleDate ?? "Date to be announced"}
+            sub={grandFinaleVenue ?? "Venue to be announced"}
+          />
         </div>
       </div>
 
