@@ -34,7 +34,7 @@ export const heroContent: HeroContent = {
 // CAMPUS_ORDER in src/lib/dashboard/campus-config.ts).
 export const campusSlides: CampusSlide[] = [
   { src: "/assets/campus/GITAM_Vizag_Campus.jpg", alt: "GITAM Visakhapatnam campus", label: "Visakhapatnam" },
-  { src: "/assets/campus/Gitam_hyd_campus.jpeg", alt: "GITAM Hyderabad campus", label: "Hyderabad" },
+  { src: "/assets/campus/Gitam_hyd_campus.avif", alt: "GITAM Hyderabad campus", label: "Hyderabad" },
   { src: "/assets/campus/GITAM_blr_Campus.jpeg", alt: "GITAM Bangalore campus", label: "Bangalore" },
 ];
 

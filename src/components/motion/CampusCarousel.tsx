@@ -10,13 +10,18 @@ const FADE_MS = 1800;
 /**
  * The hero's campus imagery: an ambient crossfade through every campus
  * running Phase 1 (SPEC.md §2), each with a slow Ken-Burns drift and its own
- * giant, barely-there watermark of the campus name spanning the whole
- * frame — mirrors the grain overlay's `mix-blend-overlay` treatment so the
- * type reads as pressed into the photograph rather than sitting on top of
- * it. Deliberately sized to bleed past the frame's edges on narrow
- * viewports (the parent layer clips it) rather than shrinking small enough
- * to always fit — the point is a wall of near-invisible type behind the
- * real title, not a tidy caption.
+ * giant, faded watermark of the campus name spanning the whole frame.
+ * Deliberately sized to bleed past the frame's edges on narrow viewports
+ * (the parent layer clips it) rather than shrinking small enough to always
+ * fit — the point is a wall of soft type behind the real title, not a tidy
+ * caption.
+ *
+ * Plain alpha (not `mix-blend-overlay`, unlike the grain texture) with a
+ * soft drop shadow for definition — these photos are mostly bright sky and
+ * light building facades, and overlay/soft-light blending a near-white fill
+ * against an already-light backdrop washes out to nearly nothing. Plain
+ * alpha plus a dark shadow stays visible regardless of how bright or dark
+ * the photo underneath is.
  *
  * Hero.tsx controls *when* this becomes visible (fading it in, or showing
  * it immediately under prefers-reduced-motion) — this component only owns
@@ -50,9 +55,12 @@ export function CampusCarousel({ slides }: { slides: CampusSlide[] }) {
               <Image src={slide.src} alt={slide.alt} fill sizes="100vw" priority={i === 0} className="object-cover" />
             </div>
 
-            {/* Giant, near-invisible location watermark spanning the whole background, crossfading in lockstep with its own photo. */}
+            {/* Giant, faded location watermark spanning the whole background, crossfading in lockstep with its own photo. */}
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
-              <span className="w-full text-center font-display text-[clamp(4.5rem,20vw,19rem)] leading-none whitespace-nowrap tracking-[0.02em] text-ink/[0.14] uppercase mix-blend-overlay">
+              <span
+                className="w-full text-center font-display text-[clamp(4.5rem,20vw,19rem)] leading-none whitespace-nowrap tracking-[0.02em] text-ink/[0.28] uppercase"
+                style={{ textShadow: "0 8px 48px rgba(0,0,0,0.45)" }}
+              >
                 {slide.label}
               </span>
             </div>
