@@ -83,6 +83,7 @@ export interface Contact {
   designation: string;
   phone: string;
   email: string;
+  photo: BrandAsset;
 }
 
 export interface RegistrationGuidelines {

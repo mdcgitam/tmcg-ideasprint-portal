@@ -1,11 +1,10 @@
+import Image from "next/image";
 import { Reveal } from "@/components/motion/Reveal";
 import { contacts } from "@/data/site-config";
 
 /**
- * Act 8 — Contact. All 4 organizer contacts (3 TMCG + 1 MDC) in a single
- * horizontal row (ideasprint_changes.pdf item 7), wrapping only below the
- * `sm` breakpoint. Names/numbers are organizer-provided placeholders
- * (SPEC.md §87) until Admin Configuration is populated.
+ * Act 8 — Contact. All 4 organizer contacts (2 TMCG + 2 MDC) as photo
+ * cards in a responsive grid (ideasprint_changes.pdf item 7).
  */
 export function ContactSection() {
   return (
@@ -15,14 +14,15 @@ export function ContactSection() {
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-7xl">TALK TO US</h2>
       </Reveal>
 
-      <Reveal stagger className="mx-auto flex max-w-7xl flex-col gap-6 sm:flex-row sm:flex-wrap">
+      <Reveal stagger className="mx-auto grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {contacts.map((c) => (
-          <ContactRow
+          <ContactCard
             key={c.id}
             name={c.name}
             designation={c.designation}
             phone={c.phone}
             email={c.email}
+            photo={c.photo}
             accent={c.org === "MDC" ? "mdc" : "gold"}
           />
         ))}
@@ -31,26 +31,33 @@ export function ContactSection() {
   );
 }
 
-function ContactRow({
+function ContactCard({
   name,
   designation,
   phone,
   email,
+  photo,
   accent = "gold",
 }: {
   name: string;
   designation: string;
   phone: string;
   email: string;
+  photo: { src: string; alt: string };
   accent?: "gold" | "mdc";
 }) {
   return (
-    <div className="flex-1 border-b border-border pb-6 sm:min-w-[220px] sm:border-b-0 sm:border-l sm:border-border sm:pb-0 sm:pl-6 sm:first:border-l-0 sm:first:pl-0">
-      <p className="font-display text-xl tracking-wide text-ink">{name}</p>
+    <div className="flex flex-col items-center rounded-2xl border border-border bg-surface/60 px-6 py-8 text-center">
+      <div
+        className={`size-24 overflow-hidden rounded-full border-2 ${accent === "gold" ? "border-gold/50" : "border-mdc/50"}`}
+      >
+        <Image src={photo.src} alt={photo.alt} width={192} height={192} className="size-full object-cover" />
+      </div>
+      <p className="mt-4 font-display text-xl tracking-wide text-ink">{name}</p>
       <p className={accent === "gold" ? "font-heading text-sm text-gold" : "font-heading text-sm text-mdc"}>
         {designation}
       </p>
-      <div className="mt-2 flex flex-col gap-1 font-mono text-xs text-ink-faint">
+      <div className="mt-3 flex flex-col gap-1 font-mono text-xs text-ink-faint">
         <span>{phone || "Phone pending"}</span>
         <span>{email || "Email pending"}</span>
       </div>

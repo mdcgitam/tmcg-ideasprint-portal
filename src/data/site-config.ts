@@ -138,10 +138,42 @@ export const registrationGuidelines: RegistrationGuidelines = {
   nocFormUrl: null,
 };
 
-// Organizer-provided — not yet supplied. Placeholder structure per SPEC.md §87.
+// Organizer-provided (SPEC.md §87).
 export const contacts: Contact[] = [
-  { id: "c1", org: "TMCG", name: "TMCG Contact 1", designation: "To be announced", phone: "", email: "" },
-  { id: "c2", org: "TMCG", name: "TMCG Contact 2", designation: "To be announced", phone: "", email: "" },
-  { id: "c3", org: "TMCG", name: "TMCG Contact 3", designation: "To be announced", phone: "", email: "" },
-  { id: "c4", org: "MDC", name: "MDC Contact", designation: "To be announced", phone: "", email: "" },
+  {
+    id: "c1",
+    org: "TMCG",
+    name: "Palla Jothisk Nandan",
+    designation: "Co-University Lead",
+    phone: "6304110542",
+    email: "jpalla2@gitam.in",
+    photo: { src: "/assets/contactphotos/jothisk-nandan.jpg", alt: "Palla Jothisk Nandan" },
+  },
+  {
+    id: "c2",
+    org: "TMCG",
+    name: "Somayajula Raam Sashank",
+    designation: "Campus Lead",
+    phone: "7396096611",
+    email: "ssomaya1@student.gitam.edu",
+    photo: { src: "/assets/contactphotos/sashank.jpeg", alt: "Somayajula Raam Sashank" },
+  },
+  {
+    id: "c3",
+    org: "MDC",
+    name: "Akash Kishan Karri",
+    designation: "Vice-President MDC",
+    phone: "8374849797",
+    email: "akarri4@gitam.in",
+    photo: { src: "/assets/contactphotos/akash-kishan.jpg", alt: "Akash Kishan Karri" },
+  },
+  {
+    id: "c4",
+    org: "MDC",
+    name: "Tanishq Kundrapu",
+    designation: "Secretary MDC",
+    phone: "9652177526",
+    email: "tkundrap@student.gitam.edu",
+    photo: { src: "/assets/contactphotos/tanishq.jpg", alt: "Tanishq Kundrapu" },
+  },
 ];
