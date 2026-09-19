@@ -14,7 +14,7 @@ export function ContactSection() {
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-7xl">TALK TO US</h2>
       </Reveal>
 
-      <Reveal stagger className="mx-auto grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <Reveal stagger className="mx-auto grid max-w-7xl gap-6 sm:grid-cols-2 lg:grid-cols-5">
         {contacts.map((c) => (
           <ContactCard
             key={c.id}
