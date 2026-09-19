@@ -144,7 +144,7 @@ export function Hero() {
       <div className="flex w-full flex-1 flex-col items-center justify-center px-2 text-center">
         <p
           data-hero-brandmark
-          className="mb-3 w-full max-w-2xl px-2 font-hero-label text-xs tracking-[0.2em] text-ink uppercase sm:tracking-[0.35em] sm:text-sm"
+          className="mb-6 w-full max-w-2xl px-2 font-hero-label text-xs tracking-[0.2em] text-ink uppercase sm:tracking-[0.35em] sm:text-sm"
         >
           {heroContent.eyebrow}
         </p>
