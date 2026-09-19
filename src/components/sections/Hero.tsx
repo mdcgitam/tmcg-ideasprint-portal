@@ -141,48 +141,50 @@ export function Hero() {
         <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-void to-transparent" />
       </div>
 
-      <div className="flex w-full flex-1 flex-col items-center justify-center px-2 text-center">
+      <div className="flex w-full flex-1 flex-col items-center px-2 text-center">
         <p
           data-hero-brandmark
-          className="mb-12 w-full max-w-2xl px-2 font-hero-label text-xs tracking-[0.2em] text-ink uppercase sm:tracking-[0.35em] sm:text-sm"
+          className="mt-2 w-full max-w-2xl px-2 font-hero-label text-xs tracking-[0.2em] text-ink uppercase sm:mt-4 sm:tracking-[0.35em] sm:text-sm"
         >
           {heroContent.eyebrow}
         </p>
 
-        <h1 className="w-full text-center font-display text-[clamp(2.4rem,11.5vw,9.75rem)] leading-[0.9] tracking-wide text-ink">
-          {titleWords.map((word, wi) => (
-            <span key={wi}>
-              {wi > 0 && " "}
-              {word.split("").map((char, ci) => (
-                <span key={ci} className="inline-block overflow-hidden py-[0.05em] align-top">
-                  <span data-hero-char className="inline-block will-change-transform">
-                    {char}
+        <div className="flex w-full flex-1 flex-col items-center justify-center">
+          <h1 className="w-full text-center font-display text-[clamp(2.4rem,11.5vw,9.75rem)] leading-[0.9] tracking-wide text-ink">
+            {titleWords.map((word, wi) => (
+              <span key={wi}>
+                {wi > 0 && " "}
+                {word.split("").map((char, ci) => (
+                  <span key={ci} className="inline-block overflow-hidden py-[0.05em] align-top">
+                    <span data-hero-char className="inline-block will-change-transform">
+                      {char}
+                    </span>
                   </span>
-                </span>
-              ))}
-            </span>
-          ))}
-        </h1>
+                ))}
+              </span>
+            ))}
+          </h1>
 
-        <p data-hero-location className="mt-6 w-full font-hero-label text-base tracking-[0.2em] text-ink uppercase sm:tracking-[0.3em] sm:text-lg">
-          GITAM Deemed to be University
-        </p>
+          <p data-hero-location className="mt-6 w-full font-hero-label text-base tracking-[0.2em] text-ink uppercase sm:tracking-[0.3em] sm:text-lg">
+            GITAM Deemed to be University
+          </p>
 
-        <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row">
-          <div data-hero-cta>
-            <MagneticButton href="/register" variant="primary" className="font-hero-label">
-              {heroContent.registerCtaLabel}
-            </MagneticButton>
-          </div>
-          <div data-hero-cta>
-            <MagneticButton
-              href="/login"
-              variant="secondary"
-              cursorKind="interactive"
-              className="font-hero-label"
-            >
-              {heroContent.loginCtaLabel}
-            </MagneticButton>
+          <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row">
+            <div data-hero-cta>
+              <MagneticButton href="/register" variant="primary" className="font-hero-label">
+                {heroContent.registerCtaLabel}
+              </MagneticButton>
+            </div>
+            <div data-hero-cta>
+              <MagneticButton
+                href="/login"
+                variant="secondary"
+                cursorKind="interactive"
+                className="font-hero-label"
+              >
+                {heroContent.loginCtaLabel}
+              </MagneticButton>
+            </div>
           </div>
         </div>
       </div>
