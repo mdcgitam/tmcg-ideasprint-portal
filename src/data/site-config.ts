@@ -1,4 +1,5 @@
 import type {
+  CampusSlide,
   Contact,
   EventConfig,
   FAQItem,
@@ -30,6 +31,16 @@ export const heroContent: HeroContent = {
   registerCtaLabel: "Register Your Team",
   loginCtaLabel: "Login",
 };
+
+// IdeaSprint 4.0 Phase 1 runs independently at all three campuses (SPEC.md
+// §2) — the hero's post-reveal carousel cycles through all three, in the
+// same VSP -> HYD -> BLR order used everywhere else in the app (see
+// CAMPUS_ORDER in src/lib/dashboard/campus-config.ts).
+export const campusSlides: CampusSlide[] = [
+  { src: "/assets/campus/GITAM_Vizag_Campus.jpg", alt: "GITAM Visakhapatnam campus", label: "Visakhapatnam" },
+  { src: "/assets/campus/Gitam_hyd_campus.jpeg", alt: "GITAM Hyderabad campus", label: "Hyderabad" },
+  { src: "/assets/campus/GITAM_blr_Campus.jpeg", alt: "GITAM Bangalore campus", label: "Bangalore" },
+];
 
 export const eventConfig: EventConfig = {
   eventName: "TMCG IdeaSprint 4.0",

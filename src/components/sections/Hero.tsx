@@ -9,7 +9,8 @@ import { GrainOverlay } from "@/components/motion/GrainOverlay";
 import { MagneticButton } from "@/components/motion/MagneticButton";
 import { BuildingBlueprint } from "@/components/motion/BuildingBlueprint";
 import { BuildingPhotograph } from "@/components/motion/BuildingPhotograph";
-import { heroContent } from "@/data/site-config";
+import { CampusCarousel } from "@/components/motion/CampusCarousel";
+import { heroContent, campusSlides } from "@/data/site-config";
 import { CURTAIN_START, CURTAIN_DURATION, REVEAL_AT } from "@/lib/hero-timing";
 
 const ALL_HERO_SELECTORS = "[data-hero-brandmark], [data-hero-char], [data-hero-location], [data-hero-cta]";
@@ -57,6 +58,7 @@ export function Hero() {
   const sweepRef = useRef<HTMLDivElement>(null);
   const particlesRef = useRef<HTMLDivElement>(null);
   const foregroundLayerRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
   const titleWords = heroContent.title.split(" ");
 
   useGSAP(
@@ -65,7 +67,8 @@ export function Hero() {
 
       function forceVisible() {
         gsap.set(ALL_HERO_SELECTORS, { clearProps: "all" });
-        gsap.set(foregroundLayerRef.current, { opacity: 0.4 });
+        gsap.set(foregroundLayerRef.current, { opacity: 0 });
+        gsap.set(carouselRef.current, { opacity: 1 });
         gsap.set("[data-reveal-base]", { opacity: 1 });
         gsap.set("[data-reveal-clip]", { attr: { height: (_i: number, target: SVGRectElement) => target.dataset.fullHeight ?? "0" } });
         gsap.set(blueprintRef.current, { opacity: 0 });
@@ -92,6 +95,7 @@ export function Hero() {
 
       tl.set(blueprintRef.current, { opacity: 1 })
         .set(foregroundLayerRef.current, { opacity: 0 })
+        .set(carouselRef.current, { opacity: 0 })
         .set(coreLightRef.current, { opacity: 0, scale: 0.5 })
         .set(sweepRef.current, { opacity: 0, xPercent: -150 })
         .set(pointNodes, { opacity: 0, scale: 0 })
@@ -189,7 +193,16 @@ export function Hero() {
           REVEAL_AT,
         )
         .to("[data-hero-location]", { opacity: 1, y: 0, duration: 0.55, ease: "power2.out" }, REVEAL_AT + 0.15)
-        .to("[data-hero-cta]", { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: "power2.out" }, REVEAL_AT + 0.3);
+        .to("[data-hero-cta]", { opacity: 1, y: 0, duration: 0.5, stagger: 0.1, ease: "power2.out" }, REVEAL_AT + 0.3)
+
+        // STATE 8 — HANDOFF TO THE CAMPUS CAROUSEL: once everything has
+        // landed, the single constructed photograph gives way to the
+        // ambient multi-campus carousel (CampusCarousel.tsx) — the
+        // foreground depth band (specific to this one building's geometry)
+        // fades out in the same beat so it never sits mismatched over a
+        // different campus's photo.
+        .to(carouselRef.current, { opacity: 1, duration: 1.4, ease: "power2.out" }, REVEAL_AT + 1.1)
+        .to(foregroundLayerRef.current, { opacity: 0, duration: 1.2, ease: "power2.inOut" }, REVEAL_AT + 1.1);
 
       // Safety net: a plain setTimeout (not GSAP's own rAF-driven clock) so
       // visibility is guaranteed on real wall-clock time even if the ticker
@@ -276,6 +289,17 @@ export function Hero() {
       >
         <BuildingPhotograph src={heroContent.campusImage.src} />
 
+        {/* Act 2 — Settled state: once the construction above has fully
+            landed (or immediately, under prefers-reduced-motion), this
+            fades in and takes over as "the photo", ambiently cycling
+            through every campus IdeaSprint 4.0 runs at (SPEC.md §2). Sits
+            right on top of the single constructed photograph so the
+            handoff is a plain crossfade, and underneath the grain/blueprint/
+            vignette layers below so it gets the same cinematic treatment. */}
+        <div ref={carouselRef} className="absolute inset-0">
+          <CampusCarousel slides={campusSlides} />
+        </div>
+
         {/* Film grain disguises the source photo's compression as an
             intentional cinematic grade instead of a stretched, soft image. */}
         <GrainOverlay opacity={0.06} />
@@ -354,7 +378,7 @@ export function Hero() {
         </h1>
 
         <p data-hero-location className="mt-6 w-full font-hero-label text-base tracking-[0.2em] text-ink uppercase sm:tracking-[0.3em] sm:text-lg">
-          GITAM Visakhapatnam
+          GITAM Deemed to be University
         </p>
 
         <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row">

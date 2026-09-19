@@ -19,6 +19,11 @@ export interface HeroContent {
   loginCtaLabel: string;
 }
 
+/** One slide of the hero's post-reveal campus carousel — the photo plus the large faded location watermark shown over it. */
+export interface CampusSlide extends BrandAsset {
+  label: string;
+}
+
 export interface EventConfig {
   eventName: string;
   eventDescription: string;
