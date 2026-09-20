@@ -7,7 +7,7 @@ import { CAMPUS_ORDER } from "@/lib/dashboard/campus-config";
 import { downloadCsv } from "@/lib/csv";
 
 /**
- * Read-only headcount summary by Zone and by Venue — a different grain than
+ * Read-only headcount summary by Zone and by Venue - a different grain than
  * a team list (aggregated, not per-team). "People" counts active members
  * only, matching the Team Size convention used everywhere else, and only
  * active (non-no-show) teams contribute (0073). Originally Rooms and
@@ -60,7 +60,7 @@ export function HeadcountSection({
   });
   const venueHcSpocOptions = venueHcCampus ? spocs.filter((s) => s.campus === venueHcCampus) : spocs;
 
-  // Only actual zones — a team with no venue (or a venue without a zone)
+  // Only actual zones - a team with no venue (or a venue without a zone)
   // just doesn't count toward any row here, rather than showing a
   // permanent "Unassigned" placeholder.
   const zoneHeadcountRows = (() => {

@@ -10,6 +10,8 @@ import {
   nowDatetimeLocalValue,
   problemStatementMaxNumber,
   problemStatementMaxNumberKey,
+  problemStatementMinNumber,
+  problemStatementMinNumberKey,
   PROBLEM_STATEMENT_PREFIX,
 } from "@/lib/dashboard/campus-config";
 import { parseDocumentLinks, type DocumentLink } from "@/components/dashboard/DocumentsSection";
@@ -20,7 +22,7 @@ const DOCUMENTS_KEY = "documents.list";
 
 /**
  * SPEC §79-88: everything admin-configurable lives in one generic
- * key/value table — new settings don't need new UI or a migration, just a
+ * key/value table - new settings don't need new UI or a migration, just a
  * new entry in one of these lists. Datetime settings use a calendar
  * date + time picker and are stored as a timestamptz-parseable ISO 8601
  * string (e.g. 2026-09-25T16:00:00.000Z), the form the consuming RPCs read
@@ -28,10 +30,10 @@ const DOCUMENTS_KEY = "documents.list";
  * record_noc_metadata, see 0002/0003/0027/0028/0048).
  *
  * The Problem Statement spreadsheet URL and the "Go Live" release control
- * live on the Problem Statements page instead — see
+ * live on the Problem Statements page instead - see
  * ProblemStatementsAdminSection.tsx.
  *
- * Campus scoping (0048): the four fields below are campus-overridable — a
+ * Campus scoping (0048): the four fields below are campus-overridable - a
  * Campus Admin's save writes a campus-suffixed key (e.g.
  * "noc.general_deadline.VSP") instead of the global one, and their form
  * displays the value in effect for their campus (their override if set,
@@ -54,33 +56,11 @@ const SELECTION_WINDOW_KEYS = [
   },
 ] as const;
 
-// Super-Admin-only — Item 23: edits the /privacy page content directly from here.
+// Super-Admin-only - Item 23: edits the /privacy page content directly from here.
 const PRIVACY_POLICY_KEY = "privacy_policy.content";
 
-// Super-Admin-only — homepage Instructions section shows the T&C box only once this is set.
+// Super-Admin-only - homepage Instructions section shows the T&C box only once this is set.
 const TNC_URL_KEY = "terms_and_conditions.url";
-
-// Super-Admin-only — homepage's "University Level" card (TimelineSection).
-// Datetime pickers, same as SELECTION_WINDOW_KEYS/DEADLINE_KEYS below, but
-// not campus-overridable — there's only one Grand Finale, not one per
-// campus. Unlike Campus Level (hardcoded in site-config.ts because it never
-// changes), this is admin-set since exactly when/where isn't fixed until the
-// campus rounds finish. Shows "to be announced" until these are set.
-const GRAND_FINALE_KEYS = [
-  {
-    key: "grand_finale.start",
-    label: "Grand Finale Start",
-    hint: "When the University Level round begins — also shown as its reporting time.",
-    description: "Grand Finale (University Level) start date and time.",
-  },
-  {
-    key: "grand_finale.end",
-    label: "Grand Finale End",
-    hint: "When the University Level round ends.",
-    description: "Grand Finale (University Level) end date and time.",
-  },
-] as const;
-const GRAND_FINALE_VENUE_KEY = "grand_finale.venue";
 
 const DEADLINE_KEYS = [
   {
@@ -112,7 +92,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
   // Super Admin viewing "All" (no campus module selected) edits the global
   // key and is the only one who sees Privacy Policy / T&C (truly global,
   // no campus override); a Campus Admin, or a Super Admin viewing one
-  // campus module, edits that campus's override — same rule Schedule uses.
+  // campus module, edits that campus's override - same rule Schedule uses.
   const isAllMode = isSuperAdmin && !campus;
 
   function writeKeyFor(baseKey: string): string {
@@ -129,14 +109,6 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
       initial[PRIVACY_POLICY_KEY] = typeof rawPrivacy === "string" ? rawPrivacy : "";
       const rawTnc = config[TNC_URL_KEY];
       initial[TNC_URL_KEY] = typeof rawTnc === "string" ? rawTnc : "";
-      const rawGfVenue = config[GRAND_FINALE_VENUE_KEY];
-      initial[GRAND_FINALE_VENUE_KEY] = typeof rawGfVenue === "string" ? rawGfVenue : "";
-      // Not campus-overridable (there's only one Grand Finale) — read the
-      // global key directly instead of through effectiveConfigValue.
-      for (const { key } of GRAND_FINALE_KEYS) {
-        const raw = config[key];
-        initial[key] = toDatetimeLocal(typeof raw === "string" ? raw : null);
-      }
     }
     for (const { key } of [...SELECTION_WINDOW_KEYS, ...DEADLINE_KEYS]) {
       initial[key] = toDatetimeLocal(effectiveConfigValue(config, key, isAllMode ? null : campus));
@@ -146,9 +118,16 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const [message, setMessage] = useState<Record<string, string>>({});
 
-  // Super-Admin-only, "All" mode only — each campus runs its own numbered
+  // Super-Admin-only, "All" mode only - each campus runs its own numbered
   // problem statement track (V1.., H1.., B1..); a Campus Admin never sees
-  // or edits any campus's count, including their own.
+  // or edits any campus's range, including their own. Min defaults to 1;
+  // raising it lets a campus's track continue a shared number space
+  // instead of restarting at 1 (e.g. VSP 1-50, HYD 51-56).
+  const [psMinDrafts, setPsMinDrafts] = useState<Record<CampusCode, string>>(() => ({
+    VSP: String(problemStatementMinNumber(config, "VSP")),
+    HYD: String(problemStatementMinNumber(config, "HYD")),
+    BLR: String(problemStatementMinNumber(config, "BLR")),
+  }));
   const [psMaxDrafts, setPsMaxDrafts] = useState<Record<CampusCode, string>>(() => ({
     VSP: String(problemStatementMaxNumber(config, "VSP")),
     HYD: String(problemStatementMaxNumber(config, "HYD")),
@@ -157,20 +136,22 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
   const [savingPsMaxCampus, setSavingPsMaxCampus] = useState<CampusCode | null>(null);
   const [psMaxMessages, setPsMaxMessages] = useState<Partial<Record<CampusCode, string>>>({});
 
-  async function handleSavePsMax(psCampus: CampusCode) {
-    const n = Number(psMaxDrafts[psCampus].trim());
-    if (!Number.isInteger(n) || n < 1) {
-      setPsMaxMessages((m) => ({ ...m, [psCampus]: "Enter a whole number of 1 or more." }));
+  async function handleSavePsRange(psCampus: CampusCode) {
+    const min = Number(psMinDrafts[psCampus].trim());
+    const max = Number(psMaxDrafts[psCampus].trim());
+    if (!Number.isInteger(min) || min < 1) {
+      setPsMaxMessages((m) => ({ ...m, [psCampus]: "Enter a whole starting number of 1 or more." }));
+      return;
+    }
+    if (!Number.isInteger(max) || max < min) {
+      setPsMaxMessages((m) => ({ ...m, [psCampus]: "Enter a whole ending number no smaller than the start." }));
       return;
     }
     setSavingPsMaxCampus(psCampus);
     setPsMaxMessages((m) => ({ ...m, [psCampus]: "" }));
     try {
-      await setConfiguration(
-        problemStatementMaxNumberKey(psCampus),
-        n,
-        `Highest problem statement number for ${psCampus} (numbering starts at 1).`,
-      );
+      await setConfiguration(problemStatementMinNumberKey(psCampus), min, `Starting problem statement number for ${psCampus}.`);
+      await setConfiguration(problemStatementMaxNumberKey(psCampus), max, `Highest problem statement number for ${psCampus}.`);
       setPsMaxMessages((m) => ({ ...m, [psCampus]: "Saved." }));
     } catch (err) {
       setPsMaxMessages((m) => ({ ...m, [psCampus]: err instanceof DashboardActionError ? err.message : "Something went wrong." }));
@@ -313,11 +294,12 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
   function psCountField() {
     return (
       <div className="rounded-xl border border-border bg-surface p-6">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Count (per campus)</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Problem Statement Range (per campus)</span>
         <p className="mt-1 font-heading text-xs text-ink-muted">
-          Each campus runs its own numbered track (V1… for VSP, H1… for HYD, B1… for BLR) - set how many each has. Go Live on the
-          Problem Statements page creates exactly this many per campus, and it&rsquo;s the ceiling Team Leads and admins can enter
-          for that campus.
+          Each campus runs its own numbered track (V.. for VSP, H.. for HYD, B.. for BLR) - set the start and end number for each.
+          Go Live on the Problem Statements page creates exactly this range per campus, and it&rsquo;s what Team Leads and admins
+          can enter for that campus. Start defaults to 1 - raise it to continue a shared number space instead of every campus
+          restarting at 1 (e.g. VSP 1-50, HYD 51-56).
         </p>
         <div className="mt-3 flex flex-col gap-3">
           {CAMPUS_ORDER.map((psCampus) => (
@@ -325,17 +307,30 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
               <span className="w-14 font-heading text-xs text-ink-muted">
                 {psCampus} ({PROBLEM_STATEMENT_PREFIX[psCampus]})
               </span>
-              <input
-                type="number"
-                min={1}
-                value={psMaxDrafts[psCampus]}
-                onChange={(e) => setPsMaxDrafts((prev) => ({ ...prev, [psCampus]: e.target.value }))}
-                className="w-28 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-              />
+              <label className="flex items-center gap-1.5 font-heading text-xs text-ink-faint">
+                Start
+                <input
+                  type="number"
+                  min={1}
+                  value={psMinDrafts[psCampus]}
+                  onChange={(e) => setPsMinDrafts((prev) => ({ ...prev, [psCampus]: e.target.value }))}
+                  className="w-24 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                />
+              </label>
+              <label className="flex items-center gap-1.5 font-heading text-xs text-ink-faint">
+                End
+                <input
+                  type="number"
+                  min={1}
+                  value={psMaxDrafts[psCampus]}
+                  onChange={(e) => setPsMaxDrafts((prev) => ({ ...prev, [psCampus]: e.target.value }))}
+                  className="w-24 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+                />
+              </label>
               <button
                 type="button"
                 disabled={savingPsMaxCampus === psCampus}
-                onClick={() => handleSavePsMax(psCampus)}
+                onClick={() => handleSavePsRange(psCampus)}
                 className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
               >
                 {savingPsMaxCampus === psCampus ? "Saving…" : "Save"}
@@ -372,65 +367,6 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
           </button>
         </div>
         {message[TNC_URL_KEY] && <p className="mt-2 font-heading text-xs text-ink-muted">{message[TNC_URL_KEY]}</p>}
-      </div>
-    );
-  }
-
-  function grandFinaleField() {
-    return (
-      <div className="rounded-xl border border-border bg-surface p-6">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Grand Finale (University Level)</span>
-        <p className="mt-1 font-heading text-xs text-ink-muted">
-          Shown on the homepage&rsquo;s Journey section. Left blank shows &ldquo;to be announced&rdquo;. Not
-          campus-overridable — there&rsquo;s only one Grand Finale.
-        </p>
-        <div className="mt-3 flex flex-col gap-4">
-          {GRAND_FINALE_KEYS.map(({ key, label, hint }) => (
-            <label key={key} className="flex flex-col gap-1">
-              <span className="font-heading text-xs text-ink-faint">
-                {label} <span className="normal-case text-ink-faint/70">— {hint}</span>
-              </span>
-              <div className="flex flex-wrap items-center gap-3">
-                <input
-                  type="datetime-local"
-                  min={nowDatetimeLocalValue()}
-                  value={values[key] ?? ""}
-                  onChange={(e) => setValues((v) => ({ ...v, [key]: e.target.value }))}
-                  className="rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-                />
-                <button
-                  type="button"
-                  disabled={savingKey === key}
-                  onClick={() => handleSaveDeadline(key, GRAND_FINALE_KEYS.find((k) => k.key === key)!.description)}
-                  className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-                >
-                  {savingKey === key ? "Saving…" : "Save"}
-                </button>
-              </div>
-              {message[key] && <p className="font-heading text-xs text-ink-muted">{message[key]}</p>}
-            </label>
-          ))}
-          <label className="flex flex-col gap-1">
-            <span className="font-heading text-xs text-ink-faint">Venue</span>
-            <div className="flex flex-wrap gap-3">
-              <input
-                value={values[GRAND_FINALE_VENUE_KEY] ?? ""}
-                onChange={(e) => setValues((v) => ({ ...v, [GRAND_FINALE_VENUE_KEY]: e.target.value }))}
-                placeholder="e.g. Shivaji Auditorium, ICT Bhavan, Visakhapatnam Campus"
-                className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
-              />
-              <button
-                type="button"
-                disabled={savingKey === GRAND_FINALE_VENUE_KEY}
-                onClick={() => handleSave(GRAND_FINALE_VENUE_KEY)}
-                className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-              >
-                {savingKey === GRAND_FINALE_VENUE_KEY ? "Saving…" : "Save"}
-              </button>
-            </div>
-            {message[GRAND_FINALE_VENUE_KEY] && <p className="font-heading text-xs text-ink-muted">{message[GRAND_FINALE_VENUE_KEY]}</p>}
-          </label>
-        </div>
       </div>
     );
   }
@@ -590,7 +526,6 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
             {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
             {DEADLINE_KEYS.map((d) => deadlineField(d))}
             {isAllMode && psCountField()}
-            {isAllMode && grandFinaleField()}
             {isAllMode && tncField()}
             {isAllMode && privacyField()}
           </>

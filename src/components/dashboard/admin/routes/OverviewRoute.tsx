@@ -8,7 +8,7 @@ export async function OverviewRoute({ profile }: { profile: ProfileRow }) {
   const { teams, membersByTeam, approvalRequests, exitRequests, nocs, rooms, zones, staffAccounts, spocs, problemStatements } =
     await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
-  // Only the Super Admin's "All" view ever mixes more than one campus's data —
+  // Only the Super Admin's "All" view ever mixes more than one campus's data -
   // every other viewer (Campus Admin/SPOC/Zone Manager, or a Super Admin who's
   // picked one campus module) already gets pre-scoped data from
   // fetchAdminDashboardData, so a Campus filter would have nothing to narrow.

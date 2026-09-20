@@ -36,7 +36,7 @@ const SOCIAL_ICON: Record<SocialPlatform, React.ReactNode> = {
 export function Footer() {
   const logosRef = useRef<HTMLDivElement>(null);
 
-  // A quiet closing beat — the three marks pulse once as the footer comes
+  // A quiet closing beat - the three marks pulse once as the footer comes
   // into view, echoing StudioIdent's opening pulse (the "curtain closes").
   useGSAP(
     () => {

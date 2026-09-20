@@ -80,7 +80,7 @@ export function RoomsZonesSection({
   const fadeRef = useTabFade(view);
 
   const [selectedTeamIds, setSelectedTeamIds] = useState<Set<string>>(new Set());
-  // Campus/Zone narrow the Venue list before picking — only shown/used when
+  // Campus/Zone narrow the Venue list before picking - only shown/used when
   // !singleCampus, since a Campus Admin (or a Super Admin scoped to one
   // campus module) already has few enough venues that Venue alone is fine.
   const [bulkCampusFilter, setBulkCampusFilter] = useState<CampusCode | "">("");
@@ -106,7 +106,7 @@ export function RoomsZonesSection({
   const [editTeamId, setEditTeamId] = useState<string | null>(null);
   const [teamVenueDraft, setTeamVenueDraft] = useState("");
 
-  // View locked to a single campus (Campus Admin, or Super Admin in a campus module) — drop the constant Campus column/filter.
+  // View locked to a single campus (Campus Admin, or Super Admin in a campus module) - drop the constant Campus column/filter.
   const singleCampus = campus != null;
   const staffById = (id: string | null) => staffAccounts.find((s) => s.id === id)?.name ?? null;
   const roomById = (id: string | null) => localRooms.find((r) => r.id === id) ?? null;
@@ -149,7 +149,7 @@ export function RoomsZonesSection({
       return true;
     });
 
-    // Campus -> Team ID only — not the usual Campus/Zone/Venue/SPOC layout
+    // Campus -> Team ID only - not the usual Campus/Zone/Venue/SPOC layout
     // order, because this is precisely the tab where Zone/Venue/SPOC get
     // assigned, so most teams here won't have one yet.
     return [...filtered].sort((a, b) => {
@@ -225,7 +225,7 @@ export function RoomsZonesSection({
     }
   }
 
-  /** Bidirectional — this is the recovery path for a late arrival or a mistaken Mark as No-Show from Attendance. */
+  /** Bidirectional - this is the recovery path for a late arrival or a mistaken Mark as No-Show from Attendance. */
   async function handleToggleTeamActive(team: TeamRow) {
     setBusy(`active-team:${team.id}`);
     setError(null);
@@ -588,7 +588,7 @@ export function RoomsZonesSection({
                             {(() => {
                               // Only this zone's own campus, and only managers not
                               // already assigned to a *different* zone (a manager
-                              // is tied to exactly one zone) — assign_zone_manager
+                              // is tied to exactly one zone) - assign_zone_manager
                               // rejects both server-side (CROSS_CAMPUS /
                               // ZONE_MANAGER_ALREADY_ASSIGNED), this just stops the
                               // dropdown from offering an invalid pick at all.

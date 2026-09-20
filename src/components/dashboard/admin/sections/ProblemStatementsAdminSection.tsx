@@ -29,14 +29,13 @@ import {
   parseProblemStatementCode,
   problemStatementCode,
   problemStatementMaxNumber,
+  problemStatementMinNumber,
   PROBLEM_STATEMENT_PREFIX,
   sortCampuses,
 } from "@/lib/dashboard/campus-config";
 import { sortByLayout } from "@/lib/dashboard/team-sort";
 import { downloadCsv } from "@/lib/csv";
 import { FilterSelect } from "./TeamFormFields";
-
-const PS_MIN = 1;
 
 interface PsFilters {
   search: string;
@@ -70,13 +69,13 @@ function configString(config: Record<string, unknown>, key: string): string | nu
  * Each campus runs its own independent problem statement track, numbered
  * 1 through a Super-Admin-configured per-campus ceiling
  * (problem_statement.max_number.<CAMPUS>, default 50) and distinguished by
- * a campus-letter prefix (V1, V2… for VSP, H1… for HYD, B1… for BLR) — a
+ * a campus-letter prefix (V1, V2… for VSP, H1… for HYD, B1… for BLR) - a
  * team may only ever select from its own campus's track. The actual
  * titles/content live in an admin-provided Google
  * Sheet (one tab per campus), browsed externally by Team Leads. The sheet
- * URL and the "Go Live" release control live here (Super Admin only —
+ * URL and the "Go Live" release control live here (Super Admin only -
  * never Campus Admin) rather than in Configuration. A campus-specific
- * override, once set, always wins over the global value for that campus —
+ * override, once set, always wins over the global value for that campus -
  * unlike the deadline fields, this is not latest-edit-wins, so a Super
  * Admin can go live for one campus independently without a later global
  * edit (or a later Go Live for "All") silently taking it over. Until a
@@ -127,7 +126,7 @@ export function ProblemStatementsAdminSection({
   }
 
   // The spreadsheet URL is one shared global value, editable only from
-  // "All" — frozen (read-only) while viewing a specific campus module, so
+  // "All" - frozen (read-only) while viewing a specific campus module, so
   // there's never a divergent link per campus. Only Go Live/Hide is
   // genuinely independent per campus.
   const [spreadsheetUrl, setSpreadsheetUrl] = useState(configString(config, URL_KEY) ?? "");
@@ -139,19 +138,19 @@ export function ProblemStatementsAdminSection({
   // the shared URL, revealed once their own campus's live_at is set (or
   // the global one, if that campus never got its own).
   const effectiveLiveAt = campusOverrideValue(config, LIVE_AT_KEY, viewerCampus);
-  // "Has this scope ever gone live" — local optimistic value if this
+  // "Has this scope ever gone live" - local optimistic value if this
   // session already changed it, else whatever's effective from config.
   const isLive = !!(liveAt ?? effectiveLiveAt);
 
   // Super-Admin-only pause: blocks new selections and hides the sheet link
   // for this scope without touching the already-created catalog or any
-  // team's existing selection — reversible instantly. Kept separate from
+  // team's existing selection - reversible instantly. Kept separate from
   // live_at so toggling it doesn't stamp over the original "went live at"
   // record. Same campus-override-wins rule as the URL/live_at.
   const HIDDEN_KEY = "problem_statement.hidden";
   const [hidden, setHidden] = useState(campusOverrideBoolean(config, HIDDEN_KEY, viewerCampus));
 
-  // One button covers all three states — go live, hide, unhide — instead
+  // One button covers all three states - go live, hide, unhide - instead
   // of a separate Go Live button that stays active (and confusing) forever
   // after the first click: !isLive -> "Go Live"; isLive && !hidden ->
   // "Hide"; isLive && hidden -> "Unhide". Unhiding re-syncs the catalog
@@ -161,14 +160,21 @@ export function ProblemStatementsAdminSection({
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Each campus's problem statement count ceiling (numbering starts at 1)
-  // — Super-Admin-set from the Configuration page, read-only here. Going
-  // live/unhiding creates/catches up exactly this many per campus, and
-  // it's the ceiling Team Leads/admins can enter for that campus.
+  // Each campus's problem statement number range - Super-Admin-set from the
+  // Configuration page, read-only here. Going live/unhiding creates/catches
+  // up exactly this range per campus, and it's what Team Leads/admins can
+  // enter for that campus. Min defaults to 1 (starting at the beginning);
+  // set higher to continue a shared number space across campuses instead of
+  // each one restarting at 1 (e.g. VSP 1-50, HYD 51-56).
   const psMax: Record<CampusCode, number> = {
     VSP: problemStatementMaxNumber(config, "VSP"),
     HYD: problemStatementMaxNumber(config, "HYD"),
     BLR: problemStatementMaxNumber(config, "BLR"),
+  };
+  const psMin: Record<CampusCode, number> = {
+    VSP: problemStatementMinNumber(config, "VSP"),
+    HYD: problemStatementMinNumber(config, "HYD"),
+    BLR: problemStatementMinNumber(config, "BLR"),
   };
 
   async function handleSaveUrl() {
@@ -184,11 +190,11 @@ export function ProblemStatementsAdminSection({
     }
   }
 
-  /** Creates/updates every problem statement this scope should have, matching the currently configured per-campus count. Idempotent — safe to call on both first Go Live and on Unhide (to catch up a count raised while paused). */
+  /** Creates/updates every problem statement this scope should have, matching the currently configured per-campus count. Idempotent - safe to call on both first Go Live and on Unhide (to catch up a count raised while paused). */
   async function syncCatalog() {
     const campusesToRelease = viewerCampus ? [viewerCampus] : CAMPUS_ORDER;
     const codes = campusesToRelease.flatMap((campus) =>
-      Array.from({ length: psMax[campus] }, (_, i) => ({ campus, code: problemStatementCode(campus, PS_MIN + i) })),
+      Array.from({ length: psMax[campus] - psMin[campus] + 1 }, (_, i) => ({ campus, code: problemStatementCode(campus, psMin[campus] + i) })),
     );
     const results = await Promise.all(
       codes.map(async ({ campus, code }) => {
@@ -272,7 +278,7 @@ export function ProblemStatementsAdminSection({
   const extensionOf = (teamId: string) => localExtensions.find((e) => e.team_id === teamId);
   // A team's effective deadline: whichever of {global selection end,
   // campus-scoped selection end, this team's extension} was edited most
-  // recently wins (0066) — same rule NOC/PPT use.
+  // recently wins (0066) - same rule NOC/PPT use.
   function effectiveDeadlineDetailed(teamId: string): { value: string | null; fromIndividualOverride: boolean } {
     const campus = localTeams.find((t) => t.id === teamId)?.campus ?? null;
     const extension = extensionOf(teamId);
@@ -365,9 +371,10 @@ export function ProblemStatementsAdminSection({
     const raw = (psDrafts[team.id] ?? psNumberOf(team)).trim();
     const prefix = PROBLEM_STATEMENT_PREFIX[team.campus];
     const max = psMax[team.campus];
+    const min = psMin[team.campus];
     const parsed = parseProblemStatementCode(raw);
-    if (!raw || !parsed || parsed.campus !== team.campus || parsed.number < PS_MIN || parsed.number > max) {
-      setPsErrors((prev) => ({ ...prev, [team.id]: `Enter a code between ${prefix}${PS_MIN} and ${prefix}${max}.` }));
+    if (!raw || !parsed || parsed.campus !== team.campus || parsed.number < min || parsed.number > max) {
+      setPsErrors((prev) => ({ ...prev, [team.id]: `Enter a code between ${prefix}${min} and ${prefix}${max}.` }));
       return;
     }
     const code = problemStatementCode(team.campus, parsed.number);
@@ -716,7 +723,7 @@ export function ProblemStatementsAdminSection({
                                     type="text"
                                     value={psDrafts[team.id] ?? psNumberOf(team)}
                                     onChange={(e) => setPsDrafts((prev) => ({ ...prev, [team.id]: e.target.value }))}
-                                    placeholder={`${PROBLEM_STATEMENT_PREFIX[team.campus]}${PS_MIN}–${PROBLEM_STATEMENT_PREFIX[team.campus]}${psMax[team.campus]}`}
+                                    placeholder={`${PROBLEM_STATEMENT_PREFIX[team.campus]}${psMin[team.campus]}–${PROBLEM_STATEMENT_PREFIX[team.campus]}${psMax[team.campus]}`}
                                     className="w-20 rounded-lg border border-border bg-void px-2 py-1 font-heading text-xs text-ink outline-none focus:border-gold"
                                   />
                                   <button

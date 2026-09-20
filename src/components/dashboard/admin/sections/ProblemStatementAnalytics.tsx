@@ -5,7 +5,7 @@ import type { ProblemStatementRow, TeamRow } from "@/types/database";
 import { CAMPUS_ORDER, parseProblemStatementCode, sortCampuses } from "@/lib/dashboard/campus-config";
 
 /**
- * Read-only Problem Statement selection analytics — one table per campus,
+ * Read-only Problem Statement selection analytics - one table per campus,
  * since each campus numbers its problem statements independently (V1..,
  * H1.., B1..) so a single merged table would mix unrelated codes together.
  * Originally the Problem Statements module's own "Analytics" tab; moved

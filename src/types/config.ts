@@ -1,7 +1,7 @@
 /**
  * Typed shape of everything the Super Admin can configure (SPEC.md §79-88).
  * Components must read through this layer (or the future Supabase-backed
- * equivalent in `src/lib/config.ts`) — never inline event-specific literals.
+ * equivalent in `src/lib/config.ts`) - never inline event-specific literals.
  */
 
 import type { CampusCode } from "@/lib/registration/schema";
@@ -20,7 +20,7 @@ export interface HeroContent {
   loginCtaLabel: string;
 }
 
-/** One slide of the hero's post-reveal campus carousel — the photo plus the large faded location watermark shown over it. */
+/** One slide of the hero's post-reveal campus carousel - the photo plus the large faded location watermark shown over it. */
 export interface CampusSlide extends BrandAsset {
   label: string;
 }
@@ -32,11 +32,15 @@ export interface EventConfig {
   registrationStatus: "open" | "closed";
   registrationStart: string; // ISO
   registrationEnd: string; // ISO
-  /** Also the reporting time, shown separately — participants must have reported in by this moment. Same time at every campus, only the venue differs. */
+  /** Also the reporting time, shown separately - participants must have reported in by this moment. Same time at every campus, only the venue differs. */
   eventStart: string; // ISO
   eventEnd: string; // ISO
-  /** Campus Level reporting venue, one per campus — different at each of the 3 campuses. */
+  /** Campus Level reporting venue, one per campus - different at each of the 3 campuses. */
   venueByCampus: Record<CampusCode, string>;
+  /** University Level (Grand Finale) - fixed like Campus Level, not admin-configurable (there's no live-changing qualification logic that would need it editable, so it doesn't need its own database round-trip). */
+  universityLevelStart: string; // ISO
+  universityLevelEnd: string; // ISO
+  universityLevelVenue: string;
 }
 
 export type TimelineStage = "round-1" | "round-2" | "grand-finale" | "milestone";
@@ -78,7 +82,7 @@ export interface FAQItem {
 
 export type ContactOrg = "TMCG" | "MDC";
 
-/** Which campus(es) this person is the point of contact for — shown as a badge so it's clear at a glance, not buried in the designation sentence. Null for a non-campus-scoped role (e.g. the website architect). */
+/** Which campus(es) this person is the point of contact for - shown as a badge so it's clear at a glance, not buried in the designation sentence. Null for a non-campus-scoped role (e.g. the website architect). */
 export type ContactScope = "All Campuses" | "Visakhapatnam" | "Hyderabad" | "Bangalore" | null;
 
 export interface Contact {
@@ -95,7 +99,7 @@ export interface Contact {
 export interface RegistrationGuidelines {
   content: string; // markdown/plain text, admin-editable
   nocNotice: string;
-  /** Link to the NOC form (PDF or hosted doc) parents fill out — shown during registration. Null until organizers supply one. */
+  /** Link to the NOC form (PDF or hosted doc) parents fill out - shown during registration. Null until organizers supply one. */
   nocFormUrl: string | null;
 }
 

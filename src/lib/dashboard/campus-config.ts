@@ -235,15 +235,32 @@ export function problemStatementMaxNumberKey(campus: CampusCode): string {
 }
 
 /**
- * The highest problem statement number in a campus's track (numbering
- * always starts at 1) — set by the Super Admin per campus via
- * "problem_statement.max_number.<CAMPUS>". Falls back to 50 until
- * explicitly configured.
+ * The highest problem statement number in a campus's track — set by the
+ * Super Admin per campus via "problem_statement.max_number.<CAMPUS>". Falls
+ * back to 50 until explicitly configured.
  */
 export function problemStatementMaxNumber(config: Record<string, unknown>, campus: CampusCode): number {
   const raw = config[problemStatementMaxNumberKey(campus)];
   const n = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
   return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_PROBLEM_STATEMENT_MAX;
+}
+
+/** The config key holding a campus's problem statement starting number — mirrors problemStatementMaxNumberKey. */
+export function problemStatementMinNumberKey(campus: CampusCode): string {
+  return `problem_statement.min_number.${campus}`;
+}
+
+/**
+ * The lowest problem statement number in a campus's track — set by the
+ * Super Admin per campus via "problem_statement.min_number.<CAMPUS>". Falls
+ * back to 1 (numbering starting at the beginning) until explicitly
+ * configured — lets a campus's track start partway through a shared number
+ * space instead of always restarting at 1 (e.g. VSP 1-50, HYD 51-56).
+ */
+export function problemStatementMinNumber(config: Record<string, unknown>, campus: CampusCode): number {
+  const raw = config[problemStatementMinNumberKey(campus)];
+  const n = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw) : NaN;
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : 1;
 }
 
 /** Builds a campus's problem statement code for number n (e.g. VSP, 5 -> "V5"). */

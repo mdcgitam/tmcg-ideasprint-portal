@@ -15,7 +15,7 @@ import type {
 /**
  * Placeholder / seed content for everything the Admin Configuration module
  * (SPEC.md §79-88) will eventually own. Nothing here is fabricated beyond
- * what SPEC.md states as fact — anything the organizers haven't supplied yet
+ * what SPEC.md states as fact - anything the organizers haven't supplied yet
  * (domains, judges, gallery photos, contacts, exact config dates) is marked
  * as a clearly-structured placeholder so it can be swapped for real content
  * without touching component code. See prompt.md "No Fake Data" + "Asset
@@ -30,7 +30,7 @@ export const heroContent: HeroContent = {
 };
 
 // IdeaSprint 4.0 Phase 1 runs independently at all three campuses (SPEC.md
-// §2) — the hero's post-reveal carousel cycles through all three, in the
+// §2) - the hero's post-reveal carousel cycles through all three, in the
 // same VSP -> HYD -> BLR order used everywhere else in the app (see
 // CAMPUS_ORDER in src/lib/dashboard/campus-config.ts).
 export const campusSlides: CampusSlide[] = [
@@ -56,6 +56,9 @@ export const eventConfig: EventConfig = {
     HYD: "Kinnera Auditorium, J Block",
     BLR: "Kojo Hall, SB Bhavan",
   },
+  universityLevelStart: "2026-10-17T10:00:00+05:30",
+  universityLevelEnd: "2026-10-18T10:00:00+05:30",
+  universityLevelVenue: "Shivaji Auditorium, ICT Bhavan, Visakhapatnam Campus",
 };
 
 // Round structure + labels are factual (SPEC.md §2). Exact configured
@@ -103,7 +106,7 @@ export const gallery: GalleryImage[] = Array.from({ length: 10 }, (_, i) => {
 // No judges confirmed/supplied yet.
 export const judges: Judge[] = [];
 
-// Sourced directly from SPEC.md facts — not fabricated.
+// Sourced directly from SPEC.md facts - not fabricated.
 export const faqs: FAQItem[] = [
   {
     id: "f1",
@@ -136,7 +139,7 @@ export const registrationGuidelines: RegistrationGuidelines = {
   content:
     "Registration guidelines will be published by the organizers before registration opens. This content is fully editable from Admin Configuration.",
   nocNotice: "NOC Submission is COMPULSORY for every participant.",
-  // Not yet supplied by organizers — until it is, the guidelines step shows a
+  // Not yet supplied by organizers - until it is, the guidelines step shows a
   // "provided closer to the event" note instead of a broken/missing link.
   nocFormUrl: null,
 };
@@ -197,7 +200,7 @@ export const contacts: Contact[] = [
   },
 ];
 
-// WhatsApp is a placeholder (SPEC.md "No Fake Data" — clearly marked, not a
+// WhatsApp is a placeholder (SPEC.md "No Fake Data" - clearly marked, not a
 // real invite link) until the organizers supply the actual group link.
 export const socialLinks: SocialLink[] = [
   { platform: "instagram", label: "Instagram", url: "https://www.instagram.com/tmcg_gcgc/" },

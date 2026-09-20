@@ -4,10 +4,10 @@ import { contacts } from "@/data/site-config";
 import type { ContactScope } from "@/types/config";
 
 /**
- * Act 8 — Contact. All 5 organizer contacts (4 TMCG + 1 MDC) as photo cards
+ * Act 8 - Contact. All 5 organizer contacts (4 TMCG + 1 MDC) as photo cards
  * in a responsive grid (ideasprint_changes.pdf item 7). This site serves all
  * three campuses at once, so who to reach out to isn't obvious from a name
- * and a title alone — each card gets an explicit scope badge (a campus, "All
+ * and a title alone - each card gets an explicit scope badge (a campus, "All
  * Campuses", or nothing for a non-campus role) rather than folding that into
  * the designation sentence.
  */

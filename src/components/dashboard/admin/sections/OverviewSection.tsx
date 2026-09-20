@@ -42,7 +42,7 @@ type Tab = "summary" | "breakdown" | "headcount" | "analytics";
 
 /**
  * dataviz skill's validated dark-mode categorical order (references/palette.md)
- * — each chart here is one series (a headcount) broken into nominal
+ * - each chart here is one series (a headcount) broken into nominal
  * categories already named by the X-axis, so per the skill's own anti-pattern
  * list ("a value-ramp on nominal categories") every bar within one chart
  * shares a single hue; a different slot per *chart* just helps tell them
@@ -64,7 +64,7 @@ interface MemberRow {
   team: TeamRow;
 }
 
-/** Generic enough to back every drill-down — team lists, request lists, and member lists alike — so clicking a KPI number behaves exactly like clicking a chart bar. */
+/** Generic enough to back every drill-down - team lists, request lists, and member lists alike - so clicking a KPI number behaves exactly like clicking a chart bar. */
 interface DrillDown {
   title: string;
   countLabel: string;
@@ -123,7 +123,7 @@ export function OverviewSection({
   );
   const teamsYetToSelectPs = useMemo(() => participatingTeams.filter((t) => !t.current_problem_statement_id), [participatingTeams]);
 
-  // Active members of teams that actually participated — the population every
+  // Active members of teams that actually participated - the population every
   // "Active ___" KPI and every chart below draws from. A no-show team's
   // roster never showed up, so it doesn't belong in "how many of our
   // attendees are 3rd years" any more than it belongs in Attendance/NOC/PPT

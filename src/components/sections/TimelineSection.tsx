@@ -43,11 +43,11 @@ function formatDateTime(iso: string) {
 
 /**
  * A date/venue callout that actually reads as an important fact instead of
- * a caption line — an icon badge + kicker up top, a gold-tinted card so it
+ * a caption line - an icon badge + kicker up top, a gold-tinted card so it
  * stands apart from the plain timeline steps below. Carries every fact a
  * participant needs to actually show up: start and end (each with its own
  * time, not just a bare date), a separate "Reporting" line for the one
- * moment that actually matters operationally, and the venue(s) — several
+ * moment that actually matters operationally, and the venue(s) - several
  * rows when they differ by campus (Campus Level), one row otherwise
  * (University Level).
  */
@@ -56,18 +56,15 @@ function DateHighlightCard({
   kicker,
   startIso,
   endIso,
-  fallback,
   statusNote,
   showReporting = false,
   venues,
 }: {
   icon: LucideIcon;
   kicker: string;
-  /** Null (with `fallback` shown instead) for a level whose schedule isn't confirmed yet — currently only possible for University Level. */
-  startIso: string | null;
-  endIso: string | null;
-  fallback?: string;
-  /** Registration's open/closed line — the only card that doesn't report to a venue. */
+  startIso: string;
+  endIso: string;
+  /** Registration's open/closed line - the only card that doesn't report to a venue. */
   statusNote?: string;
   /** Derives "Reporting: <time>" from startIso's own time-of-day, rather than a separately hand-maintained value that could drift from it. */
   showReporting?: boolean;
@@ -83,18 +80,14 @@ function DateHighlightCard({
         <span className="font-mono text-[11px] tracking-[0.25em] text-gold uppercase">{kicker}</span>
       </div>
 
-      {startIso && endIso ? (
-        <div className="mt-5 flex flex-col gap-0.5">
-          <p className="font-display text-lg leading-tight tracking-wide text-ink sm:text-xl">{formatDateTime(startIso)}</p>
-          <p className="font-heading text-[11px] tracking-[0.2em] text-ink-faint uppercase">to</p>
-          <p className="font-display text-lg leading-tight tracking-wide text-ink sm:text-xl">{formatDateTime(endIso)}</p>
-        </div>
-      ) : (
-        <p className="mt-5 font-display text-2xl leading-tight tracking-wide text-ink sm:text-3xl">{fallback}</p>
-      )}
+      <div className="mt-5 flex flex-col gap-0.5">
+        <p className="font-display text-lg leading-tight tracking-wide text-ink sm:text-xl">{formatDateTime(startIso)}</p>
+        <p className="font-heading text-[11px] tracking-[0.2em] text-ink-faint uppercase">to</p>
+        <p className="font-display text-lg leading-tight tracking-wide text-ink sm:text-xl">{formatDateTime(endIso)}</p>
+      </div>
 
       {statusNote && <p className="mt-3 font-heading text-sm text-ink-muted">{statusNote}</p>}
-      {showReporting && startIso && (
+      {showReporting && (
         <p className="mt-3 font-heading text-xs font-semibold text-gold">Reporting: {formatTime(new Date(startIso))}</p>
       )}
 
@@ -123,25 +116,15 @@ function toStep(item: (typeof timeline)[number]): Step {
 const steps: Step[] = timeline.map(toStep);
 
 /**
- * Act 2 — The Journey (prompt.md §11, §43). A connected roadmap rather than
+ * Act 2 - The Journey (prompt.md §11, §43). A connected roadmap rather than
  * a pinned cycle of giant numbers or another card row (which would just
- * repeat the Domains pattern) — Round 1 → Round 2 → Grand Finale joined by a
+ * repeat the Domains pattern) - Round 1 → Round 2 → Grand Finale joined by a
  * line that draws in as the section scrolls through view. No pinning, no
- * scroll-jacking — just a smooth, lightly-scrubbed reveal. Also carries the
- * date/reporting-time/venue for both levels (moved here from Instructions) —
- * Campus Level's is fixed (eventConfig), University Level's (Grand Finale) is
- * admin-set via Configuration and may still be unconfirmed, hence the
- * nullable props.
+ * scroll-jacking - just a smooth, lightly-scrubbed reveal. Also carries the
+ * date/reporting-time/venue for both levels (moved here from Instructions) -
+ * both fixed in eventConfig, no props needed.
  */
-export function TimelineSection({
-  grandFinaleStart,
-  grandFinaleEnd,
-  grandFinaleVenue,
-}: {
-  grandFinaleStart: string | null;
-  grandFinaleEnd: string | null;
-  grandFinaleVenue: string | null;
-}) {
+export function TimelineSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const lineRef = useRef<HTMLDivElement>(null);
 
@@ -153,7 +136,7 @@ export function TimelineSection({
       const contents = gsap.utils.toArray<HTMLElement>("[data-step-content]", sectionRef.current);
 
       // Dots/content start fully hidden (not a faint preview at their final
-      // position) — nothing should be visible ahead of where the scroll
+      // position) - nothing should be visible ahead of where the scroll
       // flow has actually reached.
       gsap.set(lineRef.current, { scaleX: 0 });
       gsap.set(dots, { scale: 0.4, opacity: 0 });
@@ -164,7 +147,7 @@ export function TimelineSection({
           trigger: sectionRef.current,
           // Starts the instant the section's top touches the viewport's
           // bottom edge (i.e. the moment it first appears) and completes
-          // when its top reaches the viewport's top — the point where the
+          // when its top reaches the viewport's top - the point where the
           // section stops sliding in and starts sliding back out. The whole
           // reveal must be finished by then, not partway through leaving.
           start: "top bottom",
@@ -176,7 +159,7 @@ export function TimelineSection({
       tl.to(lineRef.current, { scaleX: 1, ease: "none", duration: 1 }, 0);
 
       // Back-to-back slices, weighted so the first step gets a generous,
-      // gentle window and the rest share what's left — the Grand Finale's
+      // gentle window and the rest share what's left - the Grand Finale's
       // slice is short (renders quickly once reached) but still ends
       // exactly at 1, so it's fully in by the time the section starts to
       // leave, not partway through leaving.
@@ -226,11 +209,10 @@ export function TimelineSection({
           <DateHighlightCard
             icon={Trophy}
             kicker="University Level"
-            startIso={grandFinaleStart}
-            endIso={grandFinaleEnd}
-            fallback="Date to be announced"
+            startIso={eventConfig.universityLevelStart}
+            endIso={eventConfig.universityLevelEnd}
             showReporting
-            venues={[{ label: "Venue", venue: grandFinaleVenue ?? "To be announced" }]}
+            venues={[{ label: "Venue", venue: eventConfig.universityLevelVenue }]}
           />
         </div>
       </div>
