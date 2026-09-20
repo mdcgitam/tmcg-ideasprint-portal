@@ -71,20 +71,26 @@ export const timeline: TimelineItem[] = [
     stage: "round-1",
     label: "Campus Level – Round 1",
     duration: "100 Minutes",
-    detail: "Naukri Assessment - mandatory for every registered participant.",
+    detail:
+      "Naukri Assessment - mandatory for every registered participant, with multiple sections assessing different skills. Contributes 20% of your Campus Level score.",
+    // Not yet supplied by the organizers - the "know more" link stays hidden until then.
+    detailsUrl: null,
   },
   {
     id: "round-2",
     stage: "round-2",
     label: "Campus Level – Round 2",
     duration: "18 Hours",
-    detail: "Build Hackathon - mandatory for every registered participant.",
+    detail:
+      "Build Hackathon - mandatory for every registered participant. You'll be given a problem statement and must deliver the expected solution within the time limit. Contributes 80% of your Campus Level score.",
+    detailsUrl: null,
   },
   {
     id: "grand-finale",
     stage: "grand-finale",
     label: "Grand Finale",
-    detail: "Top-performing teams from Visakhapatnam, Hyderabad, and Bangalore compete for the final cash prizes.",
+    detail:
+      "Shortlisted teams from Visakhapatnam, Hyderabad, and Bangalore compete in a 24-hour hackathon with a fresh set of problem statements for the final cash prizes.",
   },
 ];
 
@@ -158,32 +164,32 @@ export const contacts: Contact[] = [
   {
     id: "c1",
     org: "TMCG",
-    name: "Palla Jothisk Nandan",
+    name: "Jothisk Nandan P",
     designation: "Co-University Lead",
     scope: "All Campuses",
     phone: "6304110542",
     email: "jpalla2@gitam.in",
-    photo: { src: "/assets/contactphotos/jothisk-nandan.jpg", alt: "Palla Jothisk Nandan" },
+    photo: { src: "/assets/contactphotos/jothisk-nandan.jpg", alt: "Jothisk Nandan P" },
   },
   {
     id: "c2",
     org: "TMCG",
-    name: "Somayajula Raam Sashank",
+    name: "Raam Sashnak S",
     designation: "Campus Lead",
     scope: "Visakhapatnam",
     phone: "7396096611",
     email: "ssomaya1@student.gitam.edu",
-    photo: { src: "/assets/contactphotos/sashank.jpeg", alt: "Somayajula Raam Sashank" },
+    photo: { src: "/assets/contactphotos/sashank.jpeg", alt: "Raam Sashnak S" },
   },
   {
     id: "c3",
     org: "TMCG",
-    name: "Krishnapriya Koppolu",
+    name: "Krishnapriya K",
     designation: "Campus Lead",
     scope: "Hyderabad",
     phone: "8142957572",
     email: "kkoppolu@student.gitam.edu",
-    photo: { src: "/assets/contactphotos/krishnapriya-koppolu.png", alt: "Krishnapriya Koppolu" },
+    photo: { src: "/assets/contactphotos/krishnapriya-koppolu.png", alt: "Krishnapriya K" },
   },
   {
     id: "c4",
@@ -193,7 +199,8 @@ export const contacts: Contact[] = [
     scope: "Bangalore",
     phone: "6302158054",
     email: "sesikala@gitam.in",
-    photo: { src: "/assets/contactphotos/sai-roopak.jpg", alt: "Sai Roopak Esikala" },
+    // Pre-cropped to head-and-chest (source: sai-roopak.jpg) since the original was a waist-up shot.
+    photo: { src: "/assets/contactphotos/sai-roopak-headshot.jpg", alt: "Sai Roopak Esikala" },
   },
   {
     id: "c5",
@@ -204,6 +211,17 @@ export const contacts: Contact[] = [
     phone: "8374849797",
     email: "akarri4@gitam.in",
     photo: { src: "/assets/contactphotos/akash-kishan.jpg", alt: "Akash Kishan Karri" },
+  },
+  {
+    id: "c6",
+    org: "MDC",
+    name: "Tanishq K",
+    designation: "Website Architect",
+    scope: "All Campuses",
+    phone: "9652177526",
+    email: "tkundrap@student.gitam.edu",
+    // Pre-cropped to head-and-chest (source: Tanishq.jpg) since the original was a waist-up shot.
+    photo: { src: "/assets/contactphotos/tanishq-headshot.jpg", alt: "Tanishq K" },
   },
 ];
 

@@ -113,8 +113,7 @@ export function Hero() {
       <div
         ref={imageRef}
         data-hero-image
-        className="pointer-events-none absolute inset-0 -z-10 overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--color-surface-2),_var(--color-void))] will-change-transform"
-        style={{ clipPath: "inset(0% round 24px)" }}
+        className="pointer-events-none absolute -inset-2 -z-10 overflow-hidden bg-[radial-gradient(ellipse_at_center,_var(--color-surface-2),_var(--color-void))] will-change-transform"
       >
         <CampusCarousel slides={campusSlides} />
 
@@ -153,7 +152,7 @@ export function Hero() {
           </h1>
 
           <p data-hero-location className="mt-6 w-full font-hero-label text-base tracking-[0.2em] text-ink uppercase sm:tracking-[0.3em] sm:text-lg">
-            GITAM Deemed to be University
+            GITAM (Deemed to be University)
           </p>
 
           <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row">

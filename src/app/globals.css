@@ -146,3 +146,24 @@ body {
   display: inline-block;
   will-change: transform, opacity;
 }
+
+/* Public-site content guard (Home + Register only - see CopyGuard.tsx) -
+   deters casual copy/drag of copy and imagery. Not real protection (view
+   source, devtools, and screenshots all bypass it), just a speed bump. */
+.copy-guard {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Form inputs/textareas stay selectable/editable regardless of the guard
+   above - participants must still be able to fix a typo in what they typed. */
+.copy-guard input,
+.copy-guard textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.copy-guard img {
+  -webkit-user-drag: none;
+  user-drag: none;
+}

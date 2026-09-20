@@ -52,6 +52,8 @@ export interface TimelineItem {
   duration?: string;
   detail: string;
   at?: string; // ISO, for configurable milestones
+  /** Link to the round's full rules/regulations doc - null until the organizers supply one. */
+  detailsUrl?: string | null;
 }
 
 export interface PrizeTier {

@@ -74,7 +74,7 @@ export function InstructionsSection({
   campusSlots: Partial<Record<CampusCode, CampusSlotInfo>>;
 }) {
   return (
-    <section id="instructions" className="flex min-h-screen flex-col justify-center border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16">
+    <section id="instructions" className="min-h-[92svh] border-t border-border bg-void px-6 pt-6 pb-16 sm:px-10 sm:pt-8 lg:px-16">
       <div className="mx-auto w-full max-w-6xl">
         <Reveal className="mb-10">
           <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 4 - The Briefing</span>

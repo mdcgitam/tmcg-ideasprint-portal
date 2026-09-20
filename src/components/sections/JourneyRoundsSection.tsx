@@ -11,14 +11,22 @@ interface Step {
   big: string;
   unit?: string;
   detail: string;
+  detailsUrl?: string | null;
 }
 
 function toStep(item: (typeof timeline)[number]): Step {
   if (!item.duration) {
-    return { id: item.id, kicker: "University Level", big: item.label.toUpperCase(), detail: item.detail };
+    return { id: item.id, kicker: "University Level", big: item.label.toUpperCase(), detail: item.detail, detailsUrl: item.detailsUrl };
   }
   const [value, ...unitParts] = item.duration.split(" ");
-  return { id: item.id, kicker: item.label, big: value, unit: unitParts.join(" ").toUpperCase(), detail: item.detail };
+  return {
+    id: item.id,
+    kicker: item.label,
+    big: value,
+    unit: unitParts.join(" ").toUpperCase(),
+    detail: item.detail,
+    detailsUrl: item.detailsUrl,
+  };
 }
 
 const steps: Step[] = timeline.map(toStep);
@@ -91,14 +99,14 @@ export function JourneyRoundsSection() {
     <section
       ref={sectionRef}
       id="rounds"
-      className="flex min-h-screen flex-col justify-center border-t border-border bg-surface px-6 py-16 sm:px-10 lg:px-16"
+      className="min-h-[88svh] border-t border-border bg-surface px-6 pt-6 pb-6 sm:px-10 sm:pt-8 sm:pb-8 lg:px-16"
     >
-      <div className="mx-auto mb-16 w-full max-w-7xl">
+      <div className="mx-auto mb-8 w-full max-w-7xl">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 3 - The Rounds</span>
-        <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">THE ROUNDS</h2>
+        <h2 className="mt-3 font-display text-5xl tracking-wide text-ink sm:text-7xl">THE ROUNDS</h2>
       </div>
 
-      <div className="mx-auto w-full max-w-5xl">
+      <div className="mx-auto w-full max-w-6xl">
         {/* the road: base line + gold progress line + node dots */}
         <div className="relative mb-10 h-4">
           <div className="absolute top-1/2 right-2 left-2 h-px -translate-y-1/2 bg-border-strong" />
@@ -117,15 +125,25 @@ export function JourneyRoundsSection() {
           </div>
         </div>
 
-        <div className="flex flex-col gap-10 sm:flex-row sm:justify-between sm:gap-6">
+        <div className="flex flex-col gap-10 sm:flex-row sm:justify-between sm:gap-8">
           {steps.map((step) => (
-            <div key={step.id} data-step-content className="text-left sm:max-w-[16rem]">
+            <div key={step.id} data-step-content className="text-left sm:max-w-[19rem]">
               <span className="font-heading text-xs tracking-[0.3em] text-ink-muted uppercase">{step.kicker}</span>
               <p className="mt-3 font-display text-4xl tracking-wide text-ink sm:text-5xl">
                 {step.big}
                 {step.unit && <span className="ml-2 align-middle font-heading text-base text-gold sm:text-lg">{step.unit}</span>}
               </p>
-              <p className="mt-3 max-w-[16rem] font-heading text-sm text-ink-muted">{step.detail}</p>
+              <p className="mt-3 max-w-[19rem] font-heading text-sm text-ink-muted">{step.detail}</p>
+              {step.detailsUrl && (
+                <a
+                  href={step.detailsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-3 inline-block font-heading text-xs font-semibold text-gold underline underline-offset-2 hover:text-gold-light"
+                >
+                  Click here to know more
+                </a>
+              )}
             </div>
           ))}
         </div>

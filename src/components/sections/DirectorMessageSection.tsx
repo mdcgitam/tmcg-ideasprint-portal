@@ -14,7 +14,7 @@ export function DirectorMessageSection() {
   return (
     <section
       id="directors-message"
-      className="flex min-h-screen flex-col justify-center border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16"
+      className="min-h-[92svh] border-t border-border bg-void px-6 pt-6 pb-16 sm:px-10 sm:pt-8 lg:px-16"
     >
       <div className="mx-auto w-full max-w-5xl">
         <Reveal className="mb-12">

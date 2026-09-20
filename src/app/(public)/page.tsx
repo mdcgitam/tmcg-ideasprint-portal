@@ -60,7 +60,7 @@ export default async function Home() {
   return (
     <main>
       <Hero />
-      <JourneyDatesSection campusSlots={campusSlots} />
+      <JourneyDatesSection />
       <JourneyRoundsSection />
       <InstructionsSection tncUrl={tncUrl} campusSlots={campusSlots} />
       <PrizeSection />
