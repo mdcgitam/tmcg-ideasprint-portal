@@ -71,9 +71,9 @@ export const timeline: TimelineItem[] = [
     stage: "round-1",
     label: "Campus Level – Round 1",
     duration: "100 Minutes",
-    detail:
-      "Naukri Assessment - mandatory for every registered participant, with multiple sections assessing different skills. Contributes 20% of your Campus Level score.",
-    // Not yet supplied by the organizers - the "know more" link stays hidden until then.
+    detail: "Naukri Assessment - mandatory for every registered participant, with multiple sections assessing different skills.",
+    scoreWeight: "20% of Campus Level Score",
+    // Not yet supplied by the organizers - shown as a disabled preview button until then.
     detailsUrl: null,
   },
   {
@@ -82,7 +82,8 @@ export const timeline: TimelineItem[] = [
     label: "Campus Level – Round 2",
     duration: "18 Hours",
     detail:
-      "Build Hackathon - mandatory for every registered participant. You'll be given a problem statement and must deliver the expected solution within the time limit. Contributes 80% of your Campus Level score.",
+      "Build Hackathon - mandatory for every registered participant. You'll be given a problem statement and must deliver the expected solution within the time limit.",
+    scoreWeight: "80% of Campus Level Score",
     detailsUrl: null,
   },
   {
@@ -91,6 +92,7 @@ export const timeline: TimelineItem[] = [
     label: "Grand Finale",
     detail:
       "Shortlisted teams from Visakhapatnam, Hyderabad, and Bangalore compete in a 24-hour hackathon with a fresh set of problem statements for the final cash prizes.",
+    detailsUrl: null,
   },
 ];
 

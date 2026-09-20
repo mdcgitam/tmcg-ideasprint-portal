@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { useGSAP } from "@gsap/react";
+import { ClipboardCheck, Code2, Trophy, FileText, type LucideIcon } from "lucide-react";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import { timeline } from "@/data/site-config";
 
@@ -12,11 +13,28 @@ interface Step {
   unit?: string;
   detail: string;
   detailsUrl?: string | null;
+  scoreWeight?: string;
 }
+
+// Keyed by the timeline entry's own id (site-config.ts) rather than stored
+// alongside the data - icon choice is a presentation concern, not a fact
+// about the event.
+const STEP_ICON: Record<string, LucideIcon> = {
+  "round-1": ClipboardCheck,
+  "round-2": Code2,
+  "grand-finale": Trophy,
+};
 
 function toStep(item: (typeof timeline)[number]): Step {
   if (!item.duration) {
-    return { id: item.id, kicker: "University Level", big: item.label.toUpperCase(), detail: item.detail, detailsUrl: item.detailsUrl };
+    return {
+      id: item.id,
+      kicker: "University Level",
+      big: item.label.toUpperCase(),
+      detail: item.detail,
+      detailsUrl: item.detailsUrl,
+      scoreWeight: item.scoreWeight,
+    };
   }
   const [value, ...unitParts] = item.duration.split(" ");
   return {
@@ -26,10 +44,37 @@ function toStep(item: (typeof timeline)[number]): Step {
     unit: unitParts.join(" ").toUpperCase(),
     detail: item.detail,
     detailsUrl: item.detailsUrl,
+    scoreWeight: item.scoreWeight,
   };
 }
 
 const steps: Step[] = timeline.map(toStep);
+
+/**
+ * "Know more" CTA, styled as a real button rather than an inline text link.
+ * Shown as a preview even before a real rules/regulations doc exists
+ * (detailsUrl null) - rendered as a disabled, muted button instead of a
+ * clickable dead end, so it's ready to go live the moment a URL is supplied.
+ */
+function KnowMoreButton({ url }: { url?: string | null }) {
+  const shared = "mt-4 inline-flex items-center gap-1.5 rounded-full border px-4 py-1.5 font-heading text-xs font-medium transition-colors";
+
+  if (url) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className={`${shared} border-gold/50 text-gold hover:bg-gold/10`}>
+        <FileText className="size-3.5" strokeWidth={1.75} />
+        Rules &amp; Regulations
+      </a>
+    );
+  }
+
+  return (
+    <span aria-disabled className={`${shared} cursor-not-allowed border-border-strong text-ink-faint`}>
+      <FileText className="size-3.5" strokeWidth={1.75} />
+      Rules &amp; Regulations
+    </span>
+  );
+}
 
 /**
  * Act 3 - The Journey, Part 2: The Rounds. Split out of the old, crowded
@@ -99,7 +144,7 @@ export function JourneyRoundsSection() {
     <section
       ref={sectionRef}
       id="rounds"
-      className="min-h-[88svh] border-t border-border bg-surface px-6 pt-6 pb-6 sm:px-10 sm:pt-8 sm:pb-8 lg:px-16"
+      className="min-h-[89svh] border-t border-border bg-surface px-6 pt-6 pb-6 sm:px-10 sm:pt-8 sm:pb-8 lg:px-16"
     >
       <div className="mx-auto mb-8 w-full max-w-7xl">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 3 - The Rounds</span>
@@ -126,26 +171,32 @@ export function JourneyRoundsSection() {
         </div>
 
         <div className="flex flex-col gap-10 sm:flex-row sm:justify-between sm:gap-8">
-          {steps.map((step) => (
-            <div key={step.id} data-step-content className="text-left sm:max-w-[19rem]">
-              <span className="font-heading text-xs tracking-[0.3em] text-ink-muted uppercase">{step.kicker}</span>
-              <p className="mt-3 font-display text-4xl tracking-wide text-ink sm:text-5xl">
-                {step.big}
-                {step.unit && <span className="ml-2 align-middle font-heading text-base text-gold sm:text-lg">{step.unit}</span>}
-              </p>
-              <p className="mt-3 max-w-[19rem] font-heading text-sm text-ink-muted">{step.detail}</p>
-              {step.detailsUrl && (
-                <a
-                  href={step.detailsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-3 inline-block font-heading text-xs font-semibold text-gold underline underline-offset-2 hover:text-gold-light"
-                >
-                  Click here to know more
-                </a>
-              )}
-            </div>
-          ))}
+          {steps.map((step) => {
+            const Icon = STEP_ICON[step.id];
+            return (
+              <div key={step.id} data-step-content className="text-left sm:max-w-[19rem]">
+                <div className="flex items-center gap-3">
+                  {Icon && (
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold">
+                      <Icon className="size-4.5" strokeWidth={1.75} />
+                    </span>
+                  )}
+                  <span className="font-heading text-xs tracking-[0.3em] text-ink-muted uppercase">{step.kicker}</span>
+                </div>
+                <p className="mt-3 font-display text-4xl tracking-wide text-ink sm:text-5xl">
+                  {step.big}
+                  {step.unit && <span className="ml-2 align-middle font-heading text-base text-gold sm:text-lg">{step.unit}</span>}
+                </p>
+                {step.scoreWeight && (
+                  <span className="mt-2 inline-block rounded-full border border-gold/40 bg-gold/10 px-3 py-1 font-mono text-[10px] tracking-[0.15em] text-gold uppercase">
+                    {step.scoreWeight}
+                  </span>
+                )}
+                <p className="mt-3 max-w-[19rem] font-heading text-sm text-ink-muted">{step.detail}</p>
+                <KnowMoreButton url={step.detailsUrl} />
+              </div>
+            );
+          })}
         </div>
       </div>
     </section>

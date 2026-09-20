@@ -54,6 +54,8 @@ export interface TimelineItem {
   at?: string; // ISO, for configurable milestones
   /** Link to the round's full rules/regulations doc - null until the organizers supply one. */
   detailsUrl?: string | null;
+  /** e.g. "20% of Campus Level Score" - shown as its own badge instead of buried in `detail` prose. */
+  scoreWeight?: string;
 }
 
 export interface PrizeTier {
