@@ -15,11 +15,13 @@ interface Step {
   detail: string;
 }
 
+// Zero-padded ("05th", not "5th") per the organizers' preferred date style.
 function ordinal(n: number) {
-  if (n % 10 === 1 && n % 100 !== 11) return `${n}st`;
-  if (n % 10 === 2 && n % 100 !== 12) return `${n}nd`;
-  if (n % 10 === 3 && n % 100 !== 13) return `${n}rd`;
-  return `${n}th`;
+  const padded = String(n).padStart(2, "0");
+  if (n % 10 === 1 && n % 100 !== 11) return `${padded}st`;
+  if (n % 10 === 2 && n % 100 !== 12) return `${padded}nd`;
+  if (n % 10 === 3 && n % 100 !== 13) return `${padded}rd`;
+  return `${padded}th`;
 }
 
 function formatEventDateRange(startIso: string, endIso: string) {
@@ -180,14 +182,14 @@ export function TimelineSection({
           />
           <DateHighlightCard
             icon={CalendarDays}
-            kicker="Campus Level - Campus Round"
+            kicker="Campus Level"
             dateText={formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)}
             sub={`Reporting ${eventConfig.reportingTime}`}
             venues={CAMPUS_OPTIONS.map((c) => ({ label: c.label, venue: eventConfig.venueByCampus[c.code] }))}
           />
           <DateHighlightCard
             icon={Trophy}
-            kicker="University Level - Grand Finale"
+            kicker="University Level"
             dateText={grandFinaleDate ?? "Date to be announced"}
             sub={grandFinaleVenue ?? "Venue to be announced"}
           />

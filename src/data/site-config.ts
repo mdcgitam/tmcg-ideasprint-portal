@@ -179,7 +179,7 @@ export const contacts: Contact[] = [
     id: "c4",
     org: "TMCG",
     name: "Sai Roopak Esikala",
-    designation: "Campus Lead",
+    designation: "Co-University Lead",
     scope: "Bangalore",
     phone: "6302158054",
     email: "sesikala@gitam.in",
