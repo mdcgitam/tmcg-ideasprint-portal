@@ -25,7 +25,11 @@ export function CompleteStep({ teamName, result }: CompleteStepProps) {
   );
 
   return (
-    <div ref={rootRef} className="mx-auto flex max-w-2xl flex-col items-center px-6 py-32 text-center">
+    <div ref={rootRef} className="relative isolate mx-auto flex max-w-2xl flex-col items-center overflow-hidden px-6 py-32 text-center">
+      <div
+        className="pointer-events-none absolute top-1/3 left-1/2 -z-10 h-[28rem] w-[28rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-gold/10 blur-[140px]"
+        aria-hidden
+      />
       <div
         data-complete-item
         className="flex size-16 items-center justify-center rounded-full border border-gold bg-gold/10 font-display text-3xl text-gold"

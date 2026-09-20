@@ -62,9 +62,13 @@ export function Footer() {
 
   return (
     <footer className="border-t border-border bg-void px-6 py-14 sm:px-10 lg:px-16">
-      <Reveal className="mx-auto flex max-w-7xl flex-col gap-10 sm:flex-row sm:items-start sm:justify-between">
+      <Reveal className="mx-auto grid max-w-7xl gap-10 sm:grid-cols-3">
         <div>
           <div ref={logosRef} className="flex items-center gap-4">
+            {/* TODO: swap for transparent-background PNG/SVG marks once supplied,
+                then drop the logo-key-black filter (SvgFilterDefs.tsx) entirely -
+                it's a luminance-to-alpha key on lossy JPEGs, prone to a faint
+                dark halo from compression artifacts around the linework. */}
             <Image
               src="/assets/brand/gitam-logo.jpeg"
               alt="GITAM"
@@ -88,8 +92,9 @@ export function Footer() {
           </p>
         </div>
 
-        <div className="flex flex-col gap-4">
-          <nav aria-label="Footer" className="flex flex-wrap gap-x-8 gap-y-3">
+        <div>
+          <span className="font-mono text-[11px] tracking-[0.25em] text-ink-faint uppercase">Quick Links</span>
+          <nav aria-label="Footer" className="mt-3 flex flex-col gap-3">
             {LINKS.map((link) => (
               <Link
                 key={link.href}
@@ -101,39 +106,38 @@ export function Footer() {
               </Link>
             ))}
           </nav>
+        </div>
 
-          <div>
-            <span className="font-mono text-[11px] tracking-[0.25em] text-ink-faint uppercase">Stay Connected</span>
-            <div className="mt-2 flex items-center gap-3">
-              {socialLinks.map((s) => (
-                <a
-                  key={s.platform}
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={s.label}
-                  data-cursor="interactive"
-                  className="flex size-9 items-center justify-center rounded-full border border-border text-ink-muted transition-colors hover:border-gold hover:text-gold"
-                >
-                  {SOCIAL_ICON[s.platform]}
-                </a>
-              ))}
-            </div>
+        <div>
+          <span className="font-mono text-[11px] tracking-[0.25em] text-ink-faint uppercase">Stay Connected</span>
+          <div className="mt-3 flex items-center gap-3">
+            {socialLinks.map((s) => (
+              <a
+                key={s.platform}
+                href={s.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={s.label}
+                data-cursor="interactive"
+                className="flex size-9 items-center justify-center rounded-full border border-border text-ink-muted transition-colors hover:border-gold hover:text-gold"
+              >
+                {SOCIAL_ICON[s.platform]}
+              </a>
+            ))}
           </div>
+          <p className="mt-6 font-mono text-[11px] tracking-[0.2em] text-ink-faint uppercase">No Registration Fee · NOC Mandatory</p>
         </div>
       </Reveal>
 
       <div className="mx-auto mt-12 flex max-w-7xl flex-col gap-3 border-t border-border pt-6 font-mono text-[11px] text-ink-faint sm:flex-row sm:items-center sm:justify-between">
         <span>© {new Date().getFullYear()} TMCG × MDC GITAM Visakhapatnam. All rights reserved.</span>
         <div className="flex items-center gap-4">
-          <span>No Registration Fee · NOC Mandatory</span>
           <Link href="/privacy" data-cursor="interactive" className="underline transition-colors hover:text-gold">
             Privacy Policy
           </Link>
+          <span>Developed by MDC GITAM</span>
         </div>
       </div>
-
-      <p className="mx-auto mt-3 max-w-7xl font-mono text-[11px] text-ink-faint">Developed by MDC GITAM</p>
     </footer>
   );
 }

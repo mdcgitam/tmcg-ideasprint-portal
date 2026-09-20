@@ -1,6 +1,7 @@
 import type {
   CampusSlide,
   Contact,
+  DirectorMessage,
   EventConfig,
   FAQItem,
   GalleryImage,
@@ -106,6 +107,11 @@ export const gallery: GalleryImage[] = Array.from({ length: 10 }, (_, i) => {
 // No judges confirmed/supplied yet.
 export const judges: Judge[] = [];
 
+// Not yet supplied by the organizers - null (not a fabricated name/photo/
+// quote) so the section can render its own "message coming soon" placeholder
+// state, same pattern as `judges` above.
+export const directorMessage: DirectorMessage | null = null;
+
 // Sourced directly from SPEC.md facts - not fabricated.
 export const faqs: FAQItem[] = [
   {
@@ -121,7 +127,8 @@ export const faqs: FAQItem[] = [
   {
     id: "f3",
     question: "Who can register?",
-    answer: "Only GITAM Visakhapatnam students with a valid @student.gitam.edu or gitam.in account can authenticate and participate.",
+    answer:
+      "B.Tech and M.Tech students of the School of CSE & CE across GITAM Visakhapatnam, Hyderabad, and Bangalore, authenticated using their @student.gitam.edu or gitam.in account.",
   },
   {
     id: "f4",

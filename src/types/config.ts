@@ -110,3 +110,10 @@ export interface SocialLink {
   label: string;
   url: string;
 }
+
+export interface DirectorMessage {
+  name: string;
+  designation: string;
+  message: string;
+  photo: BrandAsset;
+}

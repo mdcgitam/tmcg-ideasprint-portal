@@ -86,58 +86,72 @@ export function RegistrationStepper() {
 
   return (
     <FormProvider {...methods}>
-      <form
-        onSubmit={(e) => e.preventDefault()}
-        className="mx-auto max-w-3xl px-6 pt-28 pb-24 sm:px-10"
-      >
-        <ProgressRail steps={STEP_LABELS} activeIndex={stepIndex} />
+      <div className="relative isolate overflow-hidden px-6 pt-28 pb-24 sm:px-10">
+        <div
+          className="pointer-events-none absolute top-24 left-1/2 -z-10 h-[32rem] w-[32rem] -translate-x-1/2 rounded-full bg-gold/10 blur-[140px]"
+          aria-hidden
+        />
 
-        <div className="mt-14">
-          {stepIndex === 0 && <GuidelinesStep />}
-          {stepIndex === 1 && <TeamDetailsStep />}
-          {stepIndex === 2 && <MemberDetailsStep />}
-          {stepIndex === 3 && <ReviewStep />}
+        <div className="mx-auto max-w-3xl">
+          <div className="mb-10 text-center">
+            <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">TMCG IdeaSprint 4.0</span>
+            <h1 className="mt-3 font-display text-4xl tracking-wide text-ink sm:text-5xl">REGISTER YOUR TEAM</h1>
+          </div>
+
+          <form
+            onSubmit={(e) => e.preventDefault()}
+            className="rounded-3xl border border-border bg-surface/40 px-6 py-10 sm:px-10 sm:py-12"
+          >
+            <ProgressRail steps={STEP_LABELS} activeIndex={stepIndex} />
+
+            <div className="mt-14">
+              {stepIndex === 0 && <GuidelinesStep />}
+              {stepIndex === 1 && <TeamDetailsStep />}
+              {stepIndex === 2 && <MemberDetailsStep />}
+              {stepIndex === 3 && <ReviewStep />}
+            </div>
+
+            {submitError && (
+              <p className="mt-8 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 font-heading text-sm text-red-300">
+                {submitError}
+              </p>
+            )}
+
+            <div className="mt-14 flex items-center justify-between border-t border-border pt-6">
+              {stepIndex > 0 ? (
+                <button
+                  type="button"
+                  onClick={goBack}
+                  className="font-heading text-sm text-ink-muted transition-colors hover:text-ink"
+                >
+                  ← Back
+                </button>
+              ) : (
+                <span />
+              )}
+
+              {!isLastStep ? (
+                <button
+                  type="button"
+                  onClick={goNext}
+                  className="rounded-full bg-gold px-8 py-3 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light"
+                >
+                  Continue
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => handleSubmit(onSubmit)()}
+                  className="rounded-full bg-gold px-8 py-3 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+                >
+                  {submitting ? "Submitting…" : "Complete Registration"}
+                </button>
+              )}
+            </div>
+          </form>
         </div>
-
-        {submitError && (
-          <p className="mt-8 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 font-heading text-sm text-red-300">
-            {submitError}
-          </p>
-        )}
-
-        <div className="mt-14 flex items-center justify-between border-t border-border pt-6">
-          {stepIndex > 0 ? (
-            <button
-              type="button"
-              onClick={goBack}
-              className="font-heading text-sm text-ink-muted transition-colors hover:text-ink"
-            >
-              ← Back
-            </button>
-          ) : (
-            <span />
-          )}
-
-          {!isLastStep ? (
-            <button
-              type="button"
-              onClick={goNext}
-              className="rounded-full bg-gold px-8 py-3 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light"
-            >
-              Continue
-            </button>
-          ) : (
-            <button
-              type="button"
-              disabled={submitting}
-              onClick={() => handleSubmit(onSubmit)()}
-              className="rounded-full bg-gold px-8 py-3 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
-            >
-              {submitting ? "Submitting…" : "Complete Registration"}
-            </button>
-          )}
-        </div>
-      </form>
+      </div>
     </FormProvider>
   );
 }

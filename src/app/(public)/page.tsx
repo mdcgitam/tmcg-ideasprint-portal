@@ -1,9 +1,11 @@
 import { unstable_cache } from "next/cache";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { Hero } from "@/components/sections/Hero";
-import { TimelineSection } from "@/components/sections/TimelineSection";
+import { JourneyDatesSection } from "@/components/sections/JourneyDatesSection";
+import { JourneyRoundsSection } from "@/components/sections/JourneyRoundsSection";
 import { InstructionsSection } from "@/components/sections/InstructionsSection";
 import { PrizeSection } from "@/components/sections/PrizeSection";
+import { DirectorMessageSection } from "@/components/sections/DirectorMessageSection";
 import { JudgesSection } from "@/components/sections/JudgesSection";
 import { GallerySection } from "@/components/sections/GallerySection";
 import { FAQSection } from "@/components/sections/FAQSection";
@@ -58,9 +60,11 @@ export default async function Home() {
   return (
     <main>
       <Hero />
-      <TimelineSection />
+      <JourneyDatesSection campusSlots={campusSlots} />
+      <JourneyRoundsSection />
       <InstructionsSection tncUrl={tncUrl} campusSlots={campusSlots} />
       <PrizeSection />
+      <DirectorMessageSection />
       <JudgesSection />
       <GallerySection />
       <FAQSection />

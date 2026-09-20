@@ -4,7 +4,7 @@ import { contacts } from "@/data/site-config";
 import type { ContactScope } from "@/types/config";
 
 /**
- * Act 8 - Contact. All 5 organizer contacts (4 TMCG + 1 MDC) as photo cards
+ * Act 10 - Contact. All 5 organizer contacts (4 TMCG + 1 MDC) as photo cards
  * in a responsive grid (ideasprint_changes.pdf item 7). This site serves all
  * three campuses at once, so who to reach out to isn't obvious from a name
  * and a title alone - each card gets an explicit scope badge (a campus, "All
@@ -15,7 +15,7 @@ export function ContactSection() {
   return (
     <section id="contact" className="border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16">
       <Reveal className="mx-auto mb-10 max-w-7xl">
-        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 8 - Contact</span>
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 10 - Contact</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-7xl">TALK TO US</h2>
       </Reveal>
 
