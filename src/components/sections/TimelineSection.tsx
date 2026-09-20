@@ -24,36 +24,54 @@ function ordinal(n: number) {
   return `${padded}th`;
 }
 
-function formatEventDateRange(startIso: string, endIso: string) {
-  const start = new Date(startIso);
-  const end = new Date(endIso);
-  const day = (d: Date) => ordinal(d.getDate());
-  const month = (d: Date) => d.toLocaleDateString("en-IN", { month: "long" });
-  const year = (d: Date) => d.getFullYear();
-  if (month(start) === month(end) && year(start) === year(end)) {
-    return `${day(start)}–${day(end)} ${month(start)} ${year(start)}`;
-  }
-  return `${day(start)} ${month(start)} ${year(start)} – ${day(end)} ${month(end)} ${year(end)}`;
+function formatDate(d: Date) {
+  return `${ordinal(d.getDate())} ${d.toLocaleDateString("en-IN", { month: "long" })} ${d.getFullYear()}`;
+}
+
+// Zero-padded hour ("04:00 PM", not "4:00 PM") to match the ordinal style above.
+function formatTime(d: Date) {
+  let h = d.getHours() % 12;
+  if (h === 0) h = 12;
+  const ampm = d.getHours() < 12 ? "AM" : "PM";
+  return `${String(h).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")} ${ampm}`;
+}
+
+function formatDateTime(iso: string) {
+  const d = new Date(iso);
+  return `${formatDate(d)}, ${formatTime(d)}`;
 }
 
 /**
  * A date/venue callout that actually reads as an important fact instead of
- * a caption line — an icon badge + kicker up top, the date itself set large
- * in display type (not a small bold line lost among everything else), and
- * a gold-tinted card so it stands apart from the plain timeline steps below.
+ * a caption line — an icon badge + kicker up top, a gold-tinted card so it
+ * stands apart from the plain timeline steps below. Carries every fact a
+ * participant needs to actually show up: start and end (each with its own
+ * time, not just a bare date), a separate "Reporting" line for the one
+ * moment that actually matters operationally, and the venue(s) — several
+ * rows when they differ by campus (Campus Level), one row otherwise
+ * (University Level).
  */
 function DateHighlightCard({
   icon: Icon,
   kicker,
-  dateText,
-  sub,
+  startIso,
+  endIso,
+  fallback,
+  statusNote,
+  showReporting = false,
   venues,
 }: {
   icon: LucideIcon;
   kicker: string;
-  dateText: string;
-  sub: string;
-  /** One row per venue — used when reporting venues differ by campus, in the same VSP -> HYD -> BLR order used everywhere else. */
+  /** Null (with `fallback` shown instead) for a level whose schedule isn't confirmed yet — currently only possible for University Level. */
+  startIso: string | null;
+  endIso: string | null;
+  fallback?: string;
+  /** Registration's open/closed line — the only card that doesn't report to a venue. */
+  statusNote?: string;
+  /** Derives "Reporting: <time>" from startIso's own time-of-day, rather than a separately hand-maintained value that could drift from it. */
+  showReporting?: boolean;
+  /** One row per venue, in the same VSP -> HYD -> BLR order used everywhere else in the app. */
   venues?: { label: string; venue: string }[];
 }) {
   return (
@@ -64,14 +82,28 @@ function DateHighlightCard({
         </span>
         <span className="font-mono text-[11px] tracking-[0.25em] text-gold uppercase">{kicker}</span>
       </div>
-      <p className="mt-5 font-display text-2xl leading-tight tracking-wide text-ink sm:text-3xl">{dateText}</p>
-      <p className="mt-2 font-heading text-sm text-ink-muted">{sub}</p>
+
+      {startIso && endIso ? (
+        <div className="mt-5 flex flex-col gap-0.5">
+          <p className="font-display text-lg leading-tight tracking-wide text-ink sm:text-xl">{formatDateTime(startIso)}</p>
+          <p className="font-heading text-[11px] tracking-[0.2em] text-ink-faint uppercase">to</p>
+          <p className="font-display text-lg leading-tight tracking-wide text-ink sm:text-xl">{formatDateTime(endIso)}</p>
+        </div>
+      ) : (
+        <p className="mt-5 font-display text-2xl leading-tight tracking-wide text-ink sm:text-3xl">{fallback}</p>
+      )}
+
+      {statusNote && <p className="mt-3 font-heading text-sm text-ink-muted">{statusNote}</p>}
+      {showReporting && startIso && (
+        <p className="mt-3 font-heading text-xs font-semibold text-gold">Reporting: {formatTime(new Date(startIso))}</p>
+      )}
+
       {venues && venues.length > 0 && (
         <dl className="mt-3 flex flex-col gap-1 border-t border-gold/20 pt-3">
           {venues.map((v) => (
             <div key={v.label} className="flex items-center justify-between gap-3 font-heading text-xs">
               <dt className="text-ink-muted">{v.label}</dt>
-              <dd className="text-ink">{v.venue}</dd>
+              <dd className="text-right text-ink">{v.venue}</dd>
             </div>
           ))}
         </dl>
@@ -102,10 +134,12 @@ const steps: Step[] = timeline.map(toStep);
  * nullable props.
  */
 export function TimelineSection({
-  grandFinaleDate,
+  grandFinaleStart,
+  grandFinaleEnd,
   grandFinaleVenue,
 }: {
-  grandFinaleDate: string | null;
+  grandFinaleStart: string | null;
+  grandFinaleEnd: string | null;
   grandFinaleVenue: string | null;
 }) {
   const sectionRef = useRef<HTMLElement>(null);
@@ -177,21 +211,26 @@ export function TimelineSection({
           <DateHighlightCard
             icon={CalendarPlus}
             kicker="Registration Window"
-            dateText={formatEventDateRange(eventConfig.registrationStart, eventConfig.registrationEnd)}
-            sub={eventConfig.registrationStatus === "open" ? "Registration is currently open" : "Registration is now closed"}
+            startIso={eventConfig.registrationStart}
+            endIso={eventConfig.registrationEnd}
+            statusNote={eventConfig.registrationStatus === "open" ? "Registration is currently open" : "Registration is now closed"}
           />
           <DateHighlightCard
             icon={CalendarDays}
             kicker="Campus Level"
-            dateText={formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)}
-            sub={`Reporting ${eventConfig.reportingTime}`}
+            startIso={eventConfig.eventStart}
+            endIso={eventConfig.eventEnd}
+            showReporting
             venues={CAMPUS_OPTIONS.map((c) => ({ label: c.label, venue: eventConfig.venueByCampus[c.code] }))}
           />
           <DateHighlightCard
             icon={Trophy}
             kicker="University Level"
-            dateText={grandFinaleDate ?? "Date to be announced"}
-            sub={grandFinaleVenue ?? "Venue to be announced"}
+            startIso={grandFinaleStart}
+            endIso={grandFinaleEnd}
+            fallback="Date to be announced"
+            showReporting
+            venues={[{ label: "Venue", venue: grandFinaleVenue ?? "To be announced" }]}
           />
         </div>
       </div>

@@ -32,10 +32,9 @@ export interface EventConfig {
   registrationStatus: "open" | "closed";
   registrationStart: string; // ISO
   registrationEnd: string; // ISO
+  /** Also the reporting time, shown separately — participants must have reported in by this moment. Same time at every campus, only the venue differs. */
   eventStart: string; // ISO
   eventEnd: string; // ISO
-  /** display string, e.g. "4:00 PM" — when participants must have reported in, same time at every campus */
-  reportingTime: string;
   /** Campus Level reporting venue, one per campus — different at each of the 3 campuses. */
   venueByCampus: Record<CampusCode, string>;
 }
@@ -98,4 +97,12 @@ export interface RegistrationGuidelines {
   nocNotice: string;
   /** Link to the NOC form (PDF or hosted doc) parents fill out — shown during registration. Null until organizers supply one. */
   nocFormUrl: string | null;
+}
+
+export type SocialPlatform = "instagram" | "whatsapp";
+
+export interface SocialLink {
+  platform: SocialPlatform;
+  label: string;
+  url: string;
 }

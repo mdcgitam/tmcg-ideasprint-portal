@@ -16,7 +16,7 @@ import type { CampusCode } from "@/lib/registration/schema";
 // staying hidden while nobody has configured a real link yet.
 const PLACEHOLDER_TNC_URL = "https://docs.google.com/document/d/1PLACEHOLDER-ideasprint-4-0-terms-and-conditions/edit";
 
-const CONFIG_KEYS = ["terms_and_conditions.url", "grand_finale.date", "grand_finale.venue"] as const;
+const CONFIG_KEYS = ["terms_and_conditions.url", "grand_finale.start", "grand_finale.end", "grand_finale.venue"] as const;
 
 function readConfigString(rows: { key: string; value: unknown }[] | null, key: string): string | null {
   const value = rows?.find((r) => r.key === key)?.value;
@@ -54,13 +54,14 @@ export default async function Home() {
   ) as Partial<Record<CampusCode, { registered: number; cap: number }>>;
   const isFull = campusCounts.length > 0 && campusCounts.every((c) => c.registered >= c.cap);
   const tncUrl = readConfigString(configRows, "terms_and_conditions.url") ?? PLACEHOLDER_TNC_URL;
-  const grandFinaleDate = readConfigString(configRows, "grand_finale.date");
+  const grandFinaleStart = readConfigString(configRows, "grand_finale.start");
+  const grandFinaleEnd = readConfigString(configRows, "grand_finale.end");
   const grandFinaleVenue = readConfigString(configRows, "grand_finale.venue");
 
   return (
     <main>
       <Hero />
-      <TimelineSection grandFinaleDate={grandFinaleDate} grandFinaleVenue={grandFinaleVenue} />
+      <TimelineSection grandFinaleStart={grandFinaleStart} grandFinaleEnd={grandFinaleEnd} grandFinaleVenue={grandFinaleVenue} />
       <InstructionsSection tncUrl={tncUrl} campusSlots={campusSlots} />
       <PrizeSection />
       <JudgesSection />

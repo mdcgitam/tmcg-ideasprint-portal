@@ -8,6 +8,7 @@ import type {
   Judge,
   PrizeTier,
   RegistrationGuidelines,
+  SocialLink,
   TimelineItem,
 } from "@/types/config";
 
@@ -44,17 +45,16 @@ export const eventConfig: EventConfig = {
     "A campus-level innovation event conducted at GITAM Visakhapatnam, Hyderabad, and Bangalore, culminating in a Grand Finale among top-performing teams from all three campuses.",
   homepageAnnouncement: null,
   registrationStatus: "open",
-  registrationStart: "2026-09-26T10:00:00+05:30",
+  registrationStart: "2026-09-26T11:00:00+05:30",
   registrationEnd: "2026-10-05T23:00:00+05:30",
   eventStart: "2026-10-09T16:00:00+05:30",
   eventEnd: "2026-10-10T16:00:00+05:30",
-  reportingTime: "4:00 PM",
   // VSP -> HYD -> BLR order used everywhere else in the app (see CAMPUS_ORDER
   // in src/lib/dashboard/campus-config.ts).
   venueByCampus: {
-    VSP: "Shivaji Auditorium",
-    HYD: "Kinnera Hall",
-    BLR: "Shivaji Auditorium",
+    VSP: "Shivaji Auditorium, ICT Bhavan",
+    HYD: "Kinnera Auditorium, J Block",
+    BLR: "Kojo Hall, SB Bhavan",
   },
 };
 
@@ -190,9 +190,16 @@ export const contacts: Contact[] = [
     org: "MDC",
     name: "Akash Kishan Karri",
     designation: "Website Architect",
-    scope: null,
+    scope: "All Campuses",
     phone: "8374849797",
     email: "akarri4@gitam.in",
     photo: { src: "/assets/contactphotos/akash-kishan.jpg", alt: "Akash Kishan Karri" },
   },
+];
+
+// WhatsApp is a placeholder (SPEC.md "No Fake Data" — clearly marked, not a
+// real invite link) until the organizers supply the actual group link.
+export const socialLinks: SocialLink[] = [
+  { platform: "instagram", label: "Instagram", url: "https://www.instagram.com/tmcg_gcgc/" },
+  { platform: "whatsapp", label: "WhatsApp Group", url: "https://chat.whatsapp.com/PLACEHOLDER-ideasprint-4-0-group" },
 ];
