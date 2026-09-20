@@ -5,7 +5,8 @@ import { OverviewSection } from "@/components/dashboard/admin/sections/OverviewS
 import { SectionPageShell } from "@/components/dashboard/admin/routes/SectionPageShell";
 
 export async function OverviewRoute({ profile }: { profile: ProfileRow }) {
-  const { teams, membersByTeam, approvalRequests, exitRequests, nocs } = await fetchAdminDashboardData(profile);
+  const { teams, membersByTeam, approvalRequests, exitRequests, nocs, rooms, zones, staffAccounts, spocs, problemStatements } =
+    await fetchAdminDashboardData(profile);
   const scope = profile.role === "SPOC" || profile.role === "Zone Manager" ? "spoc" : "admin";
   // Only the Super Admin's "All" view ever mixes more than one campus's data —
   // every other viewer (Campus Admin/SPOC/Zone Manager, or a Super Admin who's
@@ -22,6 +23,11 @@ export async function OverviewRoute({ profile }: { profile: ProfileRow }) {
         pendingApprovals={approvalRequests.filter((a) => a.status === "Pending")}
         pendingExitRequests={exitRequests.filter((r) => r.status === "Requested")}
         nocs={nocs}
+        rooms={rooms}
+        zones={zones}
+        staffAccounts={staffAccounts}
+        spocs={spocs}
+        problemStatements={problemStatements}
         singleCampus={singleCampus}
       />
     </SectionPageShell>

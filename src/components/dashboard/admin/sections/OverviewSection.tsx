@@ -3,9 +3,21 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Bar, BarChart, CartesianGrid, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { createPortal } from "react-dom";
-import type { ApprovalRequestRow, CampusCode, ExitRequestRow, NocRow, TeamRow } from "@/types/database";
+import type {
+  ApprovalRequestRow,
+  CampusCode,
+  ExitRequestRow,
+  NocRow,
+  ProblemStatementRow,
+  ProfileRow,
+  RoomRow,
+  TeamRow,
+  ZoneRow,
+} from "@/types/database";
 import type { TeamMemberProfile } from "@/lib/dashboard/admin-data";
 import { teamActiveStatus } from "@/components/dashboard/admin/sections/ExitStatusBadge";
+import { HeadcountSection } from "@/components/dashboard/admin/sections/HeadcountSection";
+import { ProblemStatementAnalytics } from "@/components/dashboard/admin/sections/ProblemStatementAnalytics";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { FilterSelect } from "./TeamFormFields";
 import { downloadCsv } from "@/lib/csv";
@@ -26,7 +38,7 @@ import {
   STAY_OPTIONS,
 } from "@/lib/registration/academic";
 
-type Tab = "summary" | "breakdown";
+type Tab = "summary" | "breakdown" | "headcount" | "analytics";
 
 /**
  * dataviz skill's validated dark-mode categorical order (references/palette.md)
@@ -80,6 +92,11 @@ export function OverviewSection({
   pendingApprovals,
   pendingExitRequests,
   nocs,
+  rooms,
+  zones,
+  staffAccounts,
+  spocs,
+  problemStatements,
   singleCampus,
 }: {
   scope: "spoc" | "admin";
@@ -88,6 +105,11 @@ export function OverviewSection({
   pendingApprovals: ApprovalRequestRow[];
   pendingExitRequests: ExitRequestRow[];
   nocs: NocRow[];
+  rooms: RoomRow[];
+  zones: ZoneRow[];
+  staffAccounts: ProfileRow[];
+  spocs: ProfileRow[];
+  problemStatements: ProblemStatementRow[];
   singleCampus: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("summary");
@@ -386,6 +408,8 @@ export function OverviewSection({
         options={[
           { value: "summary", label: "Summary" },
           { value: "breakdown", label: "Breakdown" },
+          { value: "headcount", label: "Headcount" },
+          { value: "analytics", label: "Analytics" },
         ]}
       />
 
@@ -404,7 +428,7 @@ export function OverviewSection({
               </button>
             ))}
           </div>
-        ) : (
+        ) : tab === "breakdown" ? (
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4">
               <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Filters</span>
@@ -501,6 +525,18 @@ export function OverviewSection({
               <OverviewChart title="Stay" color={CHART_COLOR.stay} data={stayData} onBarClick={(name) => openChartDrillDown("Stay", name, (m) => m.stay)} />
             </div>
           </div>
+        ) : tab === "headcount" ? (
+          <HeadcountSection
+            rooms={rooms}
+            zones={zones}
+            teams={teams}
+            membersByTeam={membersByTeam}
+            staffAccounts={staffAccounts}
+            spocs={spocs}
+            singleCampus={singleCampus}
+          />
+        ) : (
+          <ProblemStatementAnalytics problemStatements={problemStatements} teams={teams} singleCampus={singleCampus} />
         )}
       </div>
 

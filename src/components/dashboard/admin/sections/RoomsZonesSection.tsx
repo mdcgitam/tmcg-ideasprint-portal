@@ -23,28 +23,25 @@ import { downloadCsv } from "@/lib/csv";
 import { ViewToggle } from "@/components/dashboard/admin/ViewToggle";
 import { useTabFade } from "@/hooks/useTabFade";
 
-type View = "create" | "teams" | "headcount";
+type View = "create" | "teams";
 
 /**
- * Zones and Venues module. Three tabs:
+ * Zones and Venues module. Two tabs:
  *  - Create: make Zones and Venues, each editable/deletable inline.
  *  - Teams: every team with its Zone / Zone Manager / Venue / SPOC,
  *    filterable and searchable (including an "Unassigned only" toggle),
  *    with per-team Edit (change Venue) / Delete (pull it out of its Venue),
  *    plus a checkbox + bulk "assign selected to venue" action for handling
- *    several teams (e.g. a batch of newly-registered ones) at once.
- *  - Headcount: two read-only summary tables — by Zone (Number of Teams /
- *    People / Male / Female) and by Venue (same people breakdown, plus
- *    SPOC) — a different grain than "Teams" (aggregated, not per-team), so
- *    kept separate rather than folded into that tab or the Overview tab
- *    (which has no Zone/Venue axis at all). "People" counts active
- *    members only, matching the Team Size convention used everywhere else.
- *    A no-show team (is_active false) contributes to neither table — the
- *    Teams tab is the one place that always lists every team regardless of
- *    status, with a Participation column (badge + Mark as No-Show/Mark
- *    Active toggle, 0073) since this is the recovery path for late
- *    arrivals or a mistaken no-show from the Attendance page. Actions
- *    stays Edit/Delete only so the two controls don't get cramped together.
+ *    several teams (e.g. a batch of newly-registered ones) at once. This is
+ *    the one place that always lists every team regardless of status, with
+ *    a Participation column (badge + Mark as No-Show/Mark Active toggle,
+ *    0073) since this is the recovery path for late arrivals or a mistaken
+ *    no-show from the Attendance page. Actions stays Edit/Delete only so
+ *    the two controls don't get cramped together.
+ *
+ * The read-only Headcount summary (by Zone / by Venue) that used to be a
+ * third tab here now lives in Overview (HeadcountSection.tsx) alongside
+ * every other count, rather than being split across two modules.
  */
 export function RoomsZonesSection({
   campus,
@@ -273,121 +270,6 @@ export function RoomsZonesSection({
           SPOC: staffById(v.spoc_profile_id) ?? "Unassigned",
         }));
       }),
-    );
-  }
-
-  // ── Headcount ────────────────────────────────────────────────────────
-  // "People" = active members only (Team Size convention used everywhere
-  // else) — an approved exit deactivates the profile, so they no longer
-  // occupy a seat at the venue.
-  function activeMembersOf(teamsHere: TeamRow[]) {
-    return teamsHere.flatMap((t) => (membersByTeam[t.id] ?? []).filter((m) => m.is_active));
-  }
-  function genderCounts(members: TeamMemberProfile[]) {
-    return { people: members.length, male: members.filter((m) => m.gender === "Male").length, female: members.filter((m) => m.gender === "Female").length };
-  }
-
-  const [zoneHcCampus, setZoneHcCampus] = useState<CampusCode | "">("");
-  const [zoneHcZone, setZoneHcZone] = useState("");
-  const zoneHcZoneOptions = zoneHcCampus ? localZones.filter((z) => z.campus === zoneHcCampus) : localZones;
-
-  const [venueHcCampus, setVenueHcCampus] = useState<CampusCode | "">("");
-  const [venueHcZone, setVenueHcZone] = useState("");
-  const [venueHcVenue, setVenueHcVenue] = useState("");
-  const [venueHcSpoc, setVenueHcSpoc] = useState("");
-  const venueHcZoneOptions = venueHcCampus ? localZones.filter((z) => z.campus === venueHcCampus) : localZones;
-  const venueHcVenueOptions = localRooms.filter((r) => {
-    if (venueHcZone) return r.zone_id === venueHcZone;
-    if (venueHcCampus) return r.campus === venueHcCampus;
-    return true;
-  });
-  const venueHcSpocOptions = venueHcCampus ? spocs.filter((s) => s.campus === venueHcCampus) : spocs;
-
-  // Only actual zones — a team with no venue (or a venue without a zone)
-  // just doesn't count toward any row here, rather than showing a
-  // permanent "Unassigned" placeholder.
-  const zoneHeadcountRows = useMemo(() => {
-    const rows = localZones
-      .filter((z) => (zoneHcCampus ? z.campus === zoneHcCampus : true) && (zoneHcZone ? z.id === zoneHcZone : true))
-      .map((zone) => {
-        const teamsHere = localTeams.filter((t) => t.is_active && teamContext(t).zone?.id === zone.id);
-        return {
-          key: zone.id,
-          campus: zone.campus,
-          zoneName: zone.name,
-          zoneManager: staffById(zone.zone_manager_profile_id) ?? "Unassigned",
-          teams: teamsHere.length,
-          ...genderCounts(activeMembersOf(teamsHere)),
-        };
-      });
-    return rows.sort((a, b) => {
-      const campusDiff = CAMPUS_ORDER.indexOf(a.campus) - CAMPUS_ORDER.indexOf(b.campus);
-      return campusDiff !== 0 ? campusDiff : a.zoneName.localeCompare(b.zoneName);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localZones, localTeams, membersByTeam, zoneHcCampus, zoneHcZone]);
-
-  const venueHeadcountRows = useMemo(() => {
-    return localRooms
-      .filter(
-        (r) =>
-          (venueHcCampus ? r.campus === venueHcCampus : true) &&
-          (venueHcZone ? r.zone_id === venueHcZone : true) &&
-          (venueHcVenue ? r.id === venueHcVenue : true) &&
-          (venueHcSpoc ? r.spoc_profile_id === venueHcSpoc : true),
-      )
-      .map((room) => {
-        const teamsHere = localTeams.filter((t) => t.is_active && t.room_id === room.id);
-        const zone = zoneById(room.zone_id);
-        return {
-          key: room.id,
-          campus: room.campus,
-          zoneName: zone?.name ?? "Unassigned",
-          zoneManager: zone ? (staffById(zone.zone_manager_profile_id) ?? "Unassigned") : "-",
-          venueName: room.name,
-          spoc: staffById(room.spoc_profile_id) ?? "Unassigned",
-          teams: teamsHere.length,
-          ...genderCounts(activeMembersOf(teamsHere)),
-        };
-      })
-      .sort((a, b) => {
-        const campusDiff = CAMPUS_ORDER.indexOf(a.campus) - CAMPUS_ORDER.indexOf(b.campus);
-        if (campusDiff !== 0) return campusDiff;
-        const zoneDiff = a.zoneName.localeCompare(b.zoneName);
-        return zoneDiff !== 0 ? zoneDiff : a.venueName.localeCompare(b.venueName);
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localRooms, localZones, localTeams, membersByTeam, venueHcCampus, venueHcZone, venueHcVenue, venueHcSpoc]);
-
-  function handleExportZoneHeadcountCsv() {
-    downloadCsv(
-      "zone-headcount",
-      zoneHeadcountRows.map((r) => ({
-        ...(singleCampus ? {} : { Campus: r.campus }),
-        Zone: r.zoneName,
-        "Zone Manager": r.zoneManager,
-        "Number of Teams": String(r.teams),
-        "Number of People": String(r.people),
-        Male: String(r.male),
-        Female: String(r.female),
-      })),
-    );
-  }
-
-  function handleExportVenueHeadcountCsv() {
-    downloadCsv(
-      "venue-headcount",
-      venueHeadcountRows.map((r) => ({
-        ...(singleCampus ? {} : { Campus: r.campus }),
-        Zone: r.zoneName,
-        "Zone Manager": r.zoneManager,
-        Venue: r.venueName,
-        SPOC: r.spoc,
-        "Number of Teams": String(r.teams),
-        "Number of People": String(r.people),
-        Male: String(r.male),
-        Female: String(r.female),
-      })),
     );
   }
 
@@ -628,7 +510,6 @@ export function RoomsZonesSection({
         options={[
           { value: "create", label: "Create" },
           { value: "teams", label: "Teams" },
-          { value: "headcount", label: "Headcount" },
         ]}
       />
 
@@ -951,7 +832,7 @@ export function RoomsZonesSection({
               </table>
             </div>
           </div>
-        ) : view === "teams" ? (
+        ) : (
           <div className="flex flex-col gap-4">
             {/* Bulk assign selected teams to a venue */}
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
@@ -1251,217 +1132,6 @@ export function RoomsZonesSection({
                   )}
                 </tbody>
               </table>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">By Zone</span>
-                <button
-                  type="button"
-                  onClick={handleExportZoneHeadcountCsv}
-                  className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
-                >
-                  Download CSV
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
-                {!singleCampus && (
-                  <select
-                    value={zoneHcCampus}
-                    onChange={(e) => {
-                      setZoneHcCampus(e.target.value as CampusCode | "");
-                      setZoneHcZone("");
-                    }}
-                    className={selectClass}
-                  >
-                    <option value="">Campus</option>
-                    {CAMPUS_ORDER.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <select value={zoneHcZone} onChange={(e) => setZoneHcZone(e.target.value)} className={selectClass}>
-                  <option value="">Zone</option>
-                  {zoneHcZoneOptions.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.name}
-                    </option>
-                  ))}
-                </select>
-                {(zoneHcCampus || zoneHcZone) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setZoneHcCampus("");
-                      setZoneHcZone("");
-                    }}
-                    className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
-                  >
-                    Clear Filters
-                  </button>
-                )}
-              </div>
-              <p className="font-heading text-xs text-ink-muted">Showing {zoneHeadcountRows.length} zones</p>
-              <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-                <table className="w-full text-left font-heading text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                      {!singleCampus && <th className="px-4 py-3">Campus</th>}
-                      <th className="px-4 py-3">Zone</th>
-                      <th className="px-4 py-3">Zone Manager</th>
-                      <th className="px-4 py-3">Number of Teams</th>
-                      <th className="px-4 py-3">Number of People</th>
-                      <th className="px-4 py-3">Male</th>
-                      <th className="px-4 py-3">Female</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {zoneHeadcountRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={singleCampus ? 6 : 7} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
-                          No zones match these filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      zoneHeadcountRows.map((r) => (
-                        <tr key={r.key} className="border-b border-border last:border-0">
-                          {!singleCampus && <td className="px-4 py-3 text-ink-muted">{r.campus}</td>}
-                          <td className="px-4 py-3 text-ink">{r.zoneName}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.zoneManager}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.teams}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.people}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.male}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.female}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">By Venue</span>
-                <button
-                  type="button"
-                  onClick={handleExportVenueHeadcountCsv}
-                  className="rounded-full border border-gold/50 px-4 py-1.5 font-heading text-xs font-medium text-gold transition-colors hover:bg-gold/10"
-                >
-                  Download CSV
-                </button>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
-                {!singleCampus && (
-                  <select
-                    value={venueHcCampus}
-                    onChange={(e) => {
-                      setVenueHcCampus(e.target.value as CampusCode | "");
-                      setVenueHcZone("");
-                      setVenueHcVenue("");
-                      setVenueHcSpoc("");
-                    }}
-                    className={selectClass}
-                  >
-                    <option value="">Campus</option>
-                    {CAMPUS_ORDER.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                <select
-                  value={venueHcZone}
-                  onChange={(e) => {
-                    setVenueHcZone(e.target.value);
-                    setVenueHcVenue("");
-                  }}
-                  className={selectClass}
-                >
-                  <option value="">Zone</option>
-                  {venueHcZoneOptions.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.name}
-                    </option>
-                  ))}
-                </select>
-                <select value={venueHcVenue} onChange={(e) => setVenueHcVenue(e.target.value)} className={selectClass}>
-                  <option value="">Venue</option>
-                  {venueHcVenueOptions.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-                <select value={venueHcSpoc} onChange={(e) => setVenueHcSpoc(e.target.value)} className={selectClass}>
-                  <option value="">SPOC</option>
-                  {venueHcSpocOptions.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
-                {(venueHcCampus || venueHcZone || venueHcVenue || venueHcSpoc) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setVenueHcCampus("");
-                      setVenueHcZone("");
-                      setVenueHcVenue("");
-                      setVenueHcSpoc("");
-                    }}
-                    className="rounded-full border border-border px-4 py-1.5 font-heading text-xs text-ink-muted transition-colors hover:bg-void"
-                  >
-                    Clear Filters
-                  </button>
-                )}
-              </div>
-              <p className="font-heading text-xs text-ink-muted">Showing {venueHeadcountRows.length} venues</p>
-              <div className="overflow-x-auto rounded-xl border border-border bg-surface">
-                <table className="w-full text-left font-heading text-sm">
-                  <thead>
-                    <tr className="border-b border-border bg-gold text-xs text-void uppercase">
-                      {!singleCampus && <th className="px-4 py-3">Campus</th>}
-                      <th className="px-4 py-3">Zone</th>
-                      <th className="px-4 py-3">Zone Manager</th>
-                      <th className="px-4 py-3">Venue</th>
-                      <th className="px-4 py-3">SPOC</th>
-                      <th className="px-4 py-3">Number of Teams</th>
-                      <th className="px-4 py-3">Number of People</th>
-                      <th className="px-4 py-3">Male</th>
-                      <th className="px-4 py-3">Female</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {venueHeadcountRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={singleCampus ? 7 : 8} className="px-4 py-8 text-center font-heading text-sm text-ink-muted">
-                          No venues match these filters.
-                        </td>
-                      </tr>
-                    ) : (
-                      venueHeadcountRows.map((r) => (
-                        <tr key={r.key} className="border-b border-border last:border-0">
-                          {!singleCampus && <td className="px-4 py-3 text-ink-muted">{r.campus}</td>}
-                          <td className="px-4 py-3 text-ink">{r.zoneName}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.zoneManager}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.venueName}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.spoc}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.teams}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.people}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.male}</td>
-                          <td className="px-4 py-3 text-ink-muted">{r.female}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         )}
