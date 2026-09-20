@@ -5,6 +5,7 @@ import { CalendarPlus, CalendarDays, Trophy, type LucideIcon } from "lucide-reac
 import { useGSAP } from "@gsap/react";
 import { gsap, prefersReducedMotion } from "@/lib/gsap";
 import { timeline, eventConfig } from "@/data/site-config";
+import { CAMPUS_OPTIONS } from "@/lib/registration/schema";
 
 interface Step {
   id: string;
@@ -44,11 +45,14 @@ function DateHighlightCard({
   kicker,
   dateText,
   sub,
+  venues,
 }: {
   icon: LucideIcon;
   kicker: string;
   dateText: string;
   sub: string;
+  /** One row per venue — used when reporting venues differ by campus, in the same VSP -> HYD -> BLR order used everywhere else. */
+  venues?: { label: string; venue: string }[];
 }) {
   return (
     <div className="relative overflow-hidden rounded-2xl border border-gold/40 bg-gradient-to-br from-gold/15 via-void to-void px-6 py-6 transition-colors hover:border-gold/70">
@@ -60,6 +64,16 @@ function DateHighlightCard({
       </div>
       <p className="mt-5 font-display text-2xl leading-tight tracking-wide text-ink sm:text-3xl">{dateText}</p>
       <p className="mt-2 font-heading text-sm text-ink-muted">{sub}</p>
+      {venues && venues.length > 0 && (
+        <dl className="mt-3 flex flex-col gap-1 border-t border-gold/20 pt-3">
+          {venues.map((v) => (
+            <div key={v.label} className="flex items-center justify-between gap-3 font-heading text-xs">
+              <dt className="text-ink-muted">{v.label}</dt>
+              <dd className="text-ink">{v.venue}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
     </div>
   );
 }
@@ -168,7 +182,8 @@ export function TimelineSection({
             icon={CalendarDays}
             kicker="Campus Level - Campus Round"
             dateText={formatEventDateRange(eventConfig.eventStart, eventConfig.eventEnd)}
-            sub={`Reporting ${eventConfig.reportingTime} · ${eventConfig.venue}`}
+            sub={`Reporting ${eventConfig.reportingTime}`}
+            venues={CAMPUS_OPTIONS.map((c) => ({ label: c.label, venue: eventConfig.venueByCampus[c.code] }))}
           />
           <DateHighlightCard
             icon={Trophy}

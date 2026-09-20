@@ -1,10 +1,15 @@
 import Image from "next/image";
 import { Reveal } from "@/components/motion/Reveal";
 import { contacts } from "@/data/site-config";
+import type { ContactScope } from "@/types/config";
 
 /**
- * Act 8 — Contact. All 4 organizer contacts (2 TMCG + 2 MDC) as photo
- * cards in a responsive grid (ideasprint_changes.pdf item 7).
+ * Act 8 — Contact. All 5 organizer contacts (4 TMCG + 1 MDC) as photo cards
+ * in a responsive grid (ideasprint_changes.pdf item 7). This site serves all
+ * three campuses at once, so who to reach out to isn't obvious from a name
+ * and a title alone — each card gets an explicit scope badge (a campus, "All
+ * Campuses", or nothing for a non-campus role) rather than folding that into
+ * the designation sentence.
  */
 export function ContactSection() {
   return (
@@ -20,6 +25,7 @@ export function ContactSection() {
             key={c.id}
             name={c.name}
             designation={c.designation}
+            scope={c.scope}
             phone={c.phone}
             email={c.email}
             photo={c.photo}
@@ -34,6 +40,7 @@ export function ContactSection() {
 function ContactCard({
   name,
   designation,
+  scope,
   phone,
   email,
   photo,
@@ -41,6 +48,7 @@ function ContactCard({
 }: {
   name: string;
   designation: string;
+  scope: ContactScope;
   phone: string;
   email: string;
   photo: { src: string; alt: string };
@@ -57,6 +65,11 @@ function ContactCard({
       <p className={accent === "gold" ? "font-heading text-sm text-gold" : "font-heading text-sm text-mdc"}>
         {designation}
       </p>
+      {scope && (
+        <span className="mt-2 rounded-full border border-border-strong px-3 py-0.5 font-mono text-[10px] tracking-[0.2em] text-ink-muted uppercase">
+          {scope}
+        </span>
+      )}
       <div className="mt-3 flex flex-col gap-1 font-mono text-xs text-ink-faint">
         <span>{phone || "Phone pending"}</span>
         <span>{email || "Email pending"}</span>

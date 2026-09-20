@@ -41,18 +41,21 @@ export const campusSlides: CampusSlide[] = [
 export const eventConfig: EventConfig = {
   eventName: "TMCG IdeaSprint 4.0",
   eventDescription:
-    "A campus-level innovation event conducted at GITAM Visakhapatnam, Hyderabad, and Bengaluru, culminating in a Grand Finale among top-performing teams from all three campuses.",
+    "A campus-level innovation event conducted at GITAM Visakhapatnam, Hyderabad, and Bangalore, culminating in a Grand Finale among top-performing teams from all three campuses.",
   homepageAnnouncement: null,
   registrationStatus: "open",
-  // Registration window dates aren't set yet — left as an unconfirmed
-  // placeholder, unlike the fields below which come straight from the
-  // organizer-supplied Phase-1 schedule.
-  registrationStart: "2026-08-08T00:00:00+05:30",
-  registrationEnd: "2026-08-08T00:00:00+05:30",
-  eventStart: "2026-09-25T16:00:00+05:30",
-  eventEnd: "2026-09-26T18:00:00+05:30",
-  reportingTime: "04:00 PM",
-  venue: "Shivaji Auditorium, GITAM Visakhapatnam",
+  registrationStart: "2026-09-26T10:00:00+05:30",
+  registrationEnd: "2026-10-05T23:00:00+05:30",
+  eventStart: "2026-10-09T16:00:00+05:30",
+  eventEnd: "2026-10-10T16:00:00+05:30",
+  reportingTime: "4:00 PM",
+  // VSP -> HYD -> BLR order used everywhere else in the app (see CAMPUS_ORDER
+  // in src/lib/dashboard/campus-config.ts).
+  venueByCampus: {
+    VSP: "Shivaji Auditorium",
+    HYD: "Kinnera Hall",
+    BLR: "Shivaji Auditorium",
+  },
 };
 
 // Round structure + labels are factual (SPEC.md §2). Exact configured
@@ -77,7 +80,7 @@ export const timeline: TimelineItem[] = [
     id: "grand-finale",
     stage: "grand-finale",
     label: "Grand Finale",
-    detail: "Top-performing teams from Visakhapatnam, Hyderabad, and Bengaluru compete for the final cash prizes.",
+    detail: "Top-performing teams from Visakhapatnam, Hyderabad, and Bangalore compete for the final cash prizes.",
   },
 ];
 
@@ -138,13 +141,16 @@ export const registrationGuidelines: RegistrationGuidelines = {
   nocFormUrl: null,
 };
 
-// Organizer-provided (SPEC.md §87).
+// Organizer-provided (SPEC.md §87). Order: the one all-campus contact first,
+// then the three Campus Leads in VSP -> HYD -> BLR order (CAMPUS_ORDER),
+// then the non-campus web contact last.
 export const contacts: Contact[] = [
   {
     id: "c1",
     org: "TMCG",
     name: "Palla Jothisk Nandan",
-    designation: "Co-University Lead - Visakhapatnam",
+    designation: "Co-University Lead",
+    scope: "All Campuses",
     phone: "6304110542",
     email: "jpalla2@gitam.in",
     photo: { src: "/assets/contactphotos/jothisk-nandan.jpg", alt: "Palla Jothisk Nandan" },
@@ -153,7 +159,8 @@ export const contacts: Contact[] = [
     id: "c2",
     org: "TMCG",
     name: "Somayajula Raam Sashank",
-    designation: "Campus Lead - Visakhapatnam",
+    designation: "Campus Lead",
+    scope: "Visakhapatnam",
     phone: "7396096611",
     email: "ssomaya1@student.gitam.edu",
     photo: { src: "/assets/contactphotos/sashank.jpeg", alt: "Somayajula Raam Sashank" },
@@ -161,26 +168,29 @@ export const contacts: Contact[] = [
   {
     id: "c3",
     org: "TMCG",
-    name: "Sai Roopak Esikala",
-    designation: "Co-University Lead - Hyderabad",
-    phone: "6302158054",
-    email: "sesikala@gitam.in",
-    photo: { src: "/assets/contactphotos/sai-roopak.jpg", alt: "Sai Roopak Esikala" },
+    name: "Krishnapriya Koppolu",
+    designation: "Campus Lead",
+    scope: "Hyderabad",
+    phone: "8142957572",
+    email: "kkoppolu@student.gitam.edu",
+    photo: { src: "/assets/contactphotos/krishnapriya-koppolu.png", alt: "Krishnapriya Koppolu" },
   },
   {
     id: "c4",
     org: "TMCG",
-    name: "Krishnapriya Koppolu",
-    designation: "Campus Lead - Hyderabad",
-    phone: "8142957572",
-    email: "kkoppolu@student.gitam.edu",
-    photo: { src: "/assets/contactphotos/krishnapriya-koppolu.png", alt: "Krishnapriya Koppolu" },
+    name: "Sai Roopak Esikala",
+    designation: "Campus Lead",
+    scope: "Bangalore",
+    phone: "6302158054",
+    email: "sesikala@gitam.in",
+    photo: { src: "/assets/contactphotos/sai-roopak.jpg", alt: "Sai Roopak Esikala" },
   },
   {
     id: "c5",
     org: "MDC",
     name: "Akash Kishan Karri",
     designation: "Website Architect",
+    scope: null,
     phone: "8374849797",
     email: "akarri4@gitam.in",
     photo: { src: "/assets/contactphotos/akash-kishan.jpg", alt: "Akash Kishan Karri" },

@@ -4,6 +4,8 @@
  * equivalent in `src/lib/config.ts`) — never inline event-specific literals.
  */
 
+import type { CampusCode } from "@/lib/registration/schema";
+
 export interface BrandAsset {
   src: string;
   alt: string;
@@ -32,9 +34,10 @@ export interface EventConfig {
   registrationEnd: string; // ISO
   eventStart: string; // ISO
   eventEnd: string; // ISO
-  /** display string, e.g. "4:00 PM" — when participants must have reported in */
+  /** display string, e.g. "4:00 PM" — when participants must have reported in, same time at every campus */
   reportingTime: string;
-  venue: string;
+  /** Campus Level reporting venue, one per campus — different at each of the 3 campuses. */
+  venueByCampus: Record<CampusCode, string>;
 }
 
 export type TimelineStage = "round-1" | "round-2" | "grand-finale" | "milestone";
@@ -76,11 +79,15 @@ export interface FAQItem {
 
 export type ContactOrg = "TMCG" | "MDC";
 
+/** Which campus(es) this person is the point of contact for — shown as a badge so it's clear at a glance, not buried in the designation sentence. Null for a non-campus-scoped role (e.g. the website architect). */
+export type ContactScope = "All Campuses" | "Visakhapatnam" | "Hyderabad" | "Bangalore" | null;
+
 export interface Contact {
   id: string;
   org: ContactOrg;
   name: string;
   designation: string;
+  scope: ContactScope;
   phone: string;
   email: string;
   photo: BrandAsset;

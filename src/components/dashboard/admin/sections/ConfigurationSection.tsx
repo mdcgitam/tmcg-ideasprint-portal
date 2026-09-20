@@ -60,6 +60,14 @@ const PRIVACY_POLICY_KEY = "privacy_policy.content";
 // Super-Admin-only — homepage Instructions section shows the T&C box only once this is set.
 const TNC_URL_KEY = "terms_and_conditions.url";
 
+// Super-Admin-only — homepage's "University Level - Grand Finale" card
+// (TimelineSection). Free text, not a datetime picker, since which teams
+// qualify (and so exactly when/where) isn't fixed until the campus rounds
+// finish — unlike Campus Level, which is hardcoded in site-config.ts because
+// it never changes. Shows "to be announced" until these are set.
+const GRAND_FINALE_DATE_KEY = "grand_finale.date";
+const GRAND_FINALE_VENUE_KEY = "grand_finale.venue";
+
 const DEADLINE_KEYS = [
   {
     key: "noc.general_deadline",
@@ -107,6 +115,10 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
       initial[PRIVACY_POLICY_KEY] = typeof rawPrivacy === "string" ? rawPrivacy : "";
       const rawTnc = config[TNC_URL_KEY];
       initial[TNC_URL_KEY] = typeof rawTnc === "string" ? rawTnc : "";
+      const rawGfDate = config[GRAND_FINALE_DATE_KEY];
+      initial[GRAND_FINALE_DATE_KEY] = typeof rawGfDate === "string" ? rawGfDate : "";
+      const rawGfVenue = config[GRAND_FINALE_VENUE_KEY];
+      initial[GRAND_FINALE_VENUE_KEY] = typeof rawGfVenue === "string" ? rawGfVenue : "";
     }
     for (const { key } of [...SELECTION_WINDOW_KEYS, ...DEADLINE_KEYS]) {
       initial[key] = toDatetimeLocal(effectiveConfigValue(config, key, isAllMode ? null : campus));
@@ -346,6 +358,61 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
     );
   }
 
+  function grandFinaleField() {
+    return (
+      <div className="rounded-xl border border-border bg-surface p-6">
+        <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Grand Finale (University Level)</span>
+        <p className="mt-1 font-heading text-xs text-ink-muted">
+          Shown on the homepage&rsquo;s Journey section. Free text (e.g. &ldquo;17th–18th October 2026&rdquo;) rather than a date
+          picker, since exactly when/where depends on which teams qualify from the campus rounds. Left blank shows
+          &ldquo;to be announced&rdquo;.
+        </p>
+        <div className="mt-3 flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="font-heading text-xs text-ink-faint">Date</span>
+            <div className="flex flex-wrap gap-3">
+              <input
+                value={values[GRAND_FINALE_DATE_KEY] ?? ""}
+                onChange={(e) => setValues((v) => ({ ...v, [GRAND_FINALE_DATE_KEY]: e.target.value }))}
+                placeholder="e.g. 17th–18th October 2026"
+                className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+              />
+              <button
+                type="button"
+                disabled={savingKey === GRAND_FINALE_DATE_KEY}
+                onClick={() => handleSave(GRAND_FINALE_DATE_KEY)}
+                className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+              >
+                {savingKey === GRAND_FINALE_DATE_KEY ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {message[GRAND_FINALE_DATE_KEY] && <p className="font-heading text-xs text-ink-muted">{message[GRAND_FINALE_DATE_KEY]}</p>}
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="font-heading text-xs text-ink-faint">Venue</span>
+            <div className="flex flex-wrap gap-3">
+              <input
+                value={values[GRAND_FINALE_VENUE_KEY] ?? ""}
+                onChange={(e) => setValues((v) => ({ ...v, [GRAND_FINALE_VENUE_KEY]: e.target.value }))}
+                placeholder="e.g. Shivaji Auditorium, GITAM Visakhapatnam"
+                className="min-w-[220px] flex-1 rounded-lg border border-border bg-void px-4 py-2.5 font-heading text-sm text-ink outline-none focus:border-gold"
+              />
+              <button
+                type="button"
+                disabled={savingKey === GRAND_FINALE_VENUE_KEY}
+                onClick={() => handleSave(GRAND_FINALE_VENUE_KEY)}
+                className="rounded-full bg-gold px-6 py-2.5 font-heading text-sm font-medium text-void transition-colors hover:bg-gold-light disabled:opacity-60"
+              >
+                {savingKey === GRAND_FINALE_VENUE_KEY ? "Saving…" : "Save"}
+              </button>
+            </div>
+            {message[GRAND_FINALE_VENUE_KEY] && <p className="font-heading text-xs text-ink-muted">{message[GRAND_FINALE_VENUE_KEY]}</p>}
+          </label>
+        </div>
+      </div>
+    );
+  }
+
   function privacyField() {
     return (
       <div className="rounded-xl border border-border bg-surface p-6">
@@ -501,6 +568,7 @@ export function ConfigurationSection({ config, profile }: { config: Record<strin
             {SELECTION_WINDOW_KEYS.map((d) => deadlineField(d))}
             {DEADLINE_KEYS.map((d) => deadlineField(d))}
             {isAllMode && psCountField()}
+            {isAllMode && grandFinaleField()}
             {isAllMode && tncField()}
             {isAllMode && privacyField()}
           </>
