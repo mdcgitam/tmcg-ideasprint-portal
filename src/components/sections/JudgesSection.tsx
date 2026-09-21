@@ -9,7 +9,7 @@ import { judges } from "@/data/site-config";
  */
 export function JudgesSection() {
   return (
-    <section id="judges" className="border-t border-border bg-void px-6 py-16 sm:px-10 lg:px-16">
+    <section id="judges" className="border-t border-border bg-void px-6 pt-6 pb-16 sm:px-10 sm:pt-8 lg:px-16">
       <Reveal className="mx-auto mb-14 max-w-7xl">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 7 - The Panel</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">JUDGES</h2>

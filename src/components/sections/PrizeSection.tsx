@@ -108,7 +108,7 @@ export function PrizeSection() {
     <section
       ref={sectionRef}
       id="prizes"
-      className="relative isolate overflow-hidden border-t border-border bg-void px-6 py-20 text-center sm:px-10 lg:px-16"
+      className="relative isolate min-h-[89svh] overflow-hidden border-t border-border bg-void px-6 pt-6 pb-8 text-center sm:px-10 sm:pt-8 sm:pb-10 lg:px-16"
     >
       <div
         data-prize-glow
@@ -117,12 +117,12 @@ export function PrizeSection() {
       />
 
       <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 5 - The Reward</span>
-      <h2 className="mt-4 font-display text-5xl tracking-wide text-ink sm:text-7xl">GRAND FINALE PRIZES</h2>
-      <p className="mx-auto mt-4 max-w-lg font-heading text-sm text-ink-muted">
+      <h2 className="mt-3 font-display text-5xl tracking-wide text-ink sm:text-7xl">GRAND FINALE PRIZES</h2>
+      <p className="mx-auto mt-3 max-w-lg font-heading text-sm text-ink-muted">
         Awarded only at the Grand Finale, common across all three campuses.
       </p>
 
-      <div className="mx-auto mt-20 flex max-w-5xl flex-col items-center gap-14 sm:flex-row sm:items-end sm:justify-center sm:gap-10">
+      <div className="mx-auto mt-12 flex max-w-5xl flex-col items-center gap-10 sm:flex-row sm:items-end sm:justify-center sm:gap-10">
         {[2, 3, 1].map((place) => {
           const prize = sorted.find((p) => p.place === place);
           if (!prize) return null;

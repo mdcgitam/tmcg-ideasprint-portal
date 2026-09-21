@@ -128,14 +128,14 @@ export function Hero() {
       </div>
 
       <div className="flex w-full flex-1 flex-col items-center px-2 text-center">
-        <p
-          data-hero-brandmark
-          className="mt-2 w-full max-w-2xl px-2 font-hero-label text-xs tracking-[0.2em] text-ink uppercase sm:mt-4 sm:tracking-[0.35em] sm:text-sm"
-        >
-          {heroContent.eyebrow}
-        </p>
-
         <div className="flex w-full flex-1 flex-col items-center justify-center">
+          <p
+            data-hero-brandmark
+            className="mb-6 w-full max-w-2xl px-2 font-hero-label text-xs tracking-[0.2em] text-ink uppercase sm:mb-8 sm:tracking-[0.35em] sm:text-sm"
+          >
+            {heroContent.eyebrow}
+          </p>
+
           <h1 className="w-full text-center font-display text-[clamp(2.4rem,11.5vw,9.75rem)] leading-[0.9] tracking-wide text-ink">
             {titleWords.map((word, wi) => (
               <span key={wi}>

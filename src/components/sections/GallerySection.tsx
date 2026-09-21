@@ -11,7 +11,7 @@ import { gallery } from "@/data/site-config";
  */
 export function GallerySection() {
   return (
-    <section id="gallery" className="border-t border-border bg-surface px-6 py-16 sm:px-10 lg:px-16">
+    <section id="gallery" className="border-t border-border bg-surface px-6 pt-6 pb-16 sm:px-10 sm:pt-8 lg:px-16">
       <Reveal className="mx-auto mb-14 max-w-7xl">
         <span className="font-mono text-xs tracking-[0.3em] text-gold uppercase">Act 8 - The Energy</span>
         <h2 className="mt-4 font-display text-6xl tracking-wide text-ink sm:text-8xl">IDEASPRINT 3.0</h2>

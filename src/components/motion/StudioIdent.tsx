@@ -77,11 +77,11 @@ export function StudioIdent() {
     >
       <Image
         data-ident-logo
-        src="/assets/brand/gitam-logo.jpeg"
+        src="/assets/brand/gitam-logo.png"
         alt="GITAM"
         width={1212}
         height={532}
-        style={{ filter: "url(#logo-key-black)", opacity: 0, transform: "scale(0.7)" }}
+        style={{ opacity: 0, transform: "scale(0.7)" }}
         className="h-9 w-auto sm:h-14"
       />
       <span
@@ -93,11 +93,11 @@ export function StudioIdent() {
       </span>
       <Image
         data-ident-logo
-        src="/assets/brand/tmcg-logo.jpeg"
+        src="/assets/brand/tmcg-logo.png"
         alt="TMCG"
         width={601}
         height={216}
-        style={{ filter: "url(#logo-key-black)", opacity: 0, transform: "scale(0.7)" }}
+        style={{ opacity: 0, transform: "scale(0.7)" }}
         className="h-9 w-auto sm:h-14"
       />
       <span

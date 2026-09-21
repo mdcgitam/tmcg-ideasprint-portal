@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { fontVariables } from "@/lib/fonts";
-import { SvgFilterDefs } from "@/components/motion/SvgFilterDefs";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,7 +13,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${fontVariables} h-full antialiased`}>
       <body className="min-h-full flex flex-col bg-void text-ink">
-        <SvgFilterDefs />
         {children}
       </body>
     </html>

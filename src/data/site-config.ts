@@ -120,33 +120,58 @@ export const judges: Judge[] = [];
 // state, same pattern as `judges` above.
 export const directorMessage: DirectorMessage | null = null;
 
-// Sourced directly from SPEC.md facts - not fabricated.
+// Organizer-supplied.
 export const faqs: FAQItem[] = [
   {
     id: "f1",
-    question: "What is the team size for IdeaSprint 4.0?",
-    answer: "Every team must have a minimum of 3 and a maximum of 4 members, including the Team Lead.",
+    question: "Will food be provided during the event?",
+    answer: "No. Meals will not be provided. Refreshments will be provided during the event.",
   },
   {
     id: "f2",
-    question: "Is there a registration fee?",
-    answer: "No - there is no registration fee for IdeaSprint 4.0.",
+    question: "Will there be a break during the 24-hour hackathon?",
+    answer: "Yes. A morning break will be provided. The timings will be communicated to participants accordingly.",
   },
   {
     id: "f3",
-    question: "Who can register?",
-    answer:
-      "B.Tech and M.Tech students of the School of CSE & CE across GITAM Visakhapatnam, Hyderabad, and Bangalore, authenticated using their @student.gitam.edu or gitam.in account.",
+    question: "Can team members be from different campuses?",
+    answer: "No. All team members must be from the same campus.",
   },
   {
     id: "f4",
-    question: "Is NOC submission mandatory?",
-    answer: "Yes - NOC submission is compulsory for every participant, tracked individually within your team dashboard.",
+    question: "Can I make changes to my team after registration?",
+    answer: "Yes. Team changes will be allowed until the hackathon begins. No changes will be accepted once the hackathon starts.",
   },
   {
     id: "f5",
-    question: "What rounds does the campus-level event include?",
-    answer: "Round 1 is a 100-minute Naukri Assessment and Round 2 is an 18-hour Build Hackathon. Both are mandatory and non-eliminatory - teams progress to the Grand Finale based on overall performance.",
+    question: "Is a physical NOC mandatory?",
+    answer: "Yes. A physical NOC is mandatory for participation. Digital NOCs or digital signatures will not be accepted.",
+  },
+  {
+    id: "f6",
+    question: "What are the NOC requirements for hostellers and day scholars?",
+    answer:
+      "For hostellers, the NOC must have the required signature and hostel stamp. For day scholars, the concerned authority's signature is sufficient.",
+  },
+  {
+    id: "f7",
+    question: "What happens if a team has fewer than three members during the event?",
+    answer: "If a team has fewer than three members before the evaluation is completed, the team will be disqualified.",
+  },
+  {
+    id: "f8",
+    question: "What should participants bring to the event?",
+    answer: "Participants should bring their college ID, physical NOC, laptop, charger, and other required items.",
+  },
+  {
+    id: "f9",
+    question: "Will accommodation be provided?",
+    answer: "No. Accommodation will not be provided as part of the event.",
+  },
+  {
+    id: "f10",
+    question: "Will certificates be provided?",
+    answer: "Yes. Certificates will be provided to eligible participants as per the event guidelines.",
   },
 ];
 
@@ -222,7 +247,7 @@ export const contacts: Contact[] = [
     scope: "All Campuses",
     phone: "9652177526",
     email: "tkundrap@student.gitam.edu",
-    // Pre-cropped to head-and-chest (source: Tanishq.jpg) since the original was a waist-up shot.
+    // Pre-cropped to head-and-chest - the raw waist-up original has been removed.
     photo: { src: "/assets/contactphotos/tanishq-headshot.jpg", alt: "Tanishq K" },
   },
 ];

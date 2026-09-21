@@ -58,7 +58,7 @@ export function CampusCarousel({ slides }: { slides: CampusSlide[] }) {
             {/* Giant, faded location watermark spanning the whole background, crossfading in lockstep with its own photo. */}
             <div className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden">
               <span
-                className="w-full text-center font-display text-[clamp(4.5rem,20vw,19rem)] leading-none whitespace-nowrap tracking-[0.02em] text-ink/[0.28] uppercase"
+                className="w-full text-center font-display text-[clamp(3.75rem,17vw,16rem)] leading-none whitespace-nowrap tracking-[0.02em] text-ink/[0.28] uppercase"
                 style={{ textShadow: "0 8px 48px rgba(0,0,0,0.45)" }}
               >
                 {slide.label}

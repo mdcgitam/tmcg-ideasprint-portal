@@ -63,23 +63,9 @@ export function NavBar() {
           data-nav-reveal
           className="flex shrink-0 items-center gap-1.5 sm:gap-3.5"
         >
-          <Image
-            src="/assets/brand/gitam-logo.jpeg"
-            alt="GITAM"
-            width={1212}
-            height={532}
-            style={{ filter: "url(#logo-key-black)" }}
-            className="h-6 w-auto sm:h-10"
-          />
+          <Image src="/assets/brand/gitam-logo.png" alt="GITAM" width={1212} height={532} className="h-6 w-auto sm:h-10" />
           <span className="font-display text-sm text-ink-faint sm:text-lg">×</span>
-          <Image
-            src="/assets/brand/tmcg-logo.jpeg"
-            alt="TMCG"
-            width={601}
-            height={216}
-            style={{ filter: "url(#logo-key-black)" }}
-            className="h-6 w-auto sm:h-10"
-          />
+          <Image src="/assets/brand/tmcg-logo.png" alt="TMCG" width={601} height={216} className="h-6 w-auto sm:h-10" />
           <span className="font-display text-sm text-ink-faint sm:text-lg">×</span>
           <Image
             src="/assets/brand/mdc-logo.png"
