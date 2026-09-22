@@ -76,10 +76,10 @@ export function Footer() {
         <div>
           <span className="font-mono text-[11px] tracking-[0.25em] text-ink-faint uppercase">Stay Connected</span>
           <div className="mt-3 flex items-center gap-3">
-            {socialLinks.map((s) => (
+            {socialLinks.filter((s) => s.url).map((s) => (
               <a
                 key={s.platform}
-                href={s.url}
+                href={s.url!}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={s.label}

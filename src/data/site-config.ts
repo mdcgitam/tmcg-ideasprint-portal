@@ -252,9 +252,14 @@ export const contacts: Contact[] = [
   },
 ];
 
-// WhatsApp is a placeholder (SPEC.md "No Fake Data" - clearly marked, not a
-// real invite link) until the organizers supply the actual group link.
+// WhatsApp stays `null` until the organizers supply the actual group invite
+// (SPEC.md "No Fake Data"). A placeholder invite code isn't a harmless
+// stand-in: chat.whatsapp.com answers 200 for any code and then tells the
+// visitor the link is invalid, so shipping one gives participants a
+// working-looking "Join our WhatsApp Group" button that dead-ends. Both the
+// Footer and the Contact section skip entries with no url, so the moment a
+// real link is pasted here it appears in both places.
 export const socialLinks: SocialLink[] = [
   { platform: "instagram", label: "Instagram", url: "https://www.instagram.com/tmcg_gcgc/" },
-  { platform: "whatsapp", label: "WhatsApp Group", url: "https://chat.whatsapp.com/PLACEHOLDER-ideasprint-4-0-group" },
+  { platform: "whatsapp", label: "WhatsApp Group", url: null },
 ];

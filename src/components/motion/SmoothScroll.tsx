@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useGSAP } from "@gsap/react";
-import { ScrollSmoother, prefersReducedMotion } from "@/lib/gsap";
+import { ScrollSmoother, ScrollTrigger, prefersReducedMotion } from "@/lib/gsap";
 
 /**
  * Wraps `#smooth-wrapper > #smooth-content` (see the public layout) in a
@@ -14,19 +14,50 @@ import { ScrollSmoother, prefersReducedMotion } from "@/lib/gsap";
  * outside the wrapper so its `position: fixed` isn't reinterpreted relative
  * to the transformed smooth-content element.
  *
- * The (public) layout (Home, Privacy, Register) persists across navigation
- * between those pages, so this component only mounts once — without the
- * effect below, ScrollSmoother's scroll position carries over untouched from
- * whatever page you came from (Privacy Policy opening "scrolled down" from
- * Home), and plain `<a href="#section">` fragment jumps don't move
- * ScrollSmoother's transformed content at all (footer section links
- * silently doing nothing on any page other than Home). Re-sync explicitly on
- * every route change and every hash change instead of relying on native
- * browser scroll-restoration, which ScrollSmoother bypasses.
+ * ScrollSmoother translates `#smooth-content` instead of letting the browser
+ * scroll it, so nothing that relies on native scrolling reaches the right
+ * place on its own — this component owns every in-page jump on the public
+ * site:
+ *
+ *  - Same-page hash links (the footer's `/#faq` while already on Home).
+ *    next/link navigates with `history.pushState`, which fires NO
+ *    `hashchange` event and leaves `usePathname()` untouched, so neither
+ *    signal below sees it. The capture-phase click handler intercepts these
+ *    before next/link does (it bails on `defaultPrevented`) and scrolls them
+ *    itself.
+ *  - Cross-page jumps (`/#faq` clicked from Privacy) and back/forward.
+ *    ScrollSmoother caches the content height it measured for the *previous*
+ *    page, so scrolling before a re-measure lands thousands of px short —
+ *    every jump refreshes ScrollTrigger first.
+ *  - Plain route changes, which must land at the top rather than inheriting
+ *    the scroll position of the page you came from (the (public) layout
+ *    persists across Home/Privacy/Register, and ScrollSmoother bypasses the
+ *    browser's own scroll restoration).
  */
 export function SmoothScroll() {
   const smootherRef = useRef<ScrollSmoother | null>(null);
   const pathname = usePathname();
+
+  const scrollToHash = useCallback((hash: string, smooth: boolean) => {
+    const id = hash.startsWith("#") ? decodeURIComponent(hash.slice(1)) : "";
+    const target = id ? document.getElementById(id) : null;
+    const smoother = smootherRef.current;
+
+    if (!smoother) {
+      // Reduced-motion visitors get no smoother at all — native scrolling is
+      // already correct for them.
+      if (target) target.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+      else window.scrollTo(0, 0);
+      return;
+    }
+
+    // Re-measure before computing the target's offset: stale heights (a route
+    // change, or images that finished loading after the last refresh) are what
+    // made these jumps land in the wrong place.
+    ScrollTrigger.refresh();
+    if (target) smoother.scrollTo(target, smooth, "top top");
+    else smoother.scrollTo(0, smooth);
+  }, []);
 
   useGSAP(() => {
     if (prefersReducedMotion()) return;
@@ -46,28 +77,49 @@ export function SmoothScroll() {
     };
   }, []);
 
+  // Same-page hash links. Capture phase so this runs before next/link's own
+  // handler, which returns early once the event is `defaultPrevented`.
   useEffect(() => {
-    function syncScrollPosition() {
-      const hash = window.location.hash;
-      const target = hash ? document.querySelector(hash) : null;
+    function onClick(event: MouseEvent) {
+      if (event.defaultPrevented || event.button !== 0) return;
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
-      if (smootherRef.current) {
-        smootherRef.current.scrollTo(target ?? 0, false);
-      } else if (target) {
-        target.scrollIntoView();
-      } else {
-        window.scrollTo(0, 0);
-      }
+      const anchor = (event.target as Element | null)?.closest?.<HTMLAnchorElement>("a");
+      if (!anchor || (anchor.target && anchor.target !== "_self")) return;
+      if (anchor.hasAttribute("download")) return;
+
+      const url = new URL(anchor.href, window.location.href);
+      if (url.origin !== window.location.origin) return;
+      // A different page's anchor is a real navigation — let next/link run and
+      // let the pathname effect below do the scrolling once it has mounted.
+      if (url.pathname !== window.location.pathname) return;
+      if (!url.hash || url.hash === "#") return;
+      if (!document.getElementById(decodeURIComponent(url.hash.slice(1)))) return;
+
+      event.preventDefault();
+      if (url.hash !== window.location.hash) window.history.pushState(null, "", url.hash);
+      scrollToHash(url.hash, true);
     }
 
-    // Same-route hash-only navigation (footer link clicked while already on
-    // that page) doesn't change `pathname`, so it needs its own listener —
-    // `hashchange` fires for pushState-driven fragment changes too, not only
-    // back/forward.
-    syncScrollPosition();
-    window.addEventListener("hashchange", syncScrollPosition);
-    return () => window.removeEventListener("hashchange", syncScrollPosition);
-  }, [pathname]);
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, [scrollToHash]);
+
+  // Route changes, plus back/forward (`popstate`) and any hash change driven
+  // by something other than a link click (`hashchange`).
+  useEffect(() => {
+    function sync() {
+      scrollToHash(window.location.hash, false);
+    }
+
+    sync();
+    window.addEventListener("hashchange", sync);
+    window.addEventListener("popstate", sync);
+    return () => {
+      window.removeEventListener("hashchange", sync);
+      window.removeEventListener("popstate", sync);
+    };
+  }, [pathname, scrollToHash]);
 
   return null;
 }

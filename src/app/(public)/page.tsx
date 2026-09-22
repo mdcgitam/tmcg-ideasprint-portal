@@ -13,11 +13,6 @@ import { ContactSection } from "@/components/sections/ContactSection";
 import { RegistrationClosedPopup } from "@/components/sections/RegistrationClosedPopup";
 import type { CampusCode } from "@/lib/registration/schema";
 
-// Placeholder until the real Terms & Conditions doc is set via admin
-// Configuration → Site Content - keeps the box visible now instead of
-// staying hidden while nobody has configured a real link yet.
-const PLACEHOLDER_TNC_URL = "https://docs.google.com/document/d/1PLACEHOLDER-ideasprint-4-0-terms-and-conditions/edit";
-
 const CONFIG_KEYS = ["terms_and_conditions.url"] as const;
 
 function readConfigString(rows: { key: string; value: unknown }[] | null, key: string): string | null {
@@ -55,7 +50,12 @@ export default async function Home() {
     campusCounts.map((c) => [c.campus, { registered: c.registered, cap: c.cap }]),
   ) as Partial<Record<CampusCode, { registered: number; cap: number }>>;
   const isFull = campusCounts.length > 0 && campusCounts.every((c) => c.registered >= c.cap);
-  const tncUrl = readConfigString(configRows, "terms_and_conditions.url") ?? PLACEHOLDER_TNC_URL;
+  // No placeholder fallback: the previous stand-in pointed at a made-up Google
+  // Docs id that answers 404, so the "Read Terms & Conditions" button sent
+  // every visitor to an error page. InstructionsSection hides the whole block
+  // while this is null, which is the honest state until a real document is set
+  // via admin Configuration → Site Content.
+  const tncUrl = readConfigString(configRows, "terms_and_conditions.url");
 
   return (
     <main>

@@ -112,7 +112,8 @@ export type SocialPlatform = "instagram" | "whatsapp";
 export interface SocialLink {
   platform: SocialPlatform;
   label: string;
-  url: string;
+  /** `null` until the organizers supply a real link - never rendered while unset. */
+  url: string | null;
 }
 
 export interface DirectorMessage {

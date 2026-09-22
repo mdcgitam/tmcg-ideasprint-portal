@@ -38,10 +38,10 @@ export function ContactSection() {
       <Reveal className="mx-auto mb-6 flex max-w-7xl flex-col items-center gap-3 rounded-2xl border border-gold/30 bg-gradient-to-br from-gold/10 via-void to-void px-6 py-4 text-center sm:flex-row sm:justify-center sm:gap-6">
         <span className="font-mono text-xs tracking-[0.25em] text-gold uppercase">Stay In The Loop</span>
         <div className="flex flex-wrap items-center justify-center gap-3">
-          {socialLinks.map((s) => (
+          {socialLinks.filter((s) => s.url).map((s) => (
             <a
               key={s.platform}
-              href={s.url}
+              href={s.url!}
               target="_blank"
               rel="noopener noreferrer"
               data-cursor="interactive"
@@ -118,9 +118,29 @@ function ContactCard({
           {scope}
         </span>
       )}
+      {/* Rendered as real tel:/mailto: links rather than plain text - these are
+          the only way to reach an organizer directly, and on a phone (where
+          most participants read this) flat text means copying a number by
+          hand. Falls back to plain text when a detail hasn't been supplied. */}
       <div className="mt-auto flex flex-col gap-1.5 pt-4 font-mono text-xs text-ink-faint">
-        <span>{phone || "Phone pending"}</span>
-        <span className={isLongEmail ? "text-[11px]" : undefined}>{email || "Email pending"}</span>
+        {phone ? (
+          <a href={`tel:${phone.replace(/[^\d+]/g, "")}`} data-cursor="interactive" className="transition-colors hover:text-gold">
+            {phone}
+          </a>
+        ) : (
+          <span>Phone pending</span>
+        )}
+        {email ? (
+          <a
+            href={`mailto:${email}`}
+            data-cursor="interactive"
+            className={`transition-colors hover:text-gold ${isLongEmail ? "text-[11px]" : ""}`}
+          >
+            {email}
+          </a>
+        ) : (
+          <span className={isLongEmail ? "text-[11px]" : undefined}>Email pending</span>
+        )}
       </div>
     </div>
   );

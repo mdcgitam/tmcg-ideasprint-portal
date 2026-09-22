@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -52,7 +53,26 @@ function LoginContent() {
         >
           {loading ? "Redirecting…" : "Continue with Google"}
         </button>
+
+        {/* This page sits outside the (public) route group, so it renders no
+            NavBar and no Footer - without these two links it is a dead end
+            with no way back to the site other than the browser's Back button,
+            and the not_registered error above tells people to register with
+            nowhere to do it. */}
+        <p className="mt-6 font-heading text-sm text-ink-muted">
+          Not registered yet?{" "}
+          <Link href="/register" className="text-gold underline underline-offset-4 transition-colors hover:text-gold-light">
+            Register your team
+          </Link>
+        </p>
       </div>
+
+      <Link
+        href="/"
+        className="mt-8 font-heading text-sm text-ink-muted transition-colors hover:text-gold"
+      >
+        ← Back to home
+      </Link>
     </main>
   );
 }
