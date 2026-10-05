@@ -48,8 +48,8 @@ export const eventConfig: EventConfig = {
   registrationStatus: "open",
   registrationStart: "2026-09-26T11:00:00+05:30",
   registrationEnd: "2026-10-05T23:00:00+05:30",
-  eventStart: "2026-10-09T16:00:00+05:30",
-  eventEnd: "2026-10-10T16:00:00+05:30",
+  eventStart: "2026-10-23T16:00:00+05:30",
+  eventEnd: "2026-10-24T16:00:00+05:30",
   // VSP -> HYD -> BLR order used everywhere else in the app (see CAMPUS_ORDER
   // in src/lib/dashboard/campus-config.ts).
   venueByCampus: {
