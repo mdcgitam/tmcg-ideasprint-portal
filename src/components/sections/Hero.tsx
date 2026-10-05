@@ -131,12 +131,12 @@ export function Hero() {
         <div className="flex w-full flex-1 flex-col items-center justify-center">
           <p
             data-hero-brandmark
-            className="mb-6 w-full max-w-2xl px-2 font-hero-label text-xs tracking-[0.2em] text-ink uppercase sm:mb-8 sm:tracking-[0.35em] sm:text-sm"
+            className="mb-4 w-full max-w-2xl px-2 font-mono text-xs tracking-[0.25em] text-gold uppercase sm:mb-6 sm:tracking-[0.3em] sm:text-sm font-medium"
           >
             {heroContent.eyebrow}
           </p>
 
-          <h1 className="w-full text-center font-display text-[clamp(2.4rem,11.5vw,9.75rem)] leading-[0.9] tracking-wide text-ink">
+          <h1 className="w-full text-center font-display text-[clamp(2.4rem,8.2vw,7rem)] font-extrabold leading-[0.95] tracking-tight text-ink">
             {titleWords.map((word, wi) => (
               <span key={wi}>
                 {wi > 0 && " "}
@@ -151,11 +151,11 @@ export function Hero() {
             ))}
           </h1>
 
-          <p data-hero-location className="mt-6 w-full font-hero-label text-base tracking-[0.2em] text-ink uppercase sm:tracking-[0.3em] sm:text-lg">
+          <p data-hero-location className="mt-5 w-full font-heading text-sm font-medium tracking-[0.25em] text-ink-muted uppercase sm:mt-6 sm:tracking-[0.3em] sm:text-base">
             GITAM (Deemed to be University)
           </p>
 
-          <div className="mt-12 flex flex-col items-center gap-4 sm:flex-row">
+          <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:mt-12">
             <div data-hero-cta>
               <MagneticButton href="/register" variant="primary" className="font-hero-label">
                 {heroContent.registerCtaLabel}

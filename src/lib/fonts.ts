@@ -1,21 +1,20 @@
-import { Bebas_Neue, Space_Grotesk, Geist, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Geist, JetBrains_Mono } from "next/font/google";
 
-// Giant kinetic display type — prize numbers, timeline stage names, hero fragments.
-export const display = Bebas_Neue({
+// Clean tech neo-grotesque display type — modern, geometric, zero-gimmick.
+export const display = Plus_Jakarta_Sans({
   variable: "--font-display",
-  weight: "400",
   subsets: ["latin"],
+  weight: ["500", "600", "700", "800"],
 });
 
-// Headings, nav, UI labels — refined and premium, everywhere except the Hero.
+// Headings, nav, UI labels — sleek and refined.
 export const heading = Geist({
   variable: "--font-heading",
   subsets: ["latin"],
 });
 
-// Hero-only eyebrow/location labels — kept pinned to the original typeface so
-// the Hero's typography stays untouched while `heading` moves on elsewhere.
-export const heroLabel = Space_Grotesk({
+// Hero-only eyebrow/location labels — consistent clean neo-grotesque.
+export const heroLabel = Geist({
   variable: "--font-hero-label",
   subsets: ["latin"],
 });
